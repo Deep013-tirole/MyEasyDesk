@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "reviews": {
+      "title": "Review",
+      "description": "Customer reviews and feedback attached to customerId, orderId, and serviceId with moderation status",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Review Identifier" },
+        "reviewId": { "type": "string", "description": "Canonical review code" },
+        "customerId": { "type": "string", "description": "Identifier of the customer submitting the review" },
+        "customerName": { "type": "string", "description": "Full name of the customer" },
+        "userName": { "type": "string", "description": "Display user name" },
+        "orderId": { "type": "string", "description": "Associated order tracking ID" },
+        "serviceId": { "type": "string", "description": "Identifier of the reviewed service" },
+        "serviceTitle": { "type": "string", "description": "Title of the reviewed service" },
+        "serviceName": { "type": "string", "description": "Name of the reviewed service" },
+        "rating": { "type": "number", "description": "Star rating from 1 to 5" },
+        "reviewText": { "type": "string", "description": "Detailed review comment" },
+        "comment": { "type": "string", "description": "Review comment text" },
+        "status": { "type": "string", "enum": ["Pending", "Approved", "Rejected", "Hidden"], "description": "Moderation review status" },
+        "adminNote": { "type": "string", "description": "Internal moderation note" },
+        "isDemo": { "type": "boolean", "description": "Whether this is a demo review" },
+        "isVerifiedOrder": { "type": "boolean", "description": "Whether the review is linked to a verified completed order" },
+        "isVerified": { "type": "boolean", "description": "Verification flag" },
+        "createdAt": { "type": "string", "description": "ISO timestamp of creation" },
+        "updatedAt": { "type": "string", "description": "ISO timestamp of last update" },
+        "approvedAt": { "type": "string", "description": "ISO timestamp of admin approval" },
+        "approvedBy": { "type": "string", "description": "Admin identifier who approved the review" },
+        "date": { "type": "string", "description": "Display date" }
+      },
+      "required": ["customerId", "serviceId", "rating", "reviewText", "status"]
+    },
+    "orders": {
+      "title": "Order",
+      "description": "Customer service orders and status tracking",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique Order ID" },
+        "customerId": { "type": "string", "description": "Associated customer ID" },
+        "userId": { "type": "string", "description": "User identifier" },
+        "serviceId": { "type": "string", "description": "Target service ID" },
+        "serviceTitle": { "type": "string", "description": "Target service title" },
+        "name": { "type": "string", "description": "Customer full name" },
+        "email": { "type": "string", "description": "Customer email" },
+        "mobile": { "type": "string", "description": "Customer contact mobile" },
+        "orderStatus": { "type": "string", "description": "Current processing status" },
+        "totalAmount": { "type": "number", "description": "Total order fee" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["id", "serviceId", "name", "orderStatus"]
+    },
+    "services": {
+      "title": "Service",
+      "description": "Catalog of available citizen and enterprise services",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Service ID" },
+        "categoryId": { "type": "string", "description": "Category ID" },
+        "title": { "type": "string", "description": "Service title" },
+        "description": { "type": "string", "description": "Service description" },
+        "govFees": { "type": "number", "description": "Government fee" },
+        "serviceCharge": { "type": "number", "description": "Advisory service charge" },
+        "status": { "type": "string", "description": "Active or inactive status" }
+      },
+      "required": ["id", "title", "categoryId"]
+    },
+    "customers": {
+      "title": "Customer",
+      "description": "Registered customer profiles and account records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Customer unique ID" },
+        "code": { "type": "string", "description": "Customer display code" },
+        "name": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "description": "Email address" },
+        "mobile": { "type": "string", "description": "Contact number" }
+      },
+      "required": ["id", "name", "email"]
+    },
+    "categories": {
+      "title": "ServiceCategory",
+      "description": "Centralized service category classifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique category identifier" },
+        "name": { "type": "string", "description": "Category display name" },
+        "slug": { "type": "string", "description": "URL-safe slug" },
+        "icon": { "type": "string", "description": "Lucide icon name" },
+        "color": { "type": "string", "description": "Color theme indicator" },
+        "description": { "type": "string", "description": "Detailed description" },
+        "sortOrder": { "type": "number", "description": "Display order sequence" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "Activation state" }
+      },
+      "required": ["id", "name"]
+    },
+    "blogCategories": {
+      "title": "BlogCategory",
+      "description": "Centralized blog and article category classifications",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique blog category identifier" },
+        "name": { "type": "string", "description": "Blog category display name" },
+        "slug": { "type": "string", "description": "URL-safe slug" },
+        "icon": { "type": "string", "description": "Lucide icon name" },
+        "color": { "type": "string", "description": "Color theme indicator" },
+        "description": { "type": "string", "description": "Detailed description" },
+        "sortOrder": { "type": "number", "description": "Display order sequence" },
+        "status": { "type": "string", "enum": ["Active", "Inactive"], "description": "Activation state" }
+      },
+      "required": ["id", "name"]
+    }
+  },
+  "firestore": {
+    "/reviews/{reviewId}": {
+      "schema": "#/entities/reviews",
+      "description": "Customer reviews and moderation statuses"
+    },
+    "/orders/{orderId}": {
+      "schema": "#/entities/orders",
+      "description": "Customer service orders"
+    },
+    "/services/{serviceId}": {
+      "schema": "#/entities/services",
+      "description": "Services catalog records"
+    },
+    "/categories/{categoryId}": {
+      "schema": "#/entities/categories",
+      "description": "Service categories records"
+    },
+    "/blogCategories/{blogCategoryId}": {
+      "schema": "#/entities/blogCategories",
+      "description": "Blog categories records"
+    },
+    "/customers/{customerId}": {
+      "schema": "#/entities/customers",
+      "description": "Registered customer accounts"
+    }
+  }
+}

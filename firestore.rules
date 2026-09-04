@@ -1,0 +1,132 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    match /services/{serviceId} {
+      allow read, write: if true;
+    }
+
+    match /categories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /blogs/{blogId} {
+      allow read, write: if true;
+    }
+
+    match /blogCategories/{catId} {
+      allow read, write: if true;
+    }
+
+    match /faqs/{faqId} {
+      allow read, write: if true;
+    }
+
+    match /banners/{bannerId} {
+      allow read, write: if true;
+    }
+
+    match /pages/{pageId} {
+      allow read, write: if true;
+    }
+
+    match /stats/{statId} {
+      allow read, write: if true;
+    }
+
+    match /settings/{settingId} {
+      allow read, write: if true;
+    }
+
+    match /reviews/{reviewId} {
+      allow read, write: if true;
+    }
+
+    match /inquiries/{inquiryId} {
+      allow read, write: if true;
+    }
+
+    match /leads/{leadId} {
+      allow read, write: if true;
+    }
+
+    match /tickets/{ticketId} {
+      allow read, write: if true;
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    match /employees/{employeeId} {
+      allow read, write: if true;
+    }
+
+    match /employeeKYC/{docId} {
+      allow read, write: if true;
+    }
+
+    match /employeePayroll/{docId} {
+      allow read, write: if true;
+    }
+
+    match /employeeAccounts/{docId} {
+      allow read, write: if true;
+    }
+
+    match /employeeDocuments/{docId} {
+      allow read, write: if true;
+    }
+
+    match /customers/{customerId} {
+      allow read, write: if true;
+    }
+
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    match /roles/{roleId} {
+      allow read, write: if true;
+    }
+
+    match /permissions/{permissionId} {
+      allow read, write: if true;
+    }
+
+    match /calendarEvents/{eventId} {
+      allow read, write: if true;
+    }
+
+    match /media/{mediaId} {
+      allow read, write: if true;
+    }
+
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /auditLogs/{logId} {
+      allow read, write: if true;
+    }
+
+    match /masterData/{docId} {
+      allow read, write: if true;
+    }
+
+    match /app_state/{docId} {
+      allow read, write: if true;
+    }
+
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}
+
+
+

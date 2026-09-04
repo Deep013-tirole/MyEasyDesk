@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "easydesk",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-08-04",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "alias": {
+    "iconv-lite": "./src/shims/iconv-lite.cjs"
+  },
+  "vars": {
+    "NODE_ENV": "production",
+    "FIREBASE_STORAGE_BUCKET": "khaki-fact-snzsc.firebasestorage.app"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "easydesk-prod-db",
+      "database_id": "b194c764-da29-45cd-a000-96de417f018a"
+    }
+  ],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/uploads/*"
+    ]
+  }
+}

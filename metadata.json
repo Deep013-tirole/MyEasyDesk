@@ -1,0 +1,6 @@
+{
+  "name": "EasyDesk",
+  "description": "Premium full-stack digital service platform for government, education, personal, and business services with real-time tracking, administrative dashboards, and AI assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

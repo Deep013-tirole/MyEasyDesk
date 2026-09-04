@@ -1,0 +1,40 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Media and public asset uploads: publicly readable, accessible across edge CDN
+    match /media/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Employee avatars and profile photos
+    match /employees/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Customer order documents and verification uploads
+    match /orders/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Payment proof screenshots and receipts
+    match /payments/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Restricted documents and KYC records
+    match /documents/{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Default fallback rule for all binary uploads
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}
