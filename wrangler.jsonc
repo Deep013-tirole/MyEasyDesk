@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "easydesk",
+  "name": "myeasydesk",
   "main": "src/worker.ts",
   "compatibility_date": "2026-08-04",
   "compatibility_flags": [
@@ -16,8 +16,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "easydesk-prod-db",
-      "database_id": "b194c764-da29-45cd-a000-96de417f018a"
+      "database_name": "myeasydesk-prod-db",
+      "database_id": "34b94cd2-634c-4563-b667-b41a4ae85568"
     }
   ],
   "assets": {
