@@ -194,18 +194,51 @@ export async function getClientPaymentConfig(): Promise<any> {
 }
 
 /**
+ * Safely and canonically formats structured contact address into a clean string,
+ * avoiding duplicate city/state/pincode if already part of the street address,
+ * and returning empty string when no address data is present (never injecting fake defaults).
+ */
+export function formatFullAddress(contact?: { address?: string; city?: string; state?: string; pinCode?: string } | null): string {
+  if (!contact) return '';
+  const addr = (contact.address || '').trim();
+  const city = (contact.city || '').trim();
+  const state = (contact.state || '').trim();
+  const pin = (contact.pinCode || '').trim();
+
+  const parts: string[] = [];
+  if (addr) parts.push(addr);
+  if (city && !addr.toLowerCase().includes(city.toLowerCase())) parts.push(city);
+  if (state && !addr.toLowerCase().includes(state.toLowerCase())) parts.push(state);
+
+  let formatted = parts.join(', ');
+  if (pin && !formatted.includes(pin)) {
+    formatted = formatted ? `${formatted} - ${pin}` : pin;
+  }
+  return formatted;
+}
+
+/**
  * Loads Contact Settings via Cloudflare Worker API
  */
 export async function getClientContactSettings(): Promise<any> {
   if (isNetworkOffline()) return null;
   try {
-    const res = await fetch(`/api/settings/contact?_t=${Date.now()}`, {
+    const res = await fetch(`/api/contact-settings?_t=${Date.now()}`, {
       cache: 'no-store',
-      headers: { 'Cache-Control': 'no-cache' }
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
     });
     if (res.ok) {
       const data = await res.json();
-      return data.contactSettings || data;
+      const settings = (data && data.contactSettings) ? data.contactSettings : data;
+      if (settings && typeof settings === 'object' && (settings.phone || settings.email || settings.companyName || settings.address)) {
+        try {
+          localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(settings));
+        } catch {}
+      }
+      return settings;
     }
   } catch (err) {
     console.warn('[DataClient] Error loading Contact Settings:', err);

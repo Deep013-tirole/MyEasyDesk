@@ -43,7 +43,7 @@ const PLATFORMS: PlatformMeta[] = [
   {
     key: 'whatsapp',
     name: 'WhatsApp',
-    placeholder: 'https://wa.me/919999988888',
+    placeholder: 'https://wa.me/919575538590',
     badgeBg: 'bg-emerald-50',
     badgeText: 'text-emerald-700',
     accentBorder: 'border-emerald-200',

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Phone, Mail, MapPin, Globe, ShieldCheck, Heart, ArrowUpRight, MessageSquare } from 'lucide-react';
 import { openGeneralWhatsApp, normalizeWhatsAppNumber, onContactSettingsUpdated } from '../lib/whatsapp.js';
+import { formatFullAddress } from '../lib/apiDataService.js';
 import { SocialMediaLink, SupportedSocialPlatform } from '../types.js';
 
 interface FooterProps {
@@ -79,7 +80,7 @@ export default function Footer({ setView }: FooterProps) {
           return {
             phone: parsed.phone || parsed.whatsapp || '',
             email: parsed.email || '',
-            address: parsed.address ? `${parsed.address}${parsed.city ? ', ' + parsed.city : ''}${parsed.state ? ', ' + parsed.state : ''}` : (parsed.city || ''),
+            address: formatFullAddress(parsed),
             whatsapp: parsed.whatsapp ? normalizeWhatsAppNumber(parsed.whatsapp) : ''
           };
         }
@@ -110,7 +111,7 @@ export default function Footer({ setView }: FooterProps) {
     const applyContact = (data: any) => {
       if (data && typeof data === 'object') {
         const normalizedWa = data.whatsapp ? normalizeWhatsAppNumber(data.whatsapp) : '';
-        const fullAddress = data.address ? `${data.address}${data.city ? ', ' + data.city : ''}${data.state ? ', ' + data.state : ''}${data.pinCode ? ' - ' + data.pinCode : ''}` : (data.city || '');
+        const fullAddress = formatFullAddress(data);
         setContact({
           phone: data.phone || data.whatsapp || '',
           email: data.email || '',

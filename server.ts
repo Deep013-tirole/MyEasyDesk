@@ -145,7 +145,9 @@ import {
   getAllRelationalReadModes,
   getRelationalReadStatus,
   readCollectionWithFallback,
-  readEntityWithFallback
+  readEntityWithFallback,
+  isD1Initialized,
+  setD1Initialized
 } from './src/lib/d1Storage.js';
 import { 
   validateRecordRelationships, 
@@ -942,9 +944,9 @@ const PRESEEDED_SETTINGS = {
   favicon: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=32',
   theme: 'Modern Blue Theme',
   socialLinks: { facebook: 'https://facebook.com/easydesk', twitter: 'https://twitter.com/easydesk', linkedin: 'https://linkedin.com/company/easydesk' },
-  contactDetails: { email: 'support@easydesk.com', phone: '+91 99999 88888', address: 'Digital India Tower, Sector 62, Noida, UP - 201301' },
+  contactDetails: { email: 'help.myeasydesks@gmail.com', phone: '+91 9575538590', address: 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010' },
   smtp: { host: 'smtp.gmail.com', port: '587', user: 'smtp@easydesk.com', fromEmail: 'no-reply@easydesk.com' },
-  whatsAppNumber: '+91 99999 88888',
+  whatsAppNumber: '+91 9575538590',
   googleAnalytics: 'UA-10029381-1',
   googleSearchConsole: 'GSC-9382173',
   paymentConfig: { ...PRESEEDED_PAYMENT_CONFIG },
@@ -1305,22 +1307,22 @@ const PRESEEDED_ABOUT_US = {
     { question: 'How long does document processing take?', answer: 'Standard applications are reviewed by our desk officers within 2 to 24 hours depending on the service selected.' },
     { question: 'How do I receive my final completed document?', answer: 'Once processed, final certificates are available for instant PDF download in your User Dashboard and sent directly via WhatsApp.' }
   ],
-  contactSummary: 'Have questions? Reach out to our digital service desk at support@easydesk.com or call +91 99999 88888.',
+  contactSummary: 'Have questions? Reach out to our digital service desk at help.myeasydesks@gmail.com or call +91 9575538590.',
   status: 'Published'
 };
 
 const PRESEEDED_CONTACT_SETTINGS = {
   companyName: 'EasyDesk Digital Services Pvt Ltd',
-  phone: '+91 99999 88888',
-  whatsapp: '+91 99999 88888',
-  email: 'support@easydesk.com',
+  phone: '+91 9575538590',
+  whatsapp: '919575538590',
+  email: 'help.myeasydesks@gmail.com',
   alternateEmail: 'info@easydesk.com',
-  address: 'Digital India Tower, Plot 14, Sector 62',
-  city: 'Noida',
-  state: 'Uttar Pradesh',
-  pinCode: '201301',
+  address: 'A51, Vijay Nagar',
+  city: 'Indore',
+  state: 'Madhya Pradesh',
+  pinCode: '452010',
   workingHours: 'Monday - Saturday: 9:00 AM - 7:00 PM IST',
-  googleMapsUrl: 'https://maps.google.com/?q=Sector+62+Noida',
+  googleMapsUrl: 'https://maps.google.com/?q=Indore+Madhya+Pradesh',
   socialMedia: {
     facebook: '',
     instagram: '',
@@ -1345,12 +1347,12 @@ const PRESEEDED_SOCIAL_MEDIA_LINKS: SocialMediaLink[] = [
 const PRESEEDED_COMPANY_PROFILE = {
   companyName: 'EasyDesk Digital Services Pvt Ltd',
   logoUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=200',
-  address: 'Digital India Tower, Plot 14, Sector 62',
-  city: 'Noida',
-  state: 'Uttar Pradesh',
-  pinCode: '201301',
-  phone: '+91 99999 88888',
-  email: 'support@easydesk.com',
+  address: 'A51, Vijay Nagar',
+  city: 'Indore',
+  state: 'Madhya Pradesh',
+  pinCode: '452010',
+  phone: '+91 9575538590',
+  email: 'help.myeasydesks@gmail.com',
   website: 'https://easydesk.com',
   primaryColor: '#1e40af',
   secondaryColor: '#0f172a',
@@ -1503,18 +1505,18 @@ const PRESEEDED_PRIVACY_SECURITY_SETTINGS = {
       { step: 1, title: 'Do Not Panic', description: 'EasyDesk will never demand urgent payments or banking PINs over unsolicited calls.' },
       { step: 2, title: 'Verify Identity', description: 'Cross-check the caller number against official contact numbers on easydesk.com or check your live order tracking screen.' },
       { step: 3, title: 'Never Share Banking Credentials', description: 'Immediately decline if asked for Bank OTP, UPI PIN, Card CVV, or Net Banking passwords.' },
-      { step: 4, title: 'Contact Official Support', description: 'Reach out to support@easydesk.com or call our official desk hotline at +91 99999 88888.' },
+      { step: 4, title: 'Contact Official Support', description: 'Reach out to help.myeasydesks@gmail.com or call our official desk hotline at +91 9575538590.' },
       { step: 5, title: 'Report Suspicious Activity', description: 'Submit an emergency fraud alert via our online report form for immediate security response.' }
     ]
   },
   securityContact: {
     title: 'Contact EasyDesk Security Team',
     securityEmail: 'security@easydesk.com',
-    supportEmail: 'support@easydesk.com',
-    customerCarePhone: '+91 99999 88888',
-    emergencyHotline: '+91 99999 77777',
+    supportEmail: 'help.myeasydesks@gmail.com',
+    customerCarePhone: '+91 9575538590',
+    emergencyHotline: '+91 9575538590',
     businessHours: 'Monday – Saturday: 9:00 AM – 7:00 PM IST',
-    officeAddress: 'Digital India Tower, Plot 14, Sector 62, Noida, UP - 201301'
+    officeAddress: 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010'
   },
   legalCompliance: {
     title: 'Legal Compliance Statement',
@@ -2333,7 +2335,8 @@ function getCustomerOrders(idOrCode: string): Order[] {
 /**
  * Runs on startup and after hydrations: Normalizes data relationships and repairs any orphaned / mismatched keys.
  */
-function normalizeDatabaseRelationships() {
+function normalizeDatabaseRelationships(options?: { allowReseed?: boolean }) {
+  const allowReseed = options?.allowReseed === true;
   console.log('[DATA SYNC] Normalizing record relationships across Employees and Customers...');
 
   // 1. Normalize Employees
@@ -2425,7 +2428,9 @@ function normalizeDatabaseRelationships() {
   }
 
   // 3. Normalize Service Categories
-  if (!Array.isArray(dbState.categories) || dbState.categories.length === 0) {
+  if (!Array.isArray(dbState.categories)) {
+    dbState.categories = allowReseed ? [...PRESEEDED_CATEGORIES] : [];
+  } else if (allowReseed && dbState.categories.length === 0) {
     dbState.categories = [...PRESEEDED_CATEGORIES];
   }
   // Ensure all categories have valid id, status, slug, and sortOrder
@@ -2456,7 +2461,9 @@ function normalizeDatabaseRelationships() {
   });
 
   // Ensure services have valid categoryId
-  if (!Array.isArray(dbState.services) || dbState.services.length === 0) {
+  if (!Array.isArray(dbState.services)) {
+    dbState.services = allowReseed ? [...PRESEEDED_SERVICES] : [];
+  } else if (allowReseed && dbState.services.length === 0) {
     dbState.services = [...PRESEEDED_SERVICES];
   }
   if (Array.isArray(dbState.services)) {
@@ -2472,7 +2479,9 @@ function normalizeDatabaseRelationships() {
   }
 
   // 4. Normalize Blog Categories & Blog relationships
-  if (!Array.isArray(dbState.blogCategories) || dbState.blogCategories.length === 0) {
+  if (!Array.isArray(dbState.blogCategories)) {
+    dbState.blogCategories = allowReseed ? [...PRESEEDED_BLOG_CATEGORIES] : [];
+  } else if (allowReseed && dbState.blogCategories.length === 0) {
     dbState.blogCategories = [...PRESEEDED_BLOG_CATEGORIES];
   }
   const seenBlogCatIds = new Set<string>();
@@ -2501,7 +2510,9 @@ function normalizeDatabaseRelationships() {
     if (!cat.icon) cat.icon = 'Bookmark';
   });
 
-  if (!Array.isArray(dbState.blogs) || dbState.blogs.length === 0) {
+  if (!Array.isArray(dbState.blogs)) {
+    dbState.blogs = allowReseed ? [...PRESEEDED_BLOGS] : [];
+  } else if (allowReseed && dbState.blogs.length === 0) {
     dbState.blogs = [...PRESEEDED_BLOGS];
   }
 
@@ -2626,6 +2637,32 @@ function normalizeDatabaseRelationships() {
       }
       if (cust.isVerified === undefined) cust.isVerified = true;
     });
+  }
+
+  // 5. Normalize and synchronize Contact Settings, Company Profile, and Settings
+  if (dbState.contactSettings && typeof dbState.contactSettings === 'object') {
+    const cs = dbState.contactSettings;
+    if (cs.whatsapp) {
+      cs.whatsapp = normalizeWhatsAppNumber(cs.whatsapp);
+    }
+    // Synchronize to companyProfile
+    if (!dbState.companyProfile) dbState.companyProfile = { ...PRESEEDED_COMPANY_PROFILE };
+    if (cs.phone) dbState.companyProfile.phone = cs.phone;
+    if (cs.email) dbState.companyProfile.email = cs.email;
+    if (cs.address) dbState.companyProfile.address = cs.address;
+    if (cs.city) dbState.companyProfile.city = cs.city;
+    if (cs.state) dbState.companyProfile.state = cs.state;
+    if (cs.pinCode) dbState.companyProfile.pinCode = cs.pinCode;
+
+    // Synchronize to settings.contactDetails and settings.whatsAppNumber
+    if (dbState.settings) {
+      if (!dbState.settings.contactDetails) dbState.settings.contactDetails = {};
+      if (cs.phone) dbState.settings.contactDetails.phone = cs.phone;
+      if (cs.email) dbState.settings.contactDetails.email = cs.email;
+      const fullAddr = [cs.address, cs.city, cs.state].filter(Boolean).join(', ') + (cs.pinCode ? ` - ${cs.pinCode}` : '');
+      if (fullAddr) dbState.settings.contactDetails.address = fullAddr;
+      if (cs.whatsapp) dbState.settings.whatsAppNumber = cs.whatsapp;
+    }
   }
 
   console.log('[DATA SYNC] Relationship normalization and repair complete.');
@@ -2765,12 +2802,15 @@ async function asyncInitDatabaseState(): Promise<void> {
     try {
       console.log('[DB] Checking Cloudflare D1 database state...');
       const d1Result = await loadStateFromD1(d1);
-      if (d1Result && !d1Result.isFreshDatabase && d1Result.totalDocsLoaded > 0) {
+      if (d1Result && !d1Result.isFreshDatabase) {
+        setD1Initialized(true);
         console.log(`[DB] Successfully hydrated dbState from Cloudflare D1 (${d1Result.totalDocsLoaded} records loaded)...`);
         const d1State = d1Result.state;
         for (const collName of ENTITY_COLLECTIONS) {
           if (d1State[collName] !== undefined) {
             dbState[collName] = d1State[collName];
+          } else {
+            dbState[collName] = OBJECT_COLLECTIONS.has(collName) ? {} : [];
           }
         }
         for (const key of SETTING_KEYS) {
@@ -2790,7 +2830,7 @@ async function asyncInitDatabaseState(): Promise<void> {
           if (!dbState.settings) dbState.settings = {};
           dbState.settings.paymentConfig = pay;
         }
-        normalizeDatabaseRelationships();
+        normalizeDatabaseRelationships({ allowReseed: false });
 
         // Ensure categories relational table is in 100% parity with dbState.categories on startup
         if (Array.isArray(dbState.categories) && dbState.categories.length > 0) {
@@ -2807,8 +2847,9 @@ async function asyncInitDatabaseState(): Promise<void> {
         console.log('[DB] Cloudflare D1 is fresh or empty. Will seed from baseline state.');
         const seedState = getBaselineSeedState();
         Object.assign(dbState, seedState);
-        normalizeDatabaseRelationships();
+        normalizeDatabaseRelationships({ allowReseed: true });
         await seedD1FromState(dbState, d1);
+        setD1Initialized(true);
         isDatabaseReady = true;
         return;
       }
@@ -2837,7 +2878,7 @@ async function asyncInitDatabaseState(): Promise<void> {
     console.error('[DB] Local file load warning:', err);
   }
 
-  normalizeDatabaseRelationships();
+  normalizeDatabaseRelationships({ allowReseed: false });
   isDatabaseReady = true;
 }
 
@@ -6626,7 +6667,8 @@ function normalizeWhatsAppNumber(raw: any): string {
     : '919876543210';
 }
 
-const handleContactSettingsGet = (req: express.Request, res: express.Response) => {
+const handleContactSettingsGet = async (req: express.Request, res: express.Response) => {
+  await ensureDatabaseReady();
   if (!dbState.contactSettings) {
     dbState.contactSettings = { ...PRESEEDED_CONTACT_SETTINGS };
   }
@@ -6665,9 +6707,19 @@ const handleContactSettingsUpdate = async (req: express.Request, res: express.Re
     if (sanitized.state) dbState.companyProfile.state = sanitized.state;
     if (sanitized.pinCode) dbState.companyProfile.pinCode = sanitized.pinCode;
 
+    // Also sync to settings so settings.contactDetails and settings.whatsAppNumber stay in sync
+    if (!dbState.settings) dbState.settings = { ...PRESEEDED_SETTINGS };
+    if (!dbState.settings.contactDetails) dbState.settings.contactDetails = { ...PRESEEDED_SETTINGS.contactDetails };
+    if (sanitized.phone) dbState.settings.contactDetails.phone = sanitized.phone;
+    if (sanitized.email) dbState.settings.contactDetails.email = sanitized.email;
+    if (sanitized.whatsapp) dbState.settings.whatsAppNumber = sanitized.whatsapp;
+    const fullAddress = [sanitized.address, sanitized.city, sanitized.state].filter(Boolean).join(', ') + (sanitized.pinCode ? ` - ${sanitized.pinCode}` : '');
+    if (fullAddress) dbState.settings.contactDetails.address = fullAddress;
+
     logSystemAction(user?.id || updaterId || 'admin-1', user?.name || updaterName || 'Admin', user?.role || updaterRole || 'ADMIN', 'CONTACT_SETTINGS_UPDATE', 'Updated official contact details, phone numbers & WhatsApp configuration.');
     await persistDatabase('contactSettings');
     await persistDatabase('companyProfile');
+    await persistDatabase('settings');
   }
   res.json({ message: 'Contact settings saved successfully.', contactSettings: dbState.contactSettings });
 };
@@ -9115,11 +9167,13 @@ function buildLocalKnowledgeResponse(msg: string, contextService?: any): { text:
   const isContactInquiry = /\b(contact|phone|call|email|support|office|address|location|whatsapp|reach|hours)\b/i.test(lower);
   if (isContactInquiry) {
     const cs = dbState.contactSettings || {};
-    const phone = cs.phone || '9999988888';
-    const email = cs.email || 'support@easydesk.in';
-    const address = cs.address || 'Signature IT Park, Bandra Kurla Complex (BKC), Mumbai, Maharashtra 400051';
+    const phone = cs.phone || '+91 9575538590';
+    const email = cs.email || 'help.myeasydesks@gmail.com';
+    const fullAddress = [cs.address, cs.city, cs.state].filter(Boolean).join(', ') + (cs.pinCode ? ` - ${cs.pinCode}` : '');
+    const address = fullAddress || 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010';
     const hours = cs.workingHours || 'Monday - Saturday, 9:00 AM - 7:00 PM IST';
-    const whatsapp = cs.whatsapp || phone;
+    const rawWa = cs.whatsapp || phone;
+    const whatsapp = normalizeWhatsAppNumber(rawWa);
 
     return {
       text: `### 🏢 Official EasyDesk Support & Contact Information\n\nYou can reach our customer verification and support desk through the following official channels:\n\n• **Customer Helpline**: ${phone}\n• **Official Email**: ${email}\n• **WhatsApp Support**: +${whatsapp}\n• **Working Hours**: ${hours}\n• **Head Office Address**: ${address}\n\nOur consultants are ready to assist you with active applications, document audits, and corporate filings.`,

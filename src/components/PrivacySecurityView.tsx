@@ -187,11 +187,11 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
   securityContact: {
     title: 'Contact EasyDesk Security Team',
     securityEmail: 'security@easydesk.com',
-    supportEmail: 'support@easydesk.com',
+    supportEmail: 'help.myeasydesks@gmail.com',
     customerCarePhone: '',
     emergencyHotline: '',
     businessHours: 'Monday – Saturday: 9:00 AM – 7:00 PM IST',
-    officeAddress: 'Digital India Tower, Plot 14, Sector 62, Noida, UP - 201301'
+    officeAddress: 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010'
   },
   legalCompliance: {
     title: 'Legal Compliance Statement',

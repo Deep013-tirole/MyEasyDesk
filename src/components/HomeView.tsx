@@ -9,11 +9,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Service, Blog, Review, BlogCategory } from '../types.js';
-import { openWhatsAppForService, openGeneralWhatsApp, onContactSettingsUpdated } from '../lib/whatsapp.js';
+import { openWhatsAppForService, openGeneralWhatsApp, onContactSettingsUpdated, updateCachedContactSettings } from '../lib/whatsapp.js';
 import { BaseCard, BaseCardBody, BaseCardFooter } from './BaseCard.js';
 import ReviewSubmissionModal from './ReviewSubmissionModal.js';
 import BlogCard from './blog/BlogCard.js';
-import { getClientFaqs } from '../lib/apiDataService.js';
+import { getClientFaqs, formatFullAddress } from '../lib/apiDataService.js';
 
 const STATS = [
   { label: 'Applications Handled', value: '45,280+', desc: 'Across 100+ digital certificate categories' },
@@ -107,17 +107,17 @@ export default function HomeView({
   useEffect(() => {
     const applyContact = (data: any) => {
       if (data && typeof data === 'object') {
+        const fullAddress = formatFullAddress(data) || (data.address ? `${data.address}${data.city ? ', ' + data.city : ''}${data.state ? ', ' + data.state : ''}${data.pinCode ? ' - ' + data.pinCode : ''}` : (data.city ? `${data.city}, ${data.state || ''}` : ''));
         const clean = {
           companyName: data.companyName || 'EasyDesk Digital Services Pvt Ltd',
           phone: data.phone || data.whatsapp || '',
           email: data.email || '',
-          workingHours: data.workingHours || data.hours || 'Mon - Sat: 9:00 AM - 6:30 PM',
-          address: data.address ? `${data.address}${data.city ? ', ' + data.city : ''}${data.state ? ', ' + data.state : ''}${data.pinCode ? ' - ' + data.pinCode : ''}` : (data.city ? `${data.city}, ${data.state || ''}` : '')
+          workingHours: data.workingHours || data.hours || 'Mon - Sat: 9:00 AM - 7:00 PM IST',
+          address: fullAddress
         };
         setContactInfo(clean);
-        try {
-          localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(clean));
-        } catch {}
+        // Safely cache full structured data so other views don't lose city/state/pinCode
+        updateCachedContactSettings(data);
       }
     };
 

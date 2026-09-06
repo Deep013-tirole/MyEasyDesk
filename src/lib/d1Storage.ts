@@ -563,12 +563,23 @@ export async function initD1Schema(dbInstance?: any): Promise<void> {
   }
 }
 
+let d1InitializedInMemory = false;
+
+export function isD1Initialized(): boolean {
+  return d1InitializedInMemory;
+}
+
+export function setD1Initialized(val: boolean): void {
+  d1InitializedInMemory = Boolean(val);
+}
+
 /**
  * Loads all system settings and entities from Cloudflare D1.
  */
 export async function loadStateFromD1(dbInstance?: any): Promise<{
   state: Record<string, any>;
   isFreshDatabase: boolean;
+  hasSystemInit: boolean;
   totalDocsLoaded: number;
 } | null> {
   const db = dbInstance || getD1Database();
@@ -620,9 +631,21 @@ export async function loadStateFromD1(dbInstance?: any): Promise<{
 
     const isFreshDatabase = !hasSystemInit && totalDocsLoaded === 0;
 
+    // In an already initialized database, any entity collection with 0 rows
+    // in the entities table is authoritatively empty.
+    if (hasSystemInit || !isFreshDatabase) {
+      setD1Initialized(true);
+      for (const collName of ENTITY_COLLECTIONS) {
+        if (state[collName] === undefined) {
+          state[collName] = OBJECT_COLLECTIONS.has(collName) ? {} : [];
+        }
+      }
+    }
+
     return {
       state,
       isFreshDatabase,
+      hasSystemInit,
       totalDocsLoaded
     };
   } catch (err) {
@@ -2718,39 +2741,6 @@ export async function readCollectionWithFallback<T = any>(
         throw new Error(`Relational query returned non-array result for collection ${collection}`);
       }
 
-      // Guard against silent empty or partial returns when legacy store has records
-      const legacySample = legacyGetter();
-      if (Array.isArray(legacySample) && legacySample.length > 0) {
-        if (relResult.length === 0) {
-          // Self-heal relational table in background
-          syncCollectionToD1(collection, legacySample, db).catch(e => {
-            console.warn(`[SELF-HEAL WARN] Initial population failed for ${collection}:`, e?.message);
-          });
-          throw new Error(`Relational table returned 0 records while legacy store contains ${legacySample.length} records`);
-        }
-
-        if (relResult.length < legacySample.length) {
-          console.warn(`[RELATIONAL READ PARITY DEFICIT] Relational query for ${collection} returned ${relResult.length} rows, but legacy store contains ${legacySample.length} records. Merging to prevent data loss and self-healing relational mirror...`);
-          // Self-heal missing records to relational table in background
-          syncCollectionToD1(collection, legacySample, db).catch(e => {
-            console.warn(`[SELF-HEAL WARN] Parity sync failed for ${collection}:`, e?.message);
-          });
-
-          // Merge so client receives 100% of records immediately without waiting
-          const relIds = new Set((relResult as any[]).map(r => String(r.id || r.code || '')));
-          const merged = [...relResult];
-          for (const leg of legacySample) {
-            const legId = String((leg as any).id || (leg as any).code || '');
-            if (legId && !relIds.has(legId)) {
-              merged.push(leg);
-              relIds.add(legId);
-            }
-          }
-          recordReadSuccessInMemory(collection);
-          return merged as T[];
-        }
-      }
-
       recordReadSuccessInMemory(collection);
       return relResult as T[];
     } catch (relErr: any) {
@@ -3262,7 +3252,7 @@ export async function seedD1FromState(initialState: Record<string, any>, dbInsta
         console.warn('[D1 SEED] Category relational mirror notice:', catSeedErr?.message);
       }
     }
-
+    setD1Initialized(true);
     return true;
   } catch (err) {
     console.error('[D1] Error seeding D1 database:', err);

@@ -3,7 +3,7 @@ import { Service } from '../types.js';
 let lastFetchTime = 0;
 
 export function normalizeWhatsAppNumber(raw?: string | null): string {
-  if (!raw) return '919876543210';
+  if (!raw) return '919575538590';
   const digits = raw.replace(/\D/g, '');
   if (digits.length === 10) {
     return `91${digits}`;
@@ -17,20 +17,26 @@ export function normalizeWhatsAppNumber(raw?: string | null): string {
   if (digits.length > 0) {
     return digits;
   }
-  return '919876543210';
+  return '919575538590';
 }
 
 export function updateCachedContactSettings(data: any) {
-  if (data) {
+  if (data && typeof data === 'object') {
     if (data.whatsapp) {
       const norm = normalizeWhatsAppNumber(data.whatsapp);
-      localStorage.setItem('easydesk_whatsapp_number', norm);
+      try {
+        localStorage.setItem('easydesk_whatsapp_number', norm);
+      } catch {}
     }
     if (data.phone) {
-      localStorage.setItem('easydesk_contact_phone', data.phone);
+      try {
+        localStorage.setItem('easydesk_contact_phone', data.phone);
+      } catch {}
     }
     if (data.email) {
-      localStorage.setItem('easydesk_contact_email', data.email);
+      try {
+        localStorage.setItem('easydesk_contact_email', data.email);
+      } catch {}
     }
     try {
       localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(data));
@@ -48,11 +54,15 @@ export function syncContactSettingsFromServer(force = false) {
   }
   lastFetchTime = now;
 
-  fetch('/api/contact-settings')
+  fetch(`/api/contact-settings?_t=${now}`, {
+    cache: 'no-store',
+    headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' }
+  })
     .then(res => res.ok ? res.json() : null)
     .then(data => {
-      if (data) {
-        updateCachedContactSettings(data);
+      if (data && typeof data === 'object') {
+        const contactData = data.contactSettings || data;
+        updateCachedContactSettings(contactData);
       }
     })
     .catch(() => {});
@@ -62,12 +72,22 @@ export function getWhatsAppNumber(): string {
   // Always trigger non-blocking sync from server if stale
   syncContactSettingsFromServer();
 
-  const storedNumber = typeof localStorage !== 'undefined' ? localStorage.getItem('easydesk_whatsapp_number') : null;
-  if (storedNumber) {
-    return normalizeWhatsAppNumber(storedNumber);
+  if (typeof localStorage !== 'undefined') {
+    const storedNumber = localStorage.getItem('easydesk_whatsapp_number');
+    if (storedNumber) {
+      return normalizeWhatsAppNumber(storedNumber);
+    }
+    try {
+      const cached = localStorage.getItem('easydesk_cache_contact_settings');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.whatsapp) return normalizeWhatsAppNumber(parsed.whatsapp);
+        if (parsed && parsed.phone) return normalizeWhatsAppNumber(parsed.phone);
+      }
+    } catch {}
   }
 
-  return '919876543210';
+  return '919575538590';
 }
 
 export function onContactSettingsUpdated(callback: (data: any) => void) {

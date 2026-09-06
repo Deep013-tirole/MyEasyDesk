@@ -8,7 +8,8 @@ import { motion } from 'motion/react';
 import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { openGeneralWhatsApp } from '../lib/whatsapp.js';
 import { BaseCard, BaseCardBody } from './BaseCard.js';
-import { getClientContactSettings } from '../lib/apiDataService.js';
+import { getClientContactSettings, formatFullAddress } from '../lib/apiDataService.js';
+import { onContactSettingsUpdated, updateCachedContactSettings } from '../lib/whatsapp.js';
 
 interface ContactSettings {
   companyName: string;
@@ -35,8 +36,8 @@ const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
   companyName: 'EasyDesk Digital Services Pvt Ltd',
   phone: '',
   whatsapp: '',
-  email: 'support@easydesk.com',
-  alternateEmail: 'info@easydesk.com',
+  email: '',
+  alternateEmail: '',
   address: '',
   city: '',
   state: '',
@@ -58,7 +59,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
       const cached = localStorage.getItem('easydesk_cache_contact_settings');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed && (parsed.phone || parsed.email || parsed.companyName)) {
+        if (parsed && (parsed.phone || parsed.email || parsed.companyName || parsed.address)) {
           return { ...DEFAULT_CONTACT_SETTINGS, ...parsed };
         }
       }
@@ -87,6 +88,14 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
 
   useEffect(() => {
     let isMounted = true;
+
+    // Real-time synchronization when Admin updates contact details in another component/tab
+    const unsubscribe = onContactSettingsUpdated((freshData) => {
+      if (freshData && typeof freshData === 'object' && isMounted) {
+        setContactInfo(prev => ({ ...prev, ...freshData }));
+      }
+    });
+
     const fetchContactInfo = async () => {
       try {
         try {
@@ -99,14 +108,9 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
           });
           if (res.ok) {
             const data = await safeParseJsonResponse<any>(res);
-            if (data && (data.phone || data.email || data.companyName) && isMounted) {
-              setContactInfo(prev => {
-                const updated = { ...prev, ...data };
-                try {
-                  localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(updated));
-                } catch {}
-                return updated;
-              });
+            if (data && typeof data === 'object' && (data.phone || data.email || data.companyName || data.address) && isMounted) {
+              setContactInfo(prev => ({ ...prev, ...data }));
+              updateCachedContactSettings(data);
               return;
             }
           }
@@ -120,14 +124,9 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
         try {
           if (typeof navigator === 'undefined' || navigator.onLine !== false) {
             const directContact = await getClientContactSettings();
-            if (directContact && isMounted) {
-              setContactInfo(prev => {
-                const updated = { ...prev, ...directContact };
-                try {
-                  localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(updated));
-                } catch {}
-                return updated;
-              });
+            if (directContact && typeof directContact === 'object' && isMounted) {
+              setContactInfo(prev => ({ ...prev, ...directContact }));
+              updateCachedContactSettings(directContact);
             }
           }
         } catch (fsErr: any) {
@@ -143,7 +142,10 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
     };
 
     fetchContactInfo();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
 
@@ -262,9 +264,15 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Phone Support</span>
-                  <a href={contactInfo?.phone ? `tel:${contactInfo.phone}` : '#'} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors">
-                    {contactInfo?.phone || 'Desk Hotline Available'}
-                  </a>
+                  {contactInfo?.phone ? (
+                    <a href={`tel:${contactInfo.phone}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors">
+                      {contactInfo.phone}
+                    </a>
+                  ) : loading ? (
+                    <div className="h-4 w-32 bg-slate-100 rounded animate-pulse mt-0.5" />
+                  ) : (
+                    <span className="font-medium text-xs text-slate-500">Contact Support Desk</span>
+                  )}
                 </div>
               </div>
 
@@ -279,7 +287,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                     onClick={() => openGeneralWhatsApp()}
                     className="font-black text-sm text-emerald-600 hover:underline text-left cursor-pointer p-0 bg-transparent border-0 flex items-center gap-1.5"
                   >
-                    <span>{contactInfo?.whatsapp ? `+${contactInfo.whatsapp}` : 'Online WhatsApp Support'}</span>
+                    <span>{contactInfo?.whatsapp ? `+${contactInfo.whatsapp}` : (loading ? 'Loading...' : 'Chat on WhatsApp')}</span>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Chat Live</span>
                   </button>
                 </div>
@@ -292,9 +300,15 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Official Email</span>
-                  <a href={`mailto:${contactInfo?.email}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] block transition-colors">
-                    {contactInfo?.email || 'support@easydesk.com'}
-                  </a>
+                  {contactInfo?.email ? (
+                    <a href={`mailto:${contactInfo.email}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] block transition-colors">
+                      {contactInfo.email}
+                    </a>
+                  ) : loading ? (
+                    <div className="h-4 w-36 bg-slate-100 rounded animate-pulse mt-0.5" />
+                  ) : (
+                    <span className="font-medium text-xs text-slate-500">Official Helpdesk</span>
+                  )}
                 </div>
               </div>
 
@@ -305,9 +319,17 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Office Location</span>
-                  <p className="font-medium text-xs text-slate-600 leading-relaxed m-0 mt-0.5">
-                    {contactInfo?.address || 'Signature IT Park, BKC'}, {contactInfo?.city || 'Mumbai'}, {contactInfo?.state || 'Maharashtra'} - {contactInfo?.pinCode || '400051'}
-                  </p>
+                  {formatFullAddress(contactInfo) ? (
+                    <p className="font-medium text-xs text-slate-600 leading-relaxed m-0 mt-0.5">
+                      {formatFullAddress(contactInfo)}
+                    </p>
+                  ) : loading ? (
+                    <div className="h-4 w-52 bg-slate-100 rounded animate-pulse mt-0.5" />
+                  ) : (
+                    <p className="font-medium text-xs text-slate-400 leading-relaxed m-0 mt-0.5">
+                      Head Office
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -319,7 +341,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Operating Schedule</span>
                   <p className="font-semibold text-xs text-slate-700 m-0 mt-0.5">
-                    {contactInfo?.workingHours || 'Mon - Sat: 9:00 AM - 6:30 PM IST'}
+                    {contactInfo?.workingHours || (loading ? 'Loading schedule...' : 'Mon - Sat: 9:00 AM - 7:00 PM IST')}
                   </p>
                 </div>
               </div>
