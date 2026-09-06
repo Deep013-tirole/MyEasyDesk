@@ -125,37 +125,80 @@ body {
   box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5) !important;
 }
 
-/* Global Print Styles for A4 HR Employee Records, Dossiers, & Receipts */
+/* Screen utility for print-only elements */
+.print-only {
+  display: none !important;
+}
+
+/* Global Print Styles for A4 Receipts, Tracking Slips, ID Cards & Dossiers */
 @media print {
   @page {
     size: A4 portrait;
     margin: 12mm 15mm 15mm 15mm;
   }
 
-  html, body {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-    font-size: 10pt !important;
-    font-family: Arial, Helvetica, sans-serif !important;
+  *, *::before, *::after {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
+  }
+
+  html, body {
+    background-color: #ffffff !important;
+    background: #ffffff !important;
+    color: #0f172a !important;
+    font-size: 10pt !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+  }
+
+  /* CRITICAL: #root MUST remain visible so React DOM prints correctly */
+  #root {
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+    overflow: visible !important;
+    background: transparent !important;
     margin: 0 !important;
     padding: 0 !important;
   }
 
-  /* Hide the main application root and all non-printable UI elements */
-  #root,
-  .no-print,
-  .no-print *,
+  /* Hide navigation, sidebars, footers, interactive controls, translation and chat widgets */
   nav,
   aside,
   header,
   footer,
-  button,
-  .modal-backdrop {
+  button:not(.print-include),
+  input:not(.print-include),
+  select:not(.print-include),
+  textarea:not(.print-include),
+  .no-print,
+  .no-print *,
+  .print\:hidden,
+  .screen-only,
+  #google_translate_element,
+  .modal-backdrop,
+  .floating-widget,
+  [data-floating-widget] {
     display: none !important;
   }
 
+  /* Display elements intended exclusively for print */
+  .print-only {
+    display: block !important;
+  }
+
+  span.print-only {
+    display: inline !important;
+  }
+
+  /* Printable Modal Wrapper & Dialog Resets */
+  .printable-modal-overlay,
   .print-dossier-overlay {
     position: static !important;
     inset: auto !important;
@@ -165,10 +208,25 @@ body {
     margin: 0 !important;
     display: block !important;
     overflow: visible !important;
+    width: 100% !important;
+    height: auto !important;
+    box-shadow: none !important;
   }
 
-  .print\:hidden {
-    display: none !important;
+  .printable-modal-card,
+  .print-dossier-wrapper,
+  .print-dossier-card {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
   }
 
   .print\:border-none {
@@ -176,41 +234,22 @@ body {
     box-shadow: none !important;
   }
 
-  /* Print Dossier Layout Container Reset */
-  .print-dossier-wrapper {
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: auto !important;
-    background: #ffffff !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    overflow: visible !important;
-  }
-
-  .print-dossier-card {
-    width: 100% !important;
-    max-width: 100% !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    border: none !important;
-    box-shadow: none !important;
-    background: #ffffff !important;
-  }
-
-  /* Prevent page-break separation of headers and content */
-  .print-section {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    margin-bottom: 14px !important;
+  /* Prevent awkward page-breaks inside sections, tables, and headers */
+  .print-section,
+  .print-avoid-break {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 12px !important;
   }
 
   .print-section-title {
-    page-break-after: avoid;
-    break-after: avoid;
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+
+  .print-break-before {
+    page-break-before: always !important;
+    break-before: page !important;
   }
 
   table {
@@ -220,7 +259,8 @@ body {
   }
 
   tr {
-    page-break-inside: avoid;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
     page-break-after: auto;
   }
 

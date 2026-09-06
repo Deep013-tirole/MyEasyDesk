@@ -32,6 +32,9 @@ export function updateCachedContactSettings(data: any) {
     if (data.email) {
       localStorage.setItem('easydesk_contact_email', data.email);
     }
+    try {
+      localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(data));
+    } catch {}
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('easydesk_contact_updated', { detail: data }));
     }
@@ -104,6 +107,31 @@ export function openGeneralWhatsApp(customText?: string) {
   const number = getWhatsAppNumber();
   const defaultText = `Hello EasyDesk, I would like to inquire about your digital document assistance services. Please guide me with the process. Thank you.`;
   const text = customText || defaultText;
+  window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank');
+}
+
+export function openWhatsAppForSubmittedOrder(order: {
+  id: string;
+  serviceTitle: string;
+  name: string;
+  createdAt?: string;
+}) {
+  const number = getWhatsAppNumber();
+  const dateStr = order.createdAt
+    ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+
+  const text = `Hello EasyDesk Team,
+
+I have submitted an online service request on your website:
+
+• Order ID: ${order.id}
+• Service: ${order.serviceTitle}
+• Applicant Name: ${order.name}
+• Submitted On: ${dateStr}
+
+Please verify my details and advise on the next steps and payment instructions. Thank you!`;
+
   window.open(`https://wa.me/${number}?text=${encodeURIComponent(text)}`, '_blank');
 }
 

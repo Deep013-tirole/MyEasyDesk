@@ -5,6 +5,7 @@ import {
   Search, ShieldAlert, Sparkles, Building2, MapPin, Calendar, Clock, ArrowRight
 } from 'lucide-react';
 import { Service, ServiceCategory, Order, CustomerRecord, OrderStatus, PaymentMethod, PaymentStatus } from '../../types.js';
+import IndianAddressFields from '../common/IndianAddressFields.js';
 
 interface CreateManualOrderModalProps {
   isOpen: boolean;
@@ -53,8 +54,9 @@ export default function CreateManualOrderModal({
   const [newCustEmail, setNewCustEmail] = useState('');
   const [newCustType, setNewCustType] = useState<'Individual' | 'Business' | 'Franchise'>('Individual');
   const [newCustAddress, setNewCustAddress] = useState('');
+  const [newCustDistrict, setNewCustDistrict] = useState('');
   const [newCustCity, setNewCustCity] = useState('');
-  const [newCustState, setNewCustState] = useState('Maharashtra');
+  const [newCustState, setNewCustState] = useState('');
   const [newCustPincode, setNewCustPincode] = useState('');
 
   // 5. Service Selection & Fees
@@ -219,10 +221,13 @@ export default function CreateManualOrderModal({
         payload.name = selectedCustomer.name;
         payload.mobile = selectedCustomer.mobile;
         payload.email = selectedCustomer.email;
-        payload.address = selectedCustomer.address;
-        payload.city = selectedCustomer.city;
-        payload.state = selectedCustomer.state;
-        payload.pinCode = selectedCustomer.pincode;
+        payload.address = selectedCustomer.address || '';
+        payload.city = selectedCustomer.city || '';
+        payload.district = selectedCustomer.district || '';
+        payload.state = selectedCustomer.state || '';
+        payload.pinCode = selectedCustomer.pincode || selectedCustomer.pinCode || '';
+        payload.pincode = selectedCustomer.pincode || selectedCustomer.pinCode || '';
+        payload.country = selectedCustomer.country || 'India';
       } else {
         payload.newCustomer = {
           name: newCustName.trim(),
@@ -230,19 +235,25 @@ export default function CreateManualOrderModal({
           whatsappMobile: sameAsMobile ? newCustMobile.trim() : (newCustWhatsapp.trim() || newCustMobile.trim()),
           email: newCustEmail.trim() || `${newCustName.trim().toLowerCase().replace(/[^a-z0-9]/g, '')}@easydesk.client`,
           customerType: newCustType,
-          address: newCustAddress.trim() || 'N/A',
-          city: newCustCity.trim() || 'Mumbai',
-          state: newCustState.trim() || 'Maharashtra',
-          pincode: newCustPincode.trim() || '400001',
+          address: newCustAddress.trim(),
+          city: newCustCity.trim(),
+          district: newCustDistrict.trim(),
+          state: newCustState.trim(),
+          pincode: newCustPincode.trim(),
+          pinCode: newCustPincode.trim(),
+          country: 'India',
           notes: `Created during manual ${orderSource} order creation`
         };
         payload.name = newCustName.trim();
         payload.mobile = newCustMobile.trim();
         payload.email = newCustEmail.trim() || payload.newCustomer.email;
-        payload.address = newCustAddress.trim() || 'N/A';
-        payload.city = newCustCity.trim() || 'Mumbai';
-        payload.state = newCustState.trim() || 'Maharashtra';
-        payload.pinCode = newCustPincode.trim() || '400001';
+        payload.address = newCustAddress.trim();
+        payload.city = newCustCity.trim();
+        payload.district = newCustDistrict.trim();
+        payload.state = newCustState.trim();
+        payload.pinCode = newCustPincode.trim();
+        payload.pincode = newCustPincode.trim();
+        payload.country = 'India';
       }
 
       const res = await adminFetch('/api/admin/orders', {
@@ -627,55 +638,39 @@ export default function CreateManualOrderModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="sm:col-span-1">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">
-                      Email Address (Optional)
-                    </label>
-                    <input
-                      type="email"
-                      value={newCustEmail}
-                      onChange={e => setNewCustEmail(e.target.value)}
-                      placeholder="customer@gmail.com"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">
-                      City
-                    </label>
-                    <input
-                      type="text"
-                      value={newCustCity}
-                      onChange={e => setNewCustCity(e.target.value)}
-                      placeholder="Mumbai"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">
-                      Pin Code
-                    </label>
-                    <input
-                      type="text"
-                      value={newCustPincode}
-                      onChange={e => setNewCustPincode(e.target.value)}
-                      placeholder="400001"
-                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600 font-mono"
-                    />
-                  </div>
-                </div>
-
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">
-                    Complete Street Address
+                    Email Address (Optional)
                   </label>
                   <input
-                    type="text"
-                    value={newCustAddress}
-                    onChange={e => setNewCustAddress(e.target.value)}
-                    placeholder="Flat / Shop No., Building, Street Name, Area"
+                    type="email"
+                    value={newCustEmail}
+                    onChange={e => setNewCustEmail(e.target.value)}
+                    placeholder="customer@gmail.com"
                     className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200">
+                  <IndianAddressFields
+                    compact
+                    showLandmark={false}
+                    value={{
+                      country: 'India',
+                      state: newCustState,
+                      district: newCustDistrict,
+                      city: newCustCity,
+                      addressLine1: newCustAddress,
+                      pinCode: newCustPincode,
+                      pincode: newCustPincode
+                    }}
+                    onChange={(addr) => {
+                      setNewCustState(addr.state || '');
+                      setNewCustDistrict(addr.district || '');
+                      setNewCustCity(addr.city || '');
+                      setNewCustPincode(addr.pinCode || addr.pincode || '');
+                      setNewCustAddress(addr.addressLine1 || addr.address || '');
+                    }}
                   />
                 </div>
               </div>

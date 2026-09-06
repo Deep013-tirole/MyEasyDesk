@@ -1,10 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  X, CheckCircle2, AlertCircle, FileText, IndianRupee, 
-  ShieldCheck, UploadCloud, Copy, ArrowRight, Check,
-  QrCode, CreditCard, Building, Lock, Sparkles, Clock
+  X, CheckCircle2, AlertCircle, FileText,
+  ShieldCheck, Copy, ArrowRight, Check,
+  Clock, MessageSquare, Edit3, User, MapPin,
+  Phone, Mail, FileCheck, Info
 } from 'lucide-react';
-import { Service, Order, PaymentMethod, PaymentStatus, OrderStatus } from '../types.js';
+import { Service, Order } from '../types.js';
+import { openWhatsAppForSubmittedOrder } from '../lib/whatsapp.js';
+import IndianAddressFields from './common/IndianAddressFields.js';
+import { isValidIndianPinCode } from '../lib/indiaAddressData.js';
 
 interface ApplyOnlineModalProps {
   isOpen: boolean;
@@ -23,7 +27,7 @@ export default function ApplyOnlineModal({
   onOrderCreated,
   setView
 }: ApplyOnlineModalProps) {
-  // Step indicator: 1 = Details, 2 = Documents, 3 = Payment & Summary, 4 = Confirmation
+  // Step indicator: 1 = Details, 2 = Documents, 3 = Review, 4 = Success Confirmation
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
 
   // Form State: Customer Profile
@@ -33,25 +37,15 @@ export default function ApplyOnlineModal({
   const [sameAsMobile, setSameAsMobile] = useState(true);
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [district, setDistrict] = useState('');
   const [city, setCity] = useState('');
-  const [state, setState] = useState('Maharashtra');
+  const [state, setState] = useState('');
   const [pinCode, setPinCode] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
 
   // Form State: Documents
-  const [uploadedDocs, setUploadedDocs] = useState<string[]>([]);
+  const [uploadedDocs] = useState<string[]>([]);
   const [docNotes, setDocNotes] = useState('');
-
-  // Form State: Pricing & Coupon
-  const [couponCode, setCouponCode] = useState('');
-  const [couponDiscount, setCouponDiscount] = useState(0);
-  const [couponSuccess, setCouponSuccess] = useState('');
-  const [couponError, setCouponError] = useState('');
-  const [validatingCoupon, setValidatingCoupon] = useState(false);
-
-  // Form State: Payment
-  const [paymentMethod, setPaymentMethod] = useState<string>('UPI');
-  const [utr, setUtr] = useState('');
 
   // Processing & Error States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,36 +57,7 @@ export default function ApplyOnlineModal({
 
   const baseGovFees = Number(service.govFees || 0);
   const baseServiceCharge = Number(service.serviceCharge || 0);
-  const subtotal = baseGovFees + baseServiceCharge;
-  const totalPayable = Math.max(0, subtotal - couponDiscount);
-
-  // Validate Coupon
-  const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
-    setValidatingCoupon(true);
-    setCouponError('');
-    setCouponSuccess('');
-
-    try {
-      const res = await fetch('/api/coupons/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponCode.trim(), amount: subtotal })
-      });
-      const data = await res.json();
-      if (res.ok && data.discount) {
-        setCouponDiscount(Number(data.discount));
-        setCouponSuccess(`Coupon '${data.coupon?.code || couponCode.toUpperCase()}' applied! ₹${data.discount} discount.`);
-      } else {
-        setCouponDiscount(0);
-        setCouponError(data.message || 'Invalid or expired coupon code.');
-      }
-    } catch {
-      setCouponError('Error validating coupon. Please proceed without coupon.');
-    } finally {
-      setValidatingCoupon(false);
-    }
-  };
+  const totalEstimatedAmount = baseGovFees + baseServiceCharge;
 
   // Step 1 Validation
   const handleProceedToDocs = (e: React.FormEvent) => {
@@ -107,46 +72,51 @@ export default function ApplyOnlineModal({
       return setErrorMsg('Please enter a valid email address for application updates.');
     }
     if (!address.trim()) return setErrorMsg('Please enter your complete street / postal address.');
+    if (!state.trim()) return setErrorMsg('Please select your State or Union Territory.');
     if (!city.trim()) return setErrorMsg('Please enter your city.');
-    if (!pinCode.trim() || !/^\d{6}$/.test(pinCode.replace(/\D/g, ''))) {
-      return setErrorMsg('Please enter a valid 6-digit postal PIN code.');
+    if (!isValidIndianPinCode(pinCode)) {
+      return setErrorMsg('Please enter a valid 6-digit postal PIN code (e.g. 400001).');
     }
 
     setStep(2);
   };
 
-  // Step 2 Validation
-  const handleProceedToPayment = () => {
+  // Step 2 Validation -> Proceed to Review
+  const handleProceedToReview = () => {
     setErrorMsg('');
     setStep(3);
   };
 
-  // Step 3 Order Submission
-  const handleSubmitOrder = async () => {
+  // Step 3 Order Submission (Without Payment)
+  const handleSubmitRequest = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     setErrorMsg('');
 
     try {
       const payload = {
         serviceId: service.id,
+        orderSource: 'Website',
         name: name.trim(),
         mobile: mobile.trim(),
         email: email.trim(),
         address: address.trim(),
+        district: district.trim(),
         city: city.trim(),
         state: state.trim(),
         pinCode: pinCode.trim(),
+        pincode: pinCode.trim(),
+        country: 'India',
         additionalNotes: additionalNotes.trim() + (docNotes ? ` | Doc Notes: ${docNotes}` : ''),
-        paymentMethod: paymentMethod === 'QR Code' ? PaymentMethod.QR : 
-                       paymentMethod === 'Bank Transfer' ? PaymentMethod.BANK_TRANSFER : PaymentMethod.UPI,
-        couponCode: couponDiscount > 0 ? couponCode.trim() : undefined,
-        uploadedDocs: uploadedDocs.length > 0 ? uploadedDocs : (service.requiredDocuments || ['Customer Document']),
-        utr: utr.trim() || undefined
+        uploadedDocs: uploadedDocs.length > 0 ? uploadedDocs : (service.requiredDocuments || ['Customer Verification Documents'])
       };
 
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': 'easydesk_secure_csrf_token_2026_val'
+        },
         body: JSON.stringify(payload)
       });
 
@@ -158,10 +128,10 @@ export default function ApplyOnlineModal({
           onOrderCreated(data);
         }
       } else {
-        setErrorMsg(data?.message || 'Failed to submit application. Please try again.');
+        setErrorMsg(data?.message || 'Failed to submit service request. Please try again.');
       }
     } catch {
-      setErrorMsg('Network connection error while placing application. Please try again.');
+      setErrorMsg('Network connection error while submitting request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -173,6 +143,14 @@ export default function ApplyOnlineModal({
     setCopiedOrderId(true);
     setTimeout(() => setCopiedOrderId(false), 2000);
   };
+
+  const requiredDocList = (service.requiredDocuments && service.requiredDocuments.length > 0)
+    ? service.requiredDocuments
+    : [
+        'Proof of Identity (Aadhaar / Voter ID / Passport)',
+        'Proof of Address (Electricity Bill / Rent Agreement)',
+        'Passport Size Photograph'
+      ];
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5">
@@ -206,15 +184,15 @@ export default function ApplyOnlineModal({
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 1 ? 'bg-[#0F4C81] text-white' : 'bg-slate-200'}`}>1</span>
               <span>Citizen Info</span>
             </div>
-            <div className="w-8 h-0.5 bg-slate-200" />
+            <div className="w-8 sm:w-16 h-0.5 bg-slate-200" />
             <div className={`flex items-center gap-1.5 ${step >= 2 ? 'text-[#0F4C81]' : ''}`}>
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 2 ? 'bg-[#0F4C81] text-white' : 'bg-slate-200'}`}>2</span>
               <span>Documents</span>
             </div>
-            <div className="w-8 h-0.5 bg-slate-200" />
+            <div className="w-8 sm:w-16 h-0.5 bg-slate-200" />
             <div className={`flex items-center gap-1.5 ${step >= 3 ? 'text-[#0F4C81]' : ''}`}>
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${step >= 3 ? 'bg-[#0F4C81] text-white' : 'bg-slate-200'}`}>3</span>
-              <span>Review & Pay</span>
+              <span>Review Request</span>
             </div>
           </div>
         )}
@@ -301,53 +279,28 @@ export default function ApplyOnlineModal({
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Full Street / Postal Address *</label>
-                <input
-                  type="text"
+              <div className="bg-slate-50/50 p-3 rounded-xl border border-slate-200">
+                <IndianAddressFields
                   required
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  placeholder="House/Flat No, Landmark, Area"
-                  className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none"
+                  compact
+                  showLandmark={false}
+                  value={{
+                    country: 'India',
+                    state,
+                    district,
+                    city,
+                    addressLine1: address,
+                    pinCode,
+                    pincode: pinCode
+                  }}
+                  onChange={(addr) => {
+                    setState(addr.state || '');
+                    setDistrict(addr.district || '');
+                    setCity(addr.city || '');
+                    setPinCode(addr.pinCode || addr.pincode || '');
+                    setAddress(addr.addressLine1 || addr.address || '');
+                  }}
                 />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">City *</label>
-                  <input
-                    type="text"
-                    required
-                    value={city}
-                    onChange={e => setCity(e.target.value)}
-                    placeholder="e.g. Pune"
-                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">State *</label>
-                  <input
-                    type="text"
-                    required
-                    value={state}
-                    onChange={e => setState(e.target.value)}
-                    placeholder="Maharashtra"
-                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">PIN Code *</label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    value={pinCode}
-                    onChange={e => setPinCode(e.target.value)}
-                    placeholder="411001"
-                    className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none"
-                  />
-                </div>
               </div>
 
               <div>
@@ -379,16 +332,12 @@ export default function ApplyOnlineModal({
               <div>
                 <h3 className="text-xs font-bold text-slate-900 mb-1">Required Documents Checklist</h3>
                 <p className="text-[11px] text-slate-500">
-                  Please verify that you have authentic copies of the following documents ready:
+                  Please verify that you have authentic copies of the following documents ready for submission:
                 </p>
               </div>
 
               <div className="space-y-2 bg-slate-50 border border-slate-200 rounded-2xl p-4">
-                {(service.requiredDocuments && service.requiredDocuments.length > 0 ? service.requiredDocuments : [
-                  'Proof of Identity (Aadhaar / Voter ID / Passport)',
-                  'Proof of Address (Electricity Bill / Rent Agreement)',
-                  'Passport Size Photograph'
-                ]).map((doc, idx) => (
+                {requiredDocList.map((doc, idx) => (
                   <div key={idx} className="flex items-center gap-2.5 bg-white border border-slate-200/80 p-3 rounded-xl">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                     <span className="text-xs font-semibold text-slate-800">{doc}</span>
@@ -397,10 +346,21 @@ export default function ApplyOnlineModal({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">Document Readiness Confirmation</label>
-                <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-slate-600 leading-relaxed">
-                  ✓ After placing your order, our dedicated desk agent will verify your details and connect on WhatsApp or through your tracking portal to collect clear digital copies.
-                </div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Document Readiness & Notes (Optional)</label>
+                <textarea
+                  rows={2}
+                  value={docNotes}
+                  onChange={e => setDocNotes(e.target.value)}
+                  placeholder="e.g. Aadhaar linked to phone, original marksheet available, etc."
+                  className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none resize-none"
+                />
+              </div>
+
+              <div className="p-3 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-slate-600 leading-relaxed flex items-start gap-2">
+                <Info className="w-4 h-4 text-[#0F4C81] shrink-0 mt-0.5" />
+                <span>
+                  <strong>Document Verification Guarantee:</strong> After submitting your request, our dedicated desk coordinator will review your file and connect with you on WhatsApp or call to collect clear digital scans.
+                </span>
               </div>
 
               <div className="pt-2 flex items-center justify-between">
@@ -413,22 +373,121 @@ export default function ApplyOnlineModal({
                 </button>
                 <button
                   type="button"
-                  onClick={handleProceedToPayment}
+                  onClick={handleProceedToReview}
                   className="bg-[#0F4C81] hover:bg-[#0c3e69] text-white font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
                 >
-                  <span>Continue to Payment</span>
+                  <span>Continue to Review</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: FEE BREAKDOWN & PAYMENT METHOD */}
+          {/* STEP 3: REVIEW & SUBMIT REQUEST (NO PAYMENT REQUIRED) */}
           {step === 3 && (
             <div className="space-y-4">
-              {/* Fee Summary */}
+              <div>
+                <h3 className="text-sm font-black text-slate-900">Review Application Request</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Please review all details before submitting. No payment is required at this stage.
+                </p>
+              </div>
+
+              {/* Card A: Selected Service */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Selected Service</span>
+                  <span className="text-[11px] font-bold text-[#0F4C81] bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
+                    {categoryName}
+                  </span>
+                </div>
+                <div className="flex items-baseline justify-between">
+                  <h4 className="text-sm font-black text-slate-900">{service.title}</h4>
+                  <span className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{service.processingTime || '3–5 Days'}</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Card B: Citizen Information */}
               <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2.5">
-                <h4 className="text-xs font-bold text-slate-900 border-b border-slate-200 pb-2">Fee & Charge Summary</h4>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <User className="w-3 h-3" /> Citizen Details
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="text-[11px] font-bold text-[#0F4C81] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit3 className="w-3 h-3" /> Edit
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Full Name</span>
+                    <span className="font-bold text-slate-800">{name}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Contact Number</span>
+                    <span className="font-bold text-slate-800">+91 {mobile}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">WhatsApp Number</span>
+                    <span className="font-bold text-slate-800">+91 {sameAsMobile ? mobile : whatsappMobile}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 text-[10px] block">Email Address</span>
+                    <span className="font-bold text-slate-800 truncate block">{email}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-slate-400 text-[10px] block">Postal Address</span>
+                    <span className="text-slate-700 font-medium">{[address, district, city, state].filter(Boolean).join(', ')}{pinCode ? ` - ${pinCode}` : ''}</span>
+                  </div>
+                  {additionalNotes && (
+                    <div className="sm:col-span-2 pt-1 border-t border-slate-200/60">
+                      <span className="text-slate-400 text-[10px] block">Applicant Notes</span>
+                      <span className="text-slate-600 text-[11px] italic">{additionalNotes}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Card C: Document Readiness */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                    <FileCheck className="w-3 h-3" /> Documents Ready for Verification
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="text-[11px] font-bold text-[#0F4C81] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <Edit3 className="w-3 h-3" /> Edit
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {requiredDocList.map((doc, idx) => (
+                    <span key={idx} className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-2.5 py-1 rounded-lg text-[11px] font-medium">
+                      <Check className="w-3 h-3 text-emerald-600" />
+                      <span>{doc}</span>
+                    </span>
+                  ))}
+                </div>
+                {docNotes && (
+                  <p className="text-[11px] text-slate-600 italic pt-1 border-t border-slate-200/60">
+                    Doc Notes: {docNotes}
+                  </p>
+                )}
+              </div>
+
+              {/* Card D: Transparent Fee Structure (Informational Only) */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 space-y-2">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                  Transparent Service Fee Structure
+                </span>
                 <div className="flex justify-between text-xs text-slate-600">
                   <span>Official Government Department Fee:</span>
                   <span className="font-bold text-slate-900">₹{baseGovFees}</span>
@@ -437,107 +496,46 @@ export default function ApplyOnlineModal({
                   <span>EasyDesk Documentation & Advisory Charge:</span>
                   <span className="font-bold text-slate-900">₹{baseServiceCharge}</span>
                 </div>
-                {couponDiscount > 0 && (
-                  <div className="flex justify-between text-xs text-emerald-700 font-bold">
-                    <span>Coupon Discount:</span>
-                    <span>-₹{couponDiscount}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-sm font-black text-[#0F4C81] border-t border-slate-200 pt-2">
-                  <span>Total Amount Payable:</span>
-                  <span>₹{totalPayable}</span>
+                <div className="flex justify-between text-xs font-black text-[#0F4C81] border-t border-slate-200 pt-2">
+                  <span>Total Estimated Fee:</span>
+                  <span>₹{totalEstimatedAmount}</span>
                 </div>
               </div>
 
-              {/* Coupon Code Input */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-bold text-slate-700">Have a Promotional Coupon?</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={e => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="Enter Coupon Code"
-                    className="flex-1 text-xs p-2.5 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none uppercase font-bold"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyCoupon}
-                    disabled={validatingCoupon || !couponCode.trim()}
-                    className="bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
-                  >
-                    {validatingCoupon ? 'Checking...' : 'Apply'}
-                  </button>
-                </div>
-                {couponSuccess && <p className="text-[11px] text-emerald-600 font-bold">{couponSuccess}</p>}
-                {couponError && <p className="text-[11px] text-rose-600 font-bold">{couponError}</p>}
-              </div>
-
-              {/* Payment Method Selection */}
-              <div className="space-y-2">
-                <label className="block text-xs font-bold text-slate-700">Select Payment Method</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { id: 'UPI', label: 'UPI Direct', icon: CreditCard },
-                    { id: 'QR Code', label: 'QR Scan', icon: QrCode },
-                    { id: 'Bank Transfer', label: 'Bank NEFT', icon: Building }
-                  ].map(m => {
-                    const Icon = m.icon;
-                    const isSelected = paymentMethod === m.id;
-                    return (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setPaymentMethod(m.id)}
-                        className={`p-3 rounded-xl border text-center transition cursor-pointer flex flex-col items-center gap-1.5 ${
-                          isSelected ? 'border-[#0F4C81] bg-blue-50/60 text-[#0F4C81] font-bold shadow-2xs' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                        }`}
-                      >
-                        <Icon className="w-4 h-4" />
-                        <span className="text-[11px]">{m.label}</span>
-                      </button>
-                    );
-                  })}
+              {/* Clear User Trust Advisory: No Payment Required Now */}
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-start gap-3">
+                <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-emerald-900 leading-relaxed">
+                  <strong className="font-bold block text-emerald-950 mb-0.5">No Immediate Payment Required</strong>
+                  Submit your request now without paying. Our desk coordinator will verify your paperwork and contact you directly via WhatsApp or phone to confirm details and provide official payment instructions.
                 </div>
               </div>
 
-              {/* Optional UTR Input */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  UTR / Reference ID (if already transferred)
-                </label>
-                <input
-                  type="text"
-                  value={utr}
-                  onChange={e => setUtr(e.target.value)}
-                  placeholder="e.g. 331289123456 (can also submit later on Tracking page)"
-                  className="w-full text-xs p-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#0F4C81] outline-none"
-                />
-              </div>
-
+              {/* Action Buttons */}
               <div className="pt-2 flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setStep(2)}
-                  className="border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs py-3 px-5 rounded-xl transition cursor-pointer"
+                  disabled={isSubmitting}
+                  className="border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs py-3 px-5 rounded-xl transition cursor-pointer disabled:opacity-50"
                 >
                   Back
                 </button>
                 <button
                   type="button"
-                  onClick={handleSubmitOrder}
+                  onClick={handleSubmitRequest}
                   disabled={isSubmitting}
-                  className="bg-[#10B981] hover:bg-[#0e9f6e] disabled:bg-slate-300 text-white font-black text-xs py-3.5 px-7 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
+                  className="bg-[#10B981] hover:bg-[#0e9f6e] disabled:bg-slate-300 text-white font-black text-xs py-3.5 px-8 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer active:scale-95"
                 >
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Submitting Application...</span>
+                      <span>Submitting Request...</span>
                     </>
                   ) : (
                     <>
                       <ShieldCheck className="w-4 h-4" />
-                      <span>Confirm & Place Order (₹{totalPayable})</span>
+                      <span>Submit Request</span>
                     </>
                   )}
                 </button>
@@ -545,17 +543,17 @@ export default function ApplyOnlineModal({
             </div>
           )}
 
-          {/* STEP 4: ORDER CONFIRMATION */}
+          {/* STEP 4: ORDER SUCCESS SCREEN (ZERO PAYMENT REDIRECTS) */}
           {step === 4 && createdOrder && (
             <div className="text-center py-4 space-y-5 animate-in fade-in zoom-in-95">
-              <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
-                <CheckCircle2 className="w-8 h-8" />
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-xs">
+                <CheckCircle2 className="w-9 h-9" />
               </div>
 
               <div>
-                <h3 className="text-lg font-black text-slate-900">Application Submitted Successfully!</h3>
-                <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-                  Your official application has been recorded in the EasyDesk verification queue.
+                <h3 className="text-xl font-black text-slate-900">Request Submitted Successfully!</h3>
+                <p className="text-xs text-slate-600 mt-1 max-w-md mx-auto leading-relaxed">
+                  Your request has been received. Our team will contact you shortly to confirm the details and payment.
                 </p>
               </div>
 
@@ -563,7 +561,7 @@ export default function ApplyOnlineModal({
               <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl max-w-sm mx-auto flex items-center justify-between">
                 <div className="text-left">
                   <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Your Order ID</span>
-                  <span className="text-base font-black text-[#0F4C81]">{createdOrder.id}</span>
+                  <span className="text-base font-black text-[#0F4C81] font-mono">{createdOrder.id}</span>
                 </div>
                 <button
                   onClick={copyOrderId}
@@ -583,43 +581,66 @@ export default function ApplyOnlineModal({
                 </button>
               </div>
 
-              {/* Summary Cards */}
+              {/* Order Summary Information */}
               <div className="grid grid-cols-2 gap-3 text-left max-w-md mx-auto text-xs">
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-bold">Service</span>
+                  <span className="font-bold text-slate-800 truncate block">{createdOrder.serviceTitle}</span>
+                </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
                   <span className="text-[10px] text-slate-400 block font-bold">Applicant</span>
                   <span className="font-bold text-slate-800 truncate block">{createdOrder.name}</span>
                 </div>
                 <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
-                  <span className="text-[10px] text-slate-400 block font-bold">Total Fee</span>
-                  <span className="font-black text-[#0F4C81] block">₹{createdOrder.totalAmount}</span>
+                  <span className="text-[10px] text-slate-400 block font-bold">Application Status</span>
+                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200 mt-0.5">
+                    <Clock className="w-3 h-3" />
+                    <span>Pending Contact</span>
+                  </span>
+                </div>
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 block font-bold">Payment Status</span>
+                  <span className="inline-flex items-center text-[11px] font-bold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md mt-0.5">
+                    Unpaid / Pending
+                  </span>
                 </div>
               </div>
 
-              <div className="p-3 bg-blue-50/60 border border-blue-100 rounded-xl text-xs text-slate-600 max-w-md mx-auto leading-relaxed">
-                ℹ️ Keep your Order ID handy. You can check live processing status, upload documents, or submit payment proof anytime on our Tracking desk.
+              {/* Next Steps Guidance */}
+              <div className="p-4 bg-blue-50/70 border border-blue-100 rounded-2xl text-left max-w-md mx-auto text-xs space-y-1.5 leading-relaxed text-slate-700">
+                <span className="font-bold text-[#0F4C81] block text-xs">What happens next?</span>
+                <p>1. <strong>Verification:</strong> Our team will verify your submitted information and document checklist.</p>
+                <p>2. <strong>Direct Contact:</strong> We will contact you at <strong>+91 {createdOrder.mobile}</strong> via WhatsApp or phone.</p>
+                <p>3. <strong>Payment:</strong> After confirming your details, we will provide payment instructions.</p>
               </div>
 
-              {/* Next Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
+              {/* Primary Action Buttons (Zero Payment Buttons) */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 max-w-md mx-auto">
                 <button
                   onClick={() => {
                     onClose();
                     if (setView) setView('track');
                   }}
-                  className="bg-[#0F4C81] hover:bg-[#0c3e69] text-white font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex-1 bg-[#0F4C81] hover:bg-[#0c3e69] text-white font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Clock className="w-4 h-4" />
-                  <span>Track Application Now</span>
+                  <span>Track Application</span>
                 </button>
                 <button
-                  onClick={() => {
-                    onClose();
-                    if (setView) setView('payment');
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 px-6 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
+                  onClick={() => openWhatsAppForSubmittedOrder(createdOrder)}
+                  className="flex-1 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs py-3 px-5 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Payment Portal</span>
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Contact on WhatsApp</span>
+                </button>
+              </div>
+
+              <div className="pt-1">
+                <button
+                  onClick={onClose}
+                  className="text-xs text-slate-400 hover:text-slate-600 font-semibold cursor-pointer underline"
+                >
+                  Close Window
                 </button>
               </div>
             </div>

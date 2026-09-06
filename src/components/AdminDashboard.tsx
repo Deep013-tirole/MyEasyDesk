@@ -6,7 +6,7 @@ import {
   Lock, LogOut, Check, Info, FileCode, CheckCircle2, AlertCircle, 
   Copy, FolderOpen, Search, Filter, UploadCloud, CopyCheck, ArrowUpDown,
   Building2, Phone, CreditCard, Sliders, Key, ShieldCheck, Globe, Loader2,
-  UserPlus, Menu, X, ChevronDown, ChevronRight, LayoutGrid, List, Sparkles
+  UserPlus, Menu, X, ChevronDown, ChevronRight, LayoutGrid, List, Sparkles, Share2
 } from 'lucide-react';
 import { Order, SupportTicket, Coupon, Review, User, OrderStatus, PaymentStatus, UserRole, Service, Blog, CalendarEvent, MasterData, ServiceCategory, BlogCategory } from '../types.js';
 import { fetchCsrfToken, adminFetch, safeParseJsonResponse } from '../lib/apiClient.js';
@@ -18,6 +18,7 @@ const AboutUsAdminModule = lazy(() => import('./admin/AboutUsAdminModule.js'));
 const ContactUsAdminModule = lazy(() => import('./admin/ContactUsAdminModule.js'));
 const PaymentAdminModule = lazy(() => import('./admin/PaymentAdminModule.js'));
 const AdminSettingsModule = lazy(() => import('./admin/AdminSettingsModule.js'));
+const SocialMediaAdminModule = lazy(() => import('./admin/SocialMediaAdminModule.js'));
 const PrivacySecurityAdminModule = lazy(() => import('./admin/PrivacySecurityAdminModule.js'));
 const EmployeeManagementModule = lazy(() => import('./admin/EmployeeManagementModule.js'));
 const CustomerManagementModule = lazy(() => import('./admin/CustomerManagementModule.js'));
@@ -94,19 +95,19 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>({});
   const [paymentConfig, setPaymentConfig] = useState<any>({
-    upiId: 'easydesk@ybl',
-    upiName: 'EasyDesk Digital Services',
-    qrCodeUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300',
-    bankAccountName: 'EasyDesk Solutions Pvt Ltd',
-    bankName: 'HDFC Bank',
-    bankAccountNumber: '50200088991122',
-    bankIfsc: 'HDFC0001234',
-    bankBranch: 'Nariman Point, Mumbai',
-    instructions: 'Please transfer amount using UPI ID or Bank Transfer and mention Order ID in notes.'
+    upiId: '',
+    upiName: '',
+    qrCodeUrl: '',
+    bankAccountName: '',
+    bankName: '',
+    bankAccountNumber: '',
+    bankIfsc: '',
+    bankBranch: '',
+    instructions: ''
   });
 
   // Navigation tab
-  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'services' | 'category_management' | 'blogs' | 'reviews' | 'faqs' | 'banners' | 'pages' | 'media' | 'users' | 'notifications' | 'audit' | 'settings' | 'about_us' | 'contact_us' | 'payment_settings' | 'admin_settings' | 'employee_records' | 'customer_records' | 'master_data' | 'record_integrity' | 'roles_management' | 'privacy_security' | 'calendar'>('analytics');
+  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'services' | 'category_management' | 'blogs' | 'reviews' | 'faqs' | 'banners' | 'pages' | 'media' | 'users' | 'notifications' | 'audit' | 'settings' | 'about_us' | 'contact_us' | 'payment_settings' | 'admin_settings' | 'social_media' | 'employee_records' | 'customer_records' | 'master_data' | 'record_integrity' | 'roles_management' | 'privacy_security' | 'calendar'>('analytics');
 
   // Reset scroll to top on admin module/tab change
   useScrollToTopOnChange([activeTab]);
@@ -1183,6 +1184,13 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
       });
 
       if (res.ok) {
+        const resData = await res.json().catch(() => ({}));
+        const saved = resData.paymentConfig || resData.paymentSettings || paymentConfig;
+        setPaymentConfig(saved);
+        try {
+          localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(saved));
+        } catch {}
+        window.dispatchEvent(new CustomEvent('easydesk_payment_config_updated', { detail: saved }));
         triggerAlert('Payment details and bank instructions updated successfully!');
         fetchTabData();
         onRefreshCatalogs?.();
@@ -1430,6 +1438,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
               {activeTab === 'contact_us' && <Phone className="w-4 h-4" />}
               {activeTab === 'payment_settings' && <CreditCard className="w-4 h-4" />}
               {activeTab === 'admin_settings' && <Sliders className="w-4 h-4" />}
+              {activeTab === 'social_media' && <Share2 className="w-4 h-4 text-pink-500" />}
               {activeTab === 'privacy_security' && <ShieldCheck className="w-4 h-4" />}
               {activeTab === 'employee_records' && <Users className="w-4 h-4" />}
               {activeTab === 'customer_records' && <UserCheck className="w-4 h-4" />}
@@ -1738,6 +1747,15 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                       <Sliders className="w-4 h-4 text-purple-600" /> Admin Settings
                     </button>
                   )}
+                  {hasPermission(['system_settings.view', 'system_settings.manage']) && (!mobileNavSearch || 'social media links profiles'.includes(mobileNavSearch.toLowerCase())) && (
+                    <button
+                      type="button"
+                      onClick={() => { setActiveTab('social_media'); setIsMobileNavOpen(false); }}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'social_media' ? 'bg-blue-600 text-white font-bold' : 'text-slate-700 hover:bg-slate-50'}`}
+                    >
+                      <Share2 className="w-4 h-4 text-pink-500" /> Social Media Links
+                    </button>
+                  )}
                   {(!mobileNavSearch || 'privacy security cms terms'.includes(mobileNavSearch.toLowerCase())) && (
                     <button
                       type="button"
@@ -1997,6 +2015,14 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                       className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'admin_settings' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                       <Sliders className="w-4 h-4 text-purple-600" /> Admin Settings
+                    </button>
+                  )}
+                  {hasPermission(['system_settings.view', 'system_settings.manage']) && (
+                    <button
+                      onClick={() => setActiveTab('social_media')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'social_media' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <Share2 className="w-4 h-4 text-pink-500" /> Social Media Links
                     </button>
                   )}
                   <button
@@ -3692,6 +3718,13 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
           {(activeTab === 'admin_settings' || activeTab === 'settings') && (
             <div className="animate-in fade-in duration-150">
               <AdminSettingsModule />
+            </div>
+          )}
+
+          {/* Active Tab: Social Media Links CMS */}
+          {activeTab === 'social_media' && (
+            <div className="animate-in fade-in duration-150">
+              <SocialMediaAdminModule />
             </div>
           )}
 

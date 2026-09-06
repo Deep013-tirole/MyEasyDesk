@@ -11,13 +11,13 @@ interface MasterDataAdminModuleProps {
 export default function MasterDataAdminModule({ adminFetch, triggerAlert }: MasterDataAdminModuleProps) {
   const [loading, setLoading] = useState(true);
   const [masterData, setMasterData] = useState<MasterData>({
-    departments: ['Operations', 'Customer Support', 'IT & Software', 'Human Resources', 'Finance & Accounting', 'Legal & Compliance', 'Marketing'],
-    designations: ['Operations Executive', 'Senior Service Manager', 'Verification Officer', 'HR Specialist', 'IT Admin', 'Legal Advisor', 'Department Head'],
-    employmentTypes: ['Full-Time', 'Part-Time', 'Contract', 'Trainee', 'Consultant'],
-    workLocations: ['Headquarters - Mumbai', 'Regional Office - Delhi', 'Tech Hub - Bangalore', 'Remote / Work From Home'],
-    employeeStatuses: ['Active', 'Inactive', 'On Leave', 'Suspended', 'Terminated'],
-    documentTypes: ['Aadhaar Copy', 'PAN Copy', 'Resume / Bio-Data', 'Appointment Letter', 'Educational Certificates', 'Relieving Letter'],
-    banks: ['HDFC Bank', 'ICICI Bank', 'State Bank of India', 'Axis Bank', 'Punjab National Bank', 'Kotak Mahindra Bank']
+    departments: [],
+    designations: [],
+    employmentTypes: [],
+    workLocations: [],
+    employeeStatuses: [],
+    documentTypes: [],
+    banks: []
   });
 
   const [activeTab, setActiveTab] = useState<'departments' | 'designations' | 'employmentTypes' | 'workLocations' | 'employeeStatuses' | 'documentTypes' | 'banks'>('departments');
@@ -32,17 +32,15 @@ export default function MasterDataAdminModule({ adminFetch, triggerAlert }: Mast
       const res = await adminFetch('/api/master-data');
       if (res.ok) {
         const data = await res.json();
-        setMasterData(prev => ({
-          ...prev,
-          ...data,
-          departments: data.departments?.length ? data.departments : prev.departments,
-          designations: data.designations?.length ? data.designations : prev.designations,
-          employmentTypes: data.employmentTypes?.length ? data.employmentTypes : prev.employmentTypes,
-          workLocations: data.workLocations?.length ? data.workLocations : prev.workLocations,
-          employeeStatuses: data.employeeStatuses?.length ? data.employeeStatuses : prev.employeeStatuses,
-          documentTypes: data.documentTypes?.length ? data.documentTypes : prev.documentTypes,
-          banks: data.banks?.length ? data.banks : prev.banks,
-        }));
+        setMasterData({
+          departments: Array.isArray(data.departments) ? data.departments : [],
+          designations: Array.isArray(data.designations) ? data.designations : [],
+          employmentTypes: Array.isArray(data.employmentTypes) ? data.employmentTypes : [],
+          workLocations: Array.isArray(data.workLocations) ? data.workLocations : [],
+          employeeStatuses: Array.isArray(data.employeeStatuses) ? data.employeeStatuses : [],
+          documentTypes: Array.isArray(data.documentTypes) ? data.documentTypes : [],
+          banks: Array.isArray(data.banks) ? data.banks : []
+        });
       }
     } catch (err) {
       if (typeof navigator === 'undefined' || navigator.onLine !== false) {
@@ -143,6 +141,15 @@ export default function MasterDataAdminModule({ adminFetch, triggerAlert }: Mast
     { key: 'documentTypes', label: 'Document Types', icon: FileText, desc: 'KYC & HR Document classifications' },
     { key: 'banks', label: 'Supported Banks', icon: Landmark, desc: 'Pre-approved banking institutions' },
   ] as const;
+
+  if (loading) {
+    return (
+      <div className="p-16 text-center text-slate-400 text-xs font-sans flex flex-col items-center justify-center gap-3">
+        <RefreshCw className="w-6 h-6 animate-spin text-purple-600" />
+        <span>Loading Master Data Taxonomies...</span>
+      </div>
+    );
+  }
 
   const currentList = (masterData[activeTab] || []) as string[];
 

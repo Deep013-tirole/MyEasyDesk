@@ -98,18 +98,15 @@ const DEFAULT_SERVICE_AREAS = [
 ];
 
 const DEFAULT_FOUNDER: FounderData = {
-  name: 'Devendra Sharma',
+  name: '',
   designation: 'Founder & Managing Director',
-  photoUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400',
-  shortBio: 'Pioneering accessible digital documentation assistance for citizens and enterprises across India with a focus on speed, precision, and trust.',
-  detailedBio: 'Devendra founded EasyDesk with a clear vision: to ensure no citizen ever loses a day of work standing in government service queues. With extensive expertise in public administration workflows and digital identity systems, he spearheads the company\'s nationwide documentation assistance network.',
-  founderMessage: 'Welcome to EasyDesk. Our mission is to transform how Indians interact with digital governance and document filings. By combining intelligent document pre-auditing with dedicated human desk verification, we guarantee accuracy, privacy, and expedited delivery for every applicant.',
-  email: 'founder@easydesk.com',
-  signatureUrl: 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=200',
-  socialLinks: {
-    linkedin: 'https://linkedin.com/company/easydesk',
-    twitter: 'https://twitter.com/easydesk'
-  }
+  photoUrl: '',
+  shortBio: '',
+  detailedBio: '',
+  founderMessage: '',
+  email: '',
+  signatureUrl: '',
+  socialLinks: {}
 };
 
 const DEFAULT_ABOUT_DATA: AboutUsData = {
@@ -158,7 +155,15 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
     } catch {}
     return DEFAULT_FOUNDER;
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      const cachedAbout = localStorage.getItem('easydesk_cache_about_us');
+      const cachedFounder = localStorage.getItem('easydesk_cache_founder');
+      return !(cachedAbout && cachedFounder);
+    } catch {
+      return true;
+    }
+  });
   const [activeValueIndex, setActiveValueIndex] = useState<number | null>(0);
   const [activeStepHover, setActiveStepHover] = useState<number | null>(null);
   const [searchArea, setSearchArea] = useState('');
@@ -168,57 +173,63 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
     let isMounted = true;
     const fetchAboutData = async () => {
       try {
-        const res = await fetch(`/api/about?_t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        });
-        if (res.ok) {
-          const data = await safeParseJsonResponse<any>(res);
-          if (data && data.aboutUs && isMounted) {
-            setAboutData(data.aboutUs);
-            try {
-              localStorage.setItem('easydesk_cache_about_us', JSON.stringify(data.aboutUs));
-            } catch {}
-            if (data.founder) {
-              setFounder(data.founder);
-              try {
-                localStorage.setItem('easydesk_cache_founder', JSON.stringify(data.founder));
-              } catch {}
+        try {
+          const res = await fetch(`/api/about?_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
             }
-            return;
+          });
+          if (res.ok) {
+            const data = await safeParseJsonResponse<any>(res);
+            if (data && data.aboutUs && isMounted) {
+              setAboutData(data.aboutUs);
+              try {
+                localStorage.setItem('easydesk_cache_about_us', JSON.stringify(data.aboutUs));
+              } catch {}
+              if (data.founder) {
+                setFounder(data.founder);
+                try {
+                  localStorage.setItem('easydesk_cache_founder', JSON.stringify(data.founder));
+                } catch {}
+              }
+              return;
+            }
+          }
+        } catch (err: any) {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            console.warn('Failed to load About Us content via API:', err?.message || err);
           }
         }
-      } catch (err: any) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          console.warn('Failed to load About Us content via API:', err?.message || err);
-        }
-      }
 
-      // Authoritative Direct API Fallback
-      try {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          const directAbout = await getClientAboutUs();
-          if (isMounted) {
-            if (directAbout.aboutUs) {
-              setAboutData(directAbout.aboutUs);
-              try {
-                localStorage.setItem('easydesk_cache_about_us', JSON.stringify(directAbout.aboutUs));
-              } catch {}
-            }
-            if (directAbout.founder) {
-              setFounder(directAbout.founder);
-              try {
-                localStorage.setItem('easydesk_cache_founder', JSON.stringify(directAbout.founder));
-              } catch {}
+        // Authoritative Direct API Fallback
+        try {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            const directAbout = await getClientAboutUs();
+            if (isMounted) {
+              if (directAbout.aboutUs) {
+                setAboutData(directAbout.aboutUs);
+                try {
+                  localStorage.setItem('easydesk_cache_about_us', JSON.stringify(directAbout.aboutUs));
+                } catch {}
+              }
+              if (directAbout.founder) {
+                setFounder(directAbout.founder);
+                try {
+                  localStorage.setItem('easydesk_cache_founder', JSON.stringify(directAbout.founder));
+                } catch {}
+              }
             }
           }
+        } catch (fsErr: any) {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            console.warn('Failed to load direct fallback About Us:', fsErr?.message || fsErr);
+          }
         }
-      } catch (fsErr: any) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          console.warn('Failed to load direct fallback About Us:', fsErr?.message || fsErr);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
     };
@@ -451,7 +462,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
         {/* =========================================================================
             3. FOUNDER SPOTLIGHT & EXECUTIVE MESSAGE (Bootstrap Media Card with Hover)
             ========================================================================= */}
-        {founder && (
+        {founder && Boolean(founder.name) && (
           <section className="space-y-4">
             <div className="text-center max-w-xl mx-auto">
               <span className="text-xs text-[#0F4C81] font-bold uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">

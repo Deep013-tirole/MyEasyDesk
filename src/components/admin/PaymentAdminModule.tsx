@@ -7,15 +7,24 @@ import { apiFetch } from '../../lib/apiClient.js';
 import { MediaInput } from './MediaInput';
 
 export default function PaymentAdminModule() {
-  const [paymentConfig, setPaymentConfig] = useState<any>({
-    upiId: '',
-    qrCodeUrl: '',
-    bankName: '',
-    accountName: '',
-    accountNumber: '',
-    ifscCode: '',
-    branch: '',
-    paymentInstructions: ''
+  const [paymentConfig, setPaymentConfig] = useState<any>(() => {
+    try {
+      const cached = localStorage.getItem('easydesk_cache_payment_config');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch {}
+    return {
+      upiId: '',
+      qrCodeUrl: '',
+      bankName: '',
+      accountName: '',
+      accountNumber: '',
+      ifscCode: '',
+      branch: '',
+      paymentInstructions: ''
+    };
   });
 
   const [loading, setLoading] = useState(true);
@@ -23,12 +32,54 @@ export default function PaymentAdminModule() {
   const [msg, setMsg] = useState('');
   const [errMsg, setErrMsg] = useState('');
 
+  const normalizeConfigForUI = (data: any) => {
+    if (!data || typeof data !== 'object') return {};
+    const accName = data.accountName || data.bankAccountName || data.accountHolderName || '';
+    const accNum = data.accountNumber || data.bankAccountNumber || '';
+    const ifsc = data.ifscCode || data.ifsc || data.bankIfsc || '';
+    const br = data.branch || data.bankBranch || '';
+    const inst = data.paymentInstructions || data.instructions || '';
+    return {
+      ...data,
+      upiId: data.upiId || '',
+      upiName: data.upiName || accName || 'EasyDesk Digital Services',
+      qrCodeUrl: data.qrCodeUrl || '',
+      bankName: data.bankName || '',
+      accountName: accName,
+      bankAccountName: accName,
+      accountNumber: accNum,
+      bankAccountNumber: accNum,
+      ifscCode: ifsc,
+      ifsc: ifsc,
+      bankIfsc: ifsc,
+      branch: br,
+      bankBranch: br,
+      paymentInstructions: inst,
+      instructions: inst,
+      acceptUpi: data.acceptUpi !== undefined ? Boolean(data.acceptUpi) : true,
+      acceptNetBanking: data.acceptNetBanking !== undefined ? Boolean(data.acceptNetBanking) : true,
+      acceptQrCode: data.acceptQrCode !== undefined ? Boolean(data.acceptQrCode) : true
+    };
+  };
+
   const fetchPaymentConfig = async () => {
     try {
-      const res = await fetch(`/api/payment-settings?_t=${Date.now()}`);
+      const res = await fetch(`/api/payment-settings?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       if (res.ok) {
         const data = await res.json();
-        if (data && typeof data === 'object') setPaymentConfig(data);
+        if (data && typeof data === 'object') {
+          const normalized = normalizeConfigForUI(data);
+          setPaymentConfig(normalized);
+          try {
+            localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(normalized));
+          } catch {}
+        }
       }
     } catch (err) {
       if (typeof navigator === 'undefined' || navigator.onLine !== false) {
@@ -41,6 +92,16 @@ export default function PaymentAdminModule() {
 
   useEffect(() => {
     fetchPaymentConfig();
+
+    const handleUpdateEvent = (e: any) => {
+      if (e.detail && typeof e.detail === 'object') {
+        setPaymentConfig(normalizeConfigForUI(e.detail));
+      }
+    };
+    window.addEventListener('easydesk_payment_config_updated', handleUpdateEvent);
+    return () => {
+      window.removeEventListener('easydesk_payment_config_updated', handleUpdateEvent);
+    };
   }, []);
 
   const handleSavePaymentConfig = async (e: React.FormEvent) => {
@@ -57,6 +118,14 @@ export default function PaymentAdminModule() {
       });
 
       if (res.ok) {
+        const resData = await res.json().catch(() => ({}));
+        const saved = resData.paymentConfig || resData.paymentSettings || paymentConfig;
+        const normalized = normalizeConfigForUI(saved);
+        setPaymentConfig(normalized);
+        try {
+          localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(normalized));
+        } catch {}
+        window.dispatchEvent(new CustomEvent('easydesk_payment_config_updated', { detail: normalized }));
         setMsg('Payment configuration (UPI, QR Code, and Bank Transfer) updated successfully!');
       } else {
         const errorData = await res.json().catch(() => ({}));

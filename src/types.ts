@@ -47,6 +47,20 @@ export interface MasterData {
   banks?: string[];
 }
 
+export interface StructuredAddress {
+  country?: string;
+  state?: string;
+  district?: string;
+  city?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  locality?: string;
+  landmark?: string;
+  pincode?: string;
+  pinCode?: string;
+  address?: string;
+}
+
 export interface CustomerRecord {
   id: string;
   code: string;
@@ -60,10 +74,17 @@ export interface CustomerRecord {
   email: string;
   mobile: string;
   whatsappMobile?: string;
-  address?: string;
-  city?: string;
+  country?: string;
   state?: string;
+  district?: string;
+  city?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  locality?: string;
+  landmark?: string;
   pincode?: string;
+  pinCode?: string;
+  address?: string;
   status: 'Active' | 'Inactive' | 'Blocked';
   gstin?: string;
   panNumber?: string;
@@ -88,6 +109,21 @@ export interface CompanyProfile {
   accentColor?: string;
   authorizedSignatoryName?: string;
   authorizedSignatoryDesignation?: string;
+}
+
+export type SupportedSocialPlatform =
+  | 'facebook'
+  | 'instagram'
+  | 'whatsapp'
+  | 'youtube'
+  | 'telegram'
+  | 'twitter'
+  | 'linkedin';
+
+export interface SocialMediaLink {
+  platform: SupportedSocialPlatform | string;
+  url: string;
+  enabled: boolean;
 }
 
 export interface EmployeeRecord {
@@ -132,10 +168,16 @@ export interface EmployeeProfile {
   currentAddress?: string;
   permanentAddress?: string;
   isPermanentSameAsCurrent?: boolean;
+  country?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  locality?: string;
+  landmark?: string;
   city?: string;
   district?: string;
   state?: string;
   pinCode?: string;
+  pincode?: string;
   designation: string;
   department: string;
   employmentType: 'Full-Time' | 'Part-Time' | 'Contract' | 'Intern' | 'Consultant';
@@ -446,10 +488,17 @@ export interface Order {
   name: string;
   mobile: string;
   email: string;
+  country?: string;
   address: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  locality?: string;
+  landmark?: string;
   city: string;
+  district?: string;
   state: string;
   pinCode: string;
+  pincode?: string;
   uploadedDocuments: UploadedDocument[];
   additionalNotes?: string;
   submittedData?: Record<string, any>;

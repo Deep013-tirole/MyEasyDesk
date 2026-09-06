@@ -81,15 +81,15 @@ export default function HomeView({
       const cached = localStorage.getItem('easydesk_cache_contact_settings');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed && parsed.companyName) return parsed;
+        if (parsed && (parsed.phone || parsed.email || parsed.address)) return parsed;
       }
     } catch {}
     return {
       companyName: 'EasyDesk Digital Services Pvt Ltd',
-      phone: '+91 98765 43210',
-      email: 'support@easydesk.com',
+      phone: '',
+      email: '',
       workingHours: 'Mon - Sat: 9:00 AM - 6:30 PM',
-      address: '402, Signature IT Park, Bandra Kurla Complex, Mumbai, MH, 400051'
+      address: ''
     };
   });
 
@@ -109,10 +109,10 @@ export default function HomeView({
       if (data && typeof data === 'object') {
         const clean = {
           companyName: data.companyName || 'EasyDesk Digital Services Pvt Ltd',
-          phone: data.phone || '+91 98765 43210',
-          email: data.email || 'support@easydesk.com',
-          workingHours: data.workingHours || 'Mon - Sat: 9:00 AM - 6:30 PM',
-          address: data.address || '402, Signature IT Park, Bandra Kurla Complex, Mumbai, MH, 400051'
+          phone: data.phone || data.whatsapp || '',
+          email: data.email || '',
+          workingHours: data.workingHours || data.hours || 'Mon - Sat: 9:00 AM - 6:30 PM',
+          address: data.address ? `${data.address}${data.city ? ', ' + data.city : ''}${data.state ? ', ' + data.state : ''}${data.pinCode ? ' - ' + data.pinCode : ''}` : (data.city ? `${data.city}, ${data.state || ''}` : '')
         };
         setContactInfo(clean);
         try {
@@ -1046,7 +1046,11 @@ export default function HomeView({
                     </div>
                     <div>
                       <span className="block text-[10px] text-blue-200 font-extrabold uppercase leading-none">Support Hotline</span>
-                      <span className="text-xs sm:text-sm font-black text-white mt-0.5 block">{contactInfo.phone}</span>
+                      {contactInfo.phone ? (
+                        <span className="text-xs sm:text-sm font-black text-white mt-0.5 block">{contactInfo.phone}</span>
+                      ) : (
+                        <div className="h-4 w-28 bg-white/20 rounded animate-pulse mt-1" />
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3.5 hover-scale-sm transition">
@@ -1055,7 +1059,11 @@ export default function HomeView({
                     </div>
                     <div>
                       <span className="block text-[10px] text-blue-200 font-extrabold uppercase leading-none">Official Inquiry Email</span>
-                      <span className="text-xs sm:text-sm font-black text-white mt-0.5 block">{contactInfo.email}</span>
+                      {contactInfo.email ? (
+                        <span className="text-xs sm:text-sm font-black text-white mt-0.5 block">{contactInfo.email}</span>
+                      ) : (
+                        <div className="h-4 w-36 bg-white/20 rounded animate-pulse mt-1" />
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-3.5 hover-scale-sm transition">
@@ -1072,7 +1080,11 @@ export default function HomeView({
 
               <div className="pt-6 border-t border-white/10 mt-8 flex items-center gap-2.5 relative z-10">
                 <MapPin className="w-4 h-4 text-cyan-300 shrink-0" />
-                <p className="text-xs text-blue-100/90 m-0 font-normal">{contactInfo.address}</p>
+                {contactInfo.address ? (
+                  <p className="text-xs text-blue-100/90 m-0 font-normal">{contactInfo.address}</p>
+                ) : (
+                  <div className="h-4 w-52 bg-white/20 rounded animate-pulse" />
+                )}
               </div>
             </div>
 

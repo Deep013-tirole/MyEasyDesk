@@ -83,47 +83,114 @@ export const SETTING_KEYS = [
   'settings',
   'maintenanceMode',
   'masterData',
-  'chatConfig'
+  'chatConfig',
+  'socialMediaLinks'
 ] as const;
 
 /**
- * Sanitizes and fills default values for payment configuration.
+ * Sanitizes and normalizes payment configuration, populating both canonical
+ * properties and interoperability aliases so that PaymentAdminModule, PaymentView,
+ * and legacy tests all receive expected field names without demo overrides.
  */
 export function sanitizePaymentConfig(raw?: any): any {
-  const fallback = {
-    upiId: 'easydesk@ybl',
-    upiName: 'EasyDesk Digital Services',
-    qrCodeUrl: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=300',
-    bankAccountName: 'EasyDesk Solutions Pvt Ltd',
-    bankName: 'HDFC Bank',
-    bankAccountNumber: '50200088991122',
-    bankIfsc: 'HDFC0001234',
-    bankBranch: 'Nariman Point, Mumbai',
-    acceptUpi: true,
-    acceptNetBanking: true,
-    acceptQrCode: true,
-    convenienceFeePercentage: 0,
-    updatedAt: new Date().toISOString()
-  };
-
   if (!raw || typeof raw !== 'object') {
-    return fallback;
+    raw = {};
   }
 
+  // Canonical Beneficiary / Account Name
+  let accountNameVal = '';
+  if (raw.accountName !== undefined && raw.accountName !== null) {
+    accountNameVal = String(raw.accountName).trim();
+  } else if (raw.bankAccountName !== undefined && raw.bankAccountName !== null) {
+    accountNameVal = String(raw.bankAccountName).trim();
+  } else if (raw.accountHolderName !== undefined && raw.accountHolderName !== null) {
+    accountNameVal = String(raw.accountHolderName).trim();
+  }
+
+  // Canonical Account Number
+  let accountNumberVal = '';
+  if (raw.accountNumber !== undefined && raw.accountNumber !== null) {
+    accountNumberVal = String(raw.accountNumber).trim();
+  } else if (raw.bankAccountNumber !== undefined && raw.bankAccountNumber !== null) {
+    accountNumberVal = String(raw.bankAccountNumber).trim();
+  }
+
+  // Canonical IFSC Code
+  let ifscVal = '';
+  if (raw.ifscCode !== undefined && raw.ifscCode !== null) {
+    ifscVal = String(raw.ifscCode).trim().toUpperCase();
+  } else if (raw.ifsc !== undefined && raw.ifsc !== null) {
+    ifscVal = String(raw.ifsc).trim().toUpperCase();
+  } else if (raw.bankIfsc !== undefined && raw.bankIfsc !== null) {
+    ifscVal = String(raw.bankIfsc).trim().toUpperCase();
+  }
+
+  // Canonical Bank Branch
+  let branchVal = '';
+  if (raw.branch !== undefined && raw.branch !== null) {
+    branchVal = String(raw.branch).trim();
+  } else if (raw.bankBranch !== undefined && raw.bankBranch !== null) {
+    branchVal = String(raw.bankBranch).trim();
+  }
+
+  // Canonical Bank Name
+  const bankNameVal = raw.bankName !== undefined && raw.bankName !== null ? String(raw.bankName).trim() : '';
+
+  // Canonical UPI ID
+  const upiIdVal = raw.upiId !== undefined && raw.upiId !== null ? String(raw.upiId).trim() : '';
+
+  // Canonical UPI Name
+  let upiNameVal = '';
+  if (raw.upiName !== undefined && raw.upiName !== null && String(raw.upiName).trim()) {
+    upiNameVal = String(raw.upiName).trim();
+  } else {
+    upiNameVal = accountNameVal || 'EasyDesk Digital Services';
+  }
+
+  // Canonical QR Code URL
+  const qrCodeUrlVal = raw.qrCodeUrl !== undefined && raw.qrCodeUrl !== null ? String(raw.qrCodeUrl).trim() : '';
+
+  // Canonical Payment Instructions
+  let paymentInstructionsVal = '';
+  if (raw.paymentInstructions !== undefined && raw.paymentInstructions !== null) {
+    paymentInstructionsVal = String(raw.paymentInstructions).trim();
+  } else if (raw.instructions !== undefined && raw.instructions !== null) {
+    paymentInstructionsVal = String(raw.instructions).trim();
+  }
+
+  const acceptUpiVal = raw.acceptUpi !== undefined ? Boolean(raw.acceptUpi) : true;
+  const acceptNetBankingVal = raw.acceptNetBanking !== undefined ? Boolean(raw.acceptNetBanking) : true;
+  const acceptQrCodeVal = raw.acceptQrCode !== undefined ? Boolean(raw.acceptQrCode) : true;
+  const convenienceFeePercentageVal = typeof raw.convenienceFeePercentage === 'number' ? raw.convenienceFeePercentage : 0;
+  const updatedAtVal = raw.updatedAt || new Date().toISOString();
+
   return {
-    upiId: (raw.upiId && String(raw.upiId).trim()) || fallback.upiId,
-    upiName: (raw.upiName && String(raw.upiName).trim()) || fallback.upiName,
-    qrCodeUrl: (raw.qrCodeUrl && String(raw.qrCodeUrl).trim()) || fallback.qrCodeUrl,
-    bankAccountName: (raw.bankAccountName && String(raw.bankAccountName).trim()) || fallback.bankAccountName,
-    bankName: (raw.bankName && String(raw.bankName).trim()) || fallback.bankName,
-    bankAccountNumber: (raw.bankAccountNumber && String(raw.bankAccountNumber).trim()) || fallback.bankAccountNumber,
-    bankIfsc: (raw.bankIfsc && String(raw.bankIfsc).trim()) || fallback.bankIfsc,
-    bankBranch: (raw.bankBranch && String(raw.bankBranch).trim()) || fallback.bankBranch,
-    acceptUpi: raw.acceptUpi !== undefined ? Boolean(raw.acceptUpi) : fallback.acceptUpi,
-    acceptNetBanking: raw.acceptNetBanking !== undefined ? Boolean(raw.acceptNetBanking) : fallback.acceptNetBanking,
-    acceptQrCode: raw.acceptQrCode !== undefined ? Boolean(raw.acceptQrCode) : fallback.acceptQrCode,
-    convenienceFeePercentage: typeof raw.convenienceFeePercentage === 'number' ? raw.convenienceFeePercentage : fallback.convenienceFeePercentage,
-    updatedAt: raw.updatedAt || fallback.updatedAt
+    // Canonical primary fields
+    upiId: upiIdVal,
+    upiName: upiNameVal,
+    qrCodeUrl: qrCodeUrlVal,
+    bankName: bankNameVal,
+    bankAccountName: accountNameVal,
+    accountNumber: accountNumberVal,
+    ifsc: ifscVal,
+    branch: branchVal,
+    paymentInstructions: paymentInstructionsVal,
+
+    // Interoperability aliases for frontend components and legacy consumers
+    accountName: accountNameVal,
+    accountHolderName: accountNameVal,
+    bankAccountNumber: accountNumberVal,
+    ifscCode: ifscVal,
+    bankIfsc: ifscVal,
+    bankBranch: branchVal,
+    instructions: paymentInstructionsVal,
+
+    // Gateway / method toggles
+    acceptUpi: acceptUpiVal,
+    acceptNetBanking: acceptNetBankingVal,
+    acceptQrCode: acceptQrCodeVal,
+    convenienceFeePercentage: convenienceFeePercentageVal,
+    updatedAt: updatedAtVal
   };
 }
 
@@ -309,6 +376,7 @@ export async function initD1Schema(dbInstance?: any): Promise<void> {
       basic_pay REAL DEFAULT 0,
       hra REAL DEFAULT 0,
       payroll_notes TEXT,
+      metadata TEXT,
       updated_at INTEGER NOT NULL,
       FOREIGN KEY(employee_id) REFERENCES employees(id) ON DELETE CASCADE
     );`,
@@ -483,6 +551,12 @@ export async function initD1Schema(dbInstance?: any): Promise<void> {
       }
     }
     isD1SchemaInitialized = true;
+    // Idempotent column migrations for existing tables
+    try {
+      if (typeof db.prepare === 'function') {
+        await db.prepare('ALTER TABLE employee_payroll ADD COLUMN metadata TEXT').run();
+      }
+    } catch {}
     console.log('[D1] Relational schema tables and performance indexes verified successfully.');
   } catch (err) {
     console.error('[D1] Schema initialization error:', err);
@@ -756,7 +830,7 @@ export async function saveRelationalMirror(
       const status = ['Active', 'Inactive', 'Blocked'].includes(d.status) ? d.status : 'Active';
       const contactPersonName = d.contactPersonName || null;
       const gender = d.gender || null;
-      const dobOrIncorporation = d.dobOrIncorporationDate || null;
+      const dobOrIncorporation = d.dobOrIncorporationDate || d.dobOrIncorporation || null;
       const photoUrl = d.photoUrl || null;
       const address = d.address || null;
       const city = d.city || null;
@@ -766,7 +840,13 @@ export async function saveRelationalMirror(
       const panNumber = d.panNumber || null;
       const msmeLicense = d.msmeLicense || null;
       const notes = d.notes || null;
-      const metadata = JSON.stringify({ userId: d.userId || null });
+      const metadata = JSON.stringify({
+        userId: d.userId || null,
+        dobOrIncorporationDate: dobOrIncorporation,
+        isSuspended: d.isSuspended !== undefined ? d.isSuspended : false,
+        isVerified: d.isVerified !== undefined ? d.isVerified : true,
+        ...(d.metadata && typeof d.metadata === 'object' ? d.metadata : {})
+      });
       const createdAt = typeof d.createdAt === 'number' ? d.createdAt : (d.createdAt ? Date.parse(d.createdAt) || now : now);
       const updatedAt = typeof d.updatedAt === 'number' ? d.updatedAt : (d.updatedAt ? Date.parse(d.updatedAt) || now : now);
 
@@ -821,9 +901,36 @@ export async function saveRelationalMirror(
         fatherName: d.fatherName || '',
         motherName: d.motherName || '',
         spouseName: d.spouseName || '',
+        fatherMotherSpouseName: d.fatherMotherSpouseName || '',
+        dateOfBirth: d.dateOfBirth || '',
         gender: d.gender || '',
+        nationality: d.nationality || 'Indian',
         bloodGroup: d.bloodGroup || '',
+        personalEmail: d.personalEmail || d.email || '',
+        personalMobile: d.personalMobile || d.mobile || d.phone || '',
+        emergencyContactName: d.emergencyContactName || '',
+        emergencyContactRelation: d.emergencyContactRelation || '',
+        emergencyContactMobile: d.emergencyContactMobile || d.emergency_contact_phone || '',
+        currentAddress: d.currentAddress || d.address || '',
+        permanentAddress: d.permanentAddress || '',
+        isPermanentSameAsCurrent: d.isPermanentSameAsCurrent !== undefined ? d.isPermanentSameAsCurrent : true,
+        district: d.district || '',
+        reportingManager: d.reportingManager || '',
         workLocation: d.workLocation || '',
+        probationStatus: d.probationStatus || '',
+        confirmationDate: d.confirmationDate || '',
+        exitDate: d.exitDate || '',
+        exitReason: d.exitReason || '',
+        highestQualification: d.highestQualification || d.qualification || '',
+        qualificationSummary: d.qualificationSummary || d.highestQualification || '',
+        university: d.university || '',
+        certifications: d.certifications || '',
+        totalExperienceYears: typeof d.totalExperienceYears === 'number' ? d.totalExperienceYears : (typeof d.experience === 'number' ? d.experience : 0),
+        previousOrganizations: d.previousOrganizations || '',
+        skills: Array.isArray(d.skills) ? d.skills : [],
+        languages: Array.isArray(d.languages) ? d.languages : [],
+        profilePhoto: photoUrl,
+        profilePhotoMediaId: d.profilePhotoMediaId || '',
         internalNotes: d.internalNotes || ''
       });
       const createdAt = typeof d.createdAt === 'number' ? d.createdAt : (d.createdAt ? Date.parse(d.createdAt) || now : now);
@@ -894,11 +1001,12 @@ export async function saveRelationalMirror(
       await stmt.bind(empId, aadhaarMasked, panMasked, otherIdType, otherIdNumber, aadhaarStatus, panStatus, verificationNotes, verifiedBy, verifiedAt, documents, updatedAt).run();
     } else if (collectionName === 'employeePayroll') {
       const empId = String(docId || d.employeeId);
-      const empCheck = await db.prepare('SELECT id FROM employees WHERE id = ?').bind(empId).all();
+      const empCheck = await db.prepare('SELECT id FROM employees WHERE id = ? OR code = ?').bind(empId, empId).all();
       const found = (empCheck && empCheck.results && empCheck.results.length > 0) || (Array.isArray(empCheck) && empCheck.length > 0);
       if (!found) {
         throw new Error(`Referenced employee '${empId}' does not exist in employees table`);
       }
+      const canonicalEmpId = (empCheck && empCheck.results && empCheck.results[0]?.id) || (Array.isArray(empCheck) && empCheck[0]?.id) || empId;
 
       const accountHolderName = d.accountHolderName || null;
       const bankName = d.bankName || null;
@@ -911,11 +1019,21 @@ export async function saveRelationalMirror(
       const basicPay = typeof d.basicPay === 'number' ? d.basicPay : 0;
       const hra = typeof d.hra === 'number' ? d.hra : 0;
       const payrollNotes = d.payrollNotes || null;
+      const metadata = JSON.stringify({
+        specialAllowance: typeof d.specialAllowance === 'number' ? d.specialAllowance : 0,
+        pfDeduction: typeof d.pfDeduction === 'number' ? d.pfDeduction : 0,
+        taxDeduction: typeof d.taxDeduction === 'number' ? d.taxDeduction : 0,
+        salaryType: d.salaryType || 'Monthly',
+        salaryFrequency: d.salaryFrequency || 'Monthly',
+        effectiveFrom: d.effectiveFrom || null,
+        accountNumber: d.accountNumber || null,
+        ...(d.metadata && typeof d.metadata === 'object' ? d.metadata : {})
+      });
       const updatedAt = typeof d.updatedAt === 'number' ? d.updatedAt : (d.updatedAt ? Date.parse(d.updatedAt) || now : now);
 
       const stmt = db.prepare(`
-        INSERT INTO employee_payroll (employee_id, account_holder_name, bank_name, branch_name, account_masked, ifsc_code, payment_method, salary_ctc, net_salary, basic_pay, hra, payroll_notes, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO employee_payroll (employee_id, account_holder_name, bank_name, branch_name, account_masked, ifsc_code, payment_method, salary_ctc, net_salary, basic_pay, hra, payroll_notes, metadata, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(employee_id) DO UPDATE SET
           account_holder_name = excluded.account_holder_name,
           bank_name = excluded.bank_name,
@@ -928,9 +1046,10 @@ export async function saveRelationalMirror(
           basic_pay = excluded.basic_pay,
           hra = excluded.hra,
           payroll_notes = excluded.payroll_notes,
+          metadata = excluded.metadata,
           updated_at = excluded.updated_at
       `);
-      await stmt.bind(empId, accountHolderName, bankName, branchName, accountMasked, ifscCode, paymentMethod, salaryCtc, netSalary, basicPay, hra, payrollNotes, updatedAt).run();
+      await stmt.bind(canonicalEmpId, accountHolderName, bankName, branchName, accountMasked, ifscCode, paymentMethod, salaryCtc, netSalary, basicPay, hra, payrollNotes, metadata, updatedAt).run();
     } else if (collectionName === 'employeeAccounts') {
       const empId = String(docId || d.employeeId);
       const empCheck = await db.prepare('SELECT id FROM employees WHERE id = ?').bind(empId).all();
@@ -1819,7 +1938,7 @@ export async function queryCustomersRelational(
       status: r.status,
       contactPersonName: r.contact_person_name,
       gender: r.gender,
-      dobOrIncorporationDate: r.dob_or_incorporation,
+      dobOrIncorporationDate: r.dob_or_incorporation || meta.dobOrIncorporationDate || undefined,
       photoUrl: r.photo_url,
       address: r.address,
       city: r.city,
@@ -1910,22 +2029,49 @@ export async function queryEmployeesRelational(
       joiningDate: r.joining_date,
       phone: r.phone,
       mobile: r.phone,
-      personalMobile: r.phone,
+      personalMobile: meta.personalMobile || r.phone,
       email: r.email,
-      personalEmail: r.email,
+      personalEmail: meta.personalEmail || r.email,
       photoUrl: r.photo_url,
       photo: r.photo_url,
+      profilePhoto: meta.profilePhoto || r.photo_url,
       address: r.address,
-      currentAddress: r.address,
+      currentAddress: meta.currentAddress || r.address,
+      permanentAddress: meta.permanentAddress || '',
+      isPermanentSameAsCurrent: meta.isPermanentSameAsCurrent !== undefined ? meta.isPermanentSameAsCurrent : true,
       city: r.city,
+      district: meta.district || '',
       state: r.state,
       pinCode: r.pincode,
       qualification: r.qualification,
-      highestQualification: r.qualification,
+      highestQualification: meta.highestQualification || r.qualification,
+      qualificationSummary: meta.qualificationSummary || r.qualification,
       experienceYears: r.experience_years,
       experience: r.experience_years,
+      totalExperienceYears: meta.totalExperienceYears !== undefined ? meta.totalExperienceYears : r.experience_years,
       emergencyContactName: r.emergency_contact_name,
       emergencyContactPhone: r.emergency_contact_phone,
+      emergencyContactRelation: meta.emergencyContactRelation || '',
+      emergencyContactMobile: meta.emergencyContactMobile || r.emergency_contact_phone,
+      dateOfBirth: meta.dateOfBirth || '',
+      nationality: meta.nationality || 'Indian',
+      skills: Array.isArray(meta.skills) ? meta.skills : [],
+      languages: Array.isArray(meta.languages) ? meta.languages : [],
+      reportingManager: meta.reportingManager || '',
+      workLocation: meta.workLocation || '',
+      probationStatus: meta.probationStatus || '',
+      confirmationDate: meta.confirmationDate || '',
+      exitDate: meta.exitDate || '',
+      exitReason: meta.exitReason || '',
+      university: meta.university || '',
+      certifications: meta.certifications || '',
+      previousOrganizations: meta.previousOrganizations || '',
+      profilePhotoMediaId: meta.profilePhotoMediaId || '',
+      fatherName: meta.fatherName || '',
+      motherName: meta.motherName || '',
+      spouseName: meta.spouseName || '',
+      fatherMotherSpouseName: meta.fatherMotherSpouseName || '',
+      internalNotes: meta.internalNotes || '',
       createdAt: r.created_at ? new Date(r.created_at).toISOString() : undefined,
       updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
       ...meta
@@ -1971,7 +2117,7 @@ export async function queryEmployeePayrollRelational(employeeId?: string, dbInst
   if (!db) return employeeId ? null : [];
   await initD1Schema(db);
 
-  let sql = 'SELECT employee_id, account_holder_name, bank_name, branch_name, account_masked, ifsc_code, payment_method, salary_ctc, net_salary, basic_pay, hra, payroll_notes, updated_at FROM employee_payroll';
+  let sql = 'SELECT employee_id, account_holder_name, bank_name, branch_name, account_masked, ifsc_code, payment_method, salary_ctc, net_salary, basic_pay, hra, payroll_notes, metadata, updated_at FROM employee_payroll';
   const params: any[] = [];
   if (employeeId) {
     sql += ' WHERE employee_id = ?';
@@ -1981,22 +2127,35 @@ export async function queryEmployeePayrollRelational(employeeId?: string, dbInst
   const res = await db.prepare(sql).bind(...params).all();
   const rows = (res && res.results) ? res.results : (Array.isArray(res) ? res : []);
 
-  const mapped = rows.map((r: any) => ({
-    employeeId: r.employee_id,
-    accountHolderName: r.account_holder_name,
-    bankName: r.bank_name,
-    branchName: r.branch_name,
-    accountNumber: r.account_masked,
-    ifscCode: r.ifsc_code,
-    paymentMethod: r.payment_method,
-    salaryAmount: r.salary_ctc,
-    grossSalary: r.salary_ctc,
-    netSalary: r.net_salary,
-    basicPay: r.basic_pay,
-    hra: r.hra,
-    payrollNotes: r.payroll_notes,
-    updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : undefined
-  }));
+  const mapped = rows.map((r: any) => {
+    let meta: any = {};
+    try {
+      if (r.metadata) meta = JSON.parse(r.metadata);
+    } catch {}
+    return {
+      employeeId: r.employee_id,
+      accountHolderName: r.account_holder_name,
+      bankName: r.bank_name,
+      branchName: r.branch_name,
+      accountNumber: meta.accountNumber || r.account_masked,
+      ifscCode: r.ifsc_code,
+      paymentMethod: r.payment_method,
+      salaryAmount: r.salary_ctc,
+      grossSalary: r.salary_ctc,
+      netSalary: r.net_salary,
+      basicPay: r.basic_pay,
+      hra: r.hra,
+      payrollNotes: r.payroll_notes,
+      specialAllowance: typeof meta.specialAllowance === 'number' ? meta.specialAllowance : 0,
+      pfDeduction: typeof meta.pfDeduction === 'number' ? meta.pfDeduction : 0,
+      taxDeduction: typeof meta.taxDeduction === 'number' ? meta.taxDeduction : 0,
+      salaryType: meta.salaryType || 'Monthly',
+      salaryFrequency: meta.salaryFrequency || 'Monthly',
+      effectiveFrom: meta.effectiveFrom,
+      updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
+      ...meta
+    };
+  });
 
   return employeeId ? (mapped[0] || null) : mapped;
 }
@@ -2559,10 +2718,37 @@ export async function readCollectionWithFallback<T = any>(
         throw new Error(`Relational query returned non-array result for collection ${collection}`);
       }
 
-      // Guard against silent empty returns when legacy store has records
+      // Guard against silent empty or partial returns when legacy store has records
       const legacySample = legacyGetter();
-      if (relResult.length === 0 && legacySample.length > 0) {
-        throw new Error(`Relational table returned 0 records while legacy store contains ${legacySample.length} records`);
+      if (Array.isArray(legacySample) && legacySample.length > 0) {
+        if (relResult.length === 0) {
+          // Self-heal relational table in background
+          syncCollectionToD1(collection, legacySample, db).catch(e => {
+            console.warn(`[SELF-HEAL WARN] Initial population failed for ${collection}:`, e?.message);
+          });
+          throw new Error(`Relational table returned 0 records while legacy store contains ${legacySample.length} records`);
+        }
+
+        if (relResult.length < legacySample.length) {
+          console.warn(`[RELATIONAL READ PARITY DEFICIT] Relational query for ${collection} returned ${relResult.length} rows, but legacy store contains ${legacySample.length} records. Merging to prevent data loss and self-healing relational mirror...`);
+          // Self-heal missing records to relational table in background
+          syncCollectionToD1(collection, legacySample, db).catch(e => {
+            console.warn(`[SELF-HEAL WARN] Parity sync failed for ${collection}:`, e?.message);
+          });
+
+          // Merge so client receives 100% of records immediately without waiting
+          const relIds = new Set((relResult as any[]).map(r => String(r.id || r.code || '')));
+          const merged = [...relResult];
+          for (const leg of legacySample) {
+            const legId = String((leg as any).id || (leg as any).code || '');
+            if (legId && !relIds.has(legId)) {
+              merged.push(leg);
+              relIds.add(legId);
+            }
+          }
+          recordReadSuccessInMemory(collection);
+          return merged as T[];
+        }
       }
 
       recordReadSuccessInMemory(collection);
@@ -2852,6 +3038,33 @@ export async function saveSettingToD1(
 }
 
 /**
+ * Loads a system setting directly from Cloudflare D1.
+ */
+export async function getSettingFromD1(
+  key: string,
+  dbInstance?: any
+): Promise<{ success: boolean; data?: any; error?: string }> {
+  const db = dbInstance || getD1Database();
+  if (!db || !key) {
+    return { success: false, error: 'Missing database or key' };
+  }
+
+  try {
+    await initD1Schema(db);
+    const stmt = db.prepare('SELECT data FROM system_settings WHERE key = ?');
+    const row = await stmt.bind(key).first();
+    if (row && row.data) {
+      const parsed = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+      return { success: true, data: parsed };
+    }
+    return { success: false, error: `Setting '${key}' not found in D1` };
+  } catch (err: any) {
+    console.error(`[D1 READ ERROR] getSettingFromD1 failed for ${key}:`, err);
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
+/**
  * Synchronizes an entire collection to D1, upserting active items and deleting purged items.
  */
 export async function syncCollectionToD1(
@@ -3036,6 +3249,20 @@ export async function seedD1FromState(initialState: Record<string, any>, dbInsta
     }
 
     console.log(`[D1] Successfully seeded D1 database with ${statements.length} records.`);
+
+    // Populate relational tables for promoted/dual-write collections if present in initialState
+    if (Array.isArray(initialState.categories) && initialState.categories.length > 0) {
+      try {
+        for (const cat of initialState.categories) {
+          if (cat && (cat.id || cat.slug)) {
+            await saveRelationalMirror('categories', String(cat.id || cat.slug), cat, db);
+          }
+        }
+      } catch (catSeedErr: any) {
+        console.warn('[D1 SEED] Category relational mirror notice:', catSeedErr?.message);
+      }
+    }
+
     return true;
   } catch (err) {
     console.error('[D1] Error seeding D1 database:', err);
@@ -3871,9 +4098,36 @@ export async function migrateEmployeesToRelational(optionsOrDb?: MigrationOption
           fatherName: d.fatherName || '',
           motherName: d.motherName || '',
           spouseName: d.spouseName || '',
+          fatherMotherSpouseName: d.fatherMotherSpouseName || '',
+          dateOfBirth: d.dateOfBirth || '',
           gender: d.gender || '',
+          nationality: d.nationality || 'Indian',
           bloodGroup: d.bloodGroup || '',
+          personalEmail: d.personalEmail || d.email || '',
+          personalMobile: d.personalMobile || d.mobile || d.phone || '',
+          emergencyContactName: d.emergencyContactName || '',
+          emergencyContactRelation: d.emergencyContactRelation || '',
+          emergencyContactMobile: d.emergencyContactMobile || d.emergency_contact_phone || '',
+          currentAddress: d.currentAddress || d.address || '',
+          permanentAddress: d.permanentAddress || '',
+          isPermanentSameAsCurrent: d.isPermanentSameAsCurrent !== undefined ? d.isPermanentSameAsCurrent : true,
+          district: d.district || '',
+          reportingManager: d.reportingManager || '',
           workLocation: d.workLocation || '',
+          probationStatus: d.probationStatus || '',
+          confirmationDate: d.confirmationDate || '',
+          exitDate: d.exitDate || '',
+          exitReason: d.exitReason || '',
+          highestQualification: d.highestQualification || d.qualification || '',
+          qualificationSummary: d.qualificationSummary || d.highestQualification || '',
+          university: d.university || '',
+          certifications: d.certifications || '',
+          totalExperienceYears: typeof d.totalExperienceYears === 'number' ? d.totalExperienceYears : (typeof d.experience === 'number' ? d.experience : 0),
+          previousOrganizations: d.previousOrganizations || '',
+          skills: Array.isArray(d.skills) ? d.skills : [],
+          languages: Array.isArray(d.languages) ? d.languages : [],
+          profilePhoto: photoUrl,
+          profilePhotoMediaId: d.profilePhotoMediaId || '',
           internalNotes: d.internalNotes || ''
         });
         const createdAt = typeof r.created_at === 'number' ? r.created_at : (d.createdAt ? Date.parse(d.createdAt) || Date.now() : Date.now());
@@ -4072,6 +4326,16 @@ export async function migrateEmployeePayrollToRelational(optionsOrDb?: Migration
         const basicPay = typeof d.basicPay === 'number' ? d.basicPay : 0;
         const hra = typeof d.hra === 'number' ? d.hra : 0;
         const payrollNotes = d.payrollNotes || null;
+        const metadata = JSON.stringify({
+          specialAllowance: typeof d.specialAllowance === 'number' ? d.specialAllowance : 0,
+          pfDeduction: typeof d.pfDeduction === 'number' ? d.pfDeduction : 0,
+          taxDeduction: typeof d.taxDeduction === 'number' ? d.taxDeduction : 0,
+          salaryType: d.salaryType || 'Monthly',
+          salaryFrequency: d.salaryFrequency || 'Monthly',
+          effectiveFrom: d.effectiveFrom || null,
+          accountNumber: d.accountNumber || null,
+          ...(d.metadata && typeof d.metadata === 'object' ? d.metadata : {})
+        });
         const updatedAt = typeof r.updated_at === 'number' ? r.updated_at : Date.now();
 
         const isExisting = existingIds.has(empId);
@@ -4079,8 +4343,8 @@ export async function migrateEmployeePayrollToRelational(optionsOrDb?: Migration
 
         if (!options.dryRun) {
           const stmt = db.prepare(`
-            INSERT INTO employee_payroll (employee_id, account_holder_name, bank_name, branch_name, account_masked, ifsc_code, payment_method, salary_ctc, net_salary, basic_pay, hra, payroll_notes, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO employee_payroll (employee_id, account_holder_name, bank_name, branch_name, account_masked, ifsc_code, payment_method, salary_ctc, net_salary, basic_pay, hra, payroll_notes, metadata, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(employee_id) DO UPDATE SET
               account_holder_name = excluded.account_holder_name,
               bank_name = excluded.bank_name,
@@ -4093,9 +4357,10 @@ export async function migrateEmployeePayrollToRelational(optionsOrDb?: Migration
               basic_pay = excluded.basic_pay,
               hra = excluded.hra,
               payroll_notes = excluded.payroll_notes,
+              metadata = excluded.metadata,
               updated_at = excluded.updated_at
           `);
-          await stmt.bind(empId, accountHolderName, bankName, branchName, accountMasked, ifscCode, paymentMethod, salaryCtc, netSalary, basicPay, hra, payrollNotes, updatedAt).run();
+          await stmt.bind(empId, accountHolderName, bankName, branchName, accountMasked, ifscCode, paymentMethod, salaryCtc, netSalary, basicPay, hra, payrollNotes, metadata, updatedAt).run();
           if (isExisting) res.updated++; else res.inserted++;
         }
         res.migratedCount++;

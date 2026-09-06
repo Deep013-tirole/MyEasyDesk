@@ -15,6 +15,7 @@ export {
   saveEntityToD1,
   deleteEntityFromD1,
   saveSettingToD1,
+  getSettingFromD1,
   loadEntityFromD1,
   seedD1FromState,
   putR2File,

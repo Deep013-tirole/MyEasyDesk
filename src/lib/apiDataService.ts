@@ -4,6 +4,7 @@
  * Completely eliminates direct client-side Firestore access.
  */
 import { Service, ServiceCategory, Blog, BlogCategory, Review, User } from '../types';
+import { fetchCsrfToken } from './apiClient';
 
 function isNetworkOffline(): boolean {
   return typeof navigator !== 'undefined' && navigator.onLine === false;
@@ -289,10 +290,12 @@ export async function authenticateAdminDirect(
  */
 export async function saveClientDoc(collectionName: string, docId: string, data: any): Promise<boolean> {
   try {
+    const csrfToken = await fetchCsrfToken();
     const res = await fetch(`/api/admin/${collectionName}/${encodeURIComponent(docId)}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
+        'x-csrf-token': csrfToken,
         'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token') || localStorage.getItem('token') || ''}`
       },
       body: JSON.stringify(data)
@@ -309,9 +312,11 @@ export async function saveClientDoc(collectionName: string, docId: string, data:
  */
 export async function deleteClientDoc(collectionName: string, docId: string): Promise<boolean> {
   try {
+    const csrfToken = await fetchCsrfToken();
     const res = await fetch(`/api/admin/${collectionName}/${encodeURIComponent(docId)}`, {
       method: 'DELETE',
       headers: {
+        'x-csrf-token': csrfToken,
         'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token') || localStorage.getItem('token') || ''}`
       }
     });
@@ -327,10 +332,12 @@ export async function deleteClientDoc(collectionName: string, docId: string): Pr
  */
 export async function saveClientSetting(settingKey: string, data: any): Promise<boolean> {
   try {
+    const csrfToken = await fetchCsrfToken();
     const res = await fetch(`/api/admin/settings/${settingKey}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'x-csrf-token': csrfToken,
         'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token') || localStorage.getItem('token') || ''}`
       },
       body: JSON.stringify(data)

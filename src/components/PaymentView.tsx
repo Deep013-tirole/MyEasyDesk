@@ -10,14 +10,14 @@ import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { getClientPaymentConfig } from '../lib/apiDataService.js';
 
 const DEFAULT_PAYMENT_CONFIG: PaymentConfig = {
-  upiId: 'easydesk@sbi',
+  upiId: '',
   upiName: 'EasyDesk Digital Services',
-  qrCodeUrl: 'https://images.unsplash.com/photo-1595079672139-5470805086ae?w=300',
-  bankAccountName: 'EasyDesk Digital Services Pvt Ltd',
-  bankName: 'State Bank of India',
-  accountNumber: '40918273645',
-  ifsc: 'SBIN0001234',
-  branch: 'Sector 62 Noida',
+  qrCodeUrl: '',
+  bankAccountName: '',
+  bankName: '',
+  accountNumber: '',
+  ifsc: '',
+  branch: '',
   paymentInstructions: 'Please include your Order ID in the payment remarks/notes for instant reconciliation.'
 };
 
@@ -40,7 +40,14 @@ export default function PaymentView({
     } catch {}
     return DEFAULT_PAYMENT_CONFIG;
   });
-  const [loadingConfig, setLoadingConfig] = useState(false);
+  const [loadingConfig, setLoadingConfig] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem('easydesk_cache_payment_config');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
 
   // Active method selection
   const [method, setMethod] = useState<PaymentMethod>(PaymentMethod.UPI);
@@ -56,59 +63,95 @@ export default function PaymentView({
   const [errorMsg, setErrorMsg] = useState('');
   const [copiedText, setCopiedText] = useState('');
 
+  const normalizePaymentConfig = (data: any, current: PaymentConfig): PaymentConfig => {
+    if (!data || typeof data !== 'object') return current;
+    return {
+      ...current,
+      ...data,
+      upiId: data.upiId !== undefined ? data.upiId : current.upiId,
+      upiName: data.upiName || data.accountName || data.bankAccountName || current.upiName,
+      qrCodeUrl: data.qrCodeUrl !== undefined ? data.qrCodeUrl : current.qrCodeUrl,
+      bankAccountName: data.bankAccountName || data.accountName || data.accountHolderName || current.bankAccountName,
+      bankName: data.bankName !== undefined ? data.bankName : current.bankName,
+      accountNumber: data.accountNumber || data.bankAccountNumber || current.accountNumber,
+      ifsc: data.ifsc || data.ifscCode || data.bankIfsc || current.ifsc,
+      branch: data.branch || data.bankBranch || current.branch,
+      paymentInstructions: data.paymentInstructions !== undefined
+        ? data.paymentInstructions
+        : (data.instructions !== undefined ? data.instructions : current.paymentInstructions)
+    };
+  };
+
   useEffect(() => {
     let isMounted = true;
     const fetchPaymentConfig = async () => {
       try {
-        const res = await fetch(`/api/payment-settings?_t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
+        try {
+          const res = await fetch(`/api/payment-settings?_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
+          if (res.ok) {
+            const data = await safeParseJsonResponse<any>(res);
+            if (data && (data.upiId || data.bankName || data.accountNumber || data.bankAccountName || data.accountName) && isMounted) {
+              setPaymentConfig(prev => {
+                const updated = normalizePaymentConfig(data, prev);
+                try {
+                  localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+              return;
+            }
           }
-        });
-        if (res.ok) {
-          const data = await safeParseJsonResponse<any>(res);
-          if (data && (data.upiId || data.bankName || data.accountNumber) && isMounted) {
-            setPaymentConfig(prev => {
-              const updated = { ...prev, ...data };
-              try {
-                localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(updated));
-              } catch {}
-              return updated;
-            });
-            return;
+        } catch (err: any) {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            console.warn('Failed to load payment config via API:', err?.message || err);
           }
         }
-      } catch (err: any) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          console.warn('Failed to load payment config via API:', err?.message || err);
-        }
-      }
 
-      // Authoritative Direct API Fallback
-      try {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          const directPay = await getClientPaymentConfig();
-          if (directPay && isMounted) {
-            setPaymentConfig(prev => {
-              const updated = { ...prev, ...directPay };
-              try {
-                localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(updated));
-              } catch {}
-              return updated;
-            });
+        // Authoritative Direct API Fallback
+        try {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            const directPay = await getClientPaymentConfig();
+            if (directPay && isMounted) {
+              setPaymentConfig(prev => {
+                const updated = normalizePaymentConfig(directPay, prev);
+                try {
+                  localStorage.setItem('easydesk_cache_payment_config', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
+          }
+        } catch (fsErr: any) {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            console.warn('Failed to load direct fallback payment config:', fsErr?.message || fsErr);
           }
         }
-      } catch (fsErr: any) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          console.warn('Failed to load direct fallback payment config:', fsErr?.message || fsErr);
+      } finally {
+        if (isMounted) {
+          setLoadingConfig(false);
         }
       }
     };
 
     fetchPaymentConfig();
-    return () => { isMounted = false; };
+
+    const handleUpdate = (e: any) => {
+      if (e.detail && isMounted) {
+        setPaymentConfig(prev => normalizePaymentConfig(e.detail, prev));
+      }
+    };
+    window.addEventListener('easydesk_payment_config_updated', handleUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('easydesk_payment_config_updated', handleUpdate);
+    };
   }, []);
 
 
@@ -275,100 +318,109 @@ export default function PaymentView({
                 </button>
               </div>
 
-              {/* Tab 1: UPI */}
-              {method === PaymentMethod.UPI && (
-                <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-4 text-xs">
-                  <div className="flex justify-between items-center">
-                    <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official EasyDesk UPI VPA</span>
-                    {copiedText === 'upi' && <span className="text-emerald-600 font-bold text-[10px]">✓ Copied to Clipboard</span>}
-                  </div>
-
-                  <div className="flex items-center justify-between bg-white border border-slate-200/80 p-4 rounded-xl shadow-2xs">
-                    <div>
-                      <p className="font-mono text-sm sm:text-base font-black text-[#0F4C81] m-0">{paymentConfig?.upiId || 'easydesk@sbi'}</p>
-                      <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5">{paymentConfig?.upiName || 'EasyDesk Digital Services'}</p>
-                    </div>
-                    <button
-                      onClick={() => copyToClipboard(paymentConfig?.upiId || 'easydesk@sbi', 'upi')}
-                      className="border border-[#0F4C81] text-[#0F4C81] hover:bg-blue-50 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 hover-scale-sm shadow-2xs"
-                    >
-                      <Copy className="w-3.5 h-3.5" /> Copy ID
-                    </button>
-                  </div>
-
-                  <p className="text-[11px] text-slate-500 leading-relaxed m-0 font-normal">
-                    Open GPay, PhonePe, Paytm, or BHIM app, select <strong>Pay via UPI ID</strong>, paste the address above, enter the total order amount, and complete the payment.
-                  </p>
+              {loadingConfig && (!paymentConfig?.upiId && !paymentConfig?.accountNumber) ? (
+                <div className="py-12 flex flex-col items-center justify-center gap-3 text-xs text-slate-500 font-medium">
+                  <div className="w-8 h-8 border-4 border-[#0F4C81] border-t-transparent rounded-full animate-spin" />
+                  <span>Loading Verified Payment Details...</span>
                 </div>
-              )}
+              ) : (
+                <>
+                  {/* Tab 1: UPI */}
+                  {method === PaymentMethod.UPI && (
+                    <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-4 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official EasyDesk UPI VPA</span>
+                        {copiedText === 'upi' && <span className="text-emerald-600 font-bold text-[10px]">✓ Copied to Clipboard</span>}
+                      </div>
 
-              {/* Tab 2: QR Code */}
-              {method === PaymentMethod.QR && (
-                <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl text-center space-y-4 text-xs">
-                  <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider block">Scan & Pay with Any UPI App</span>
+                      <div className="flex items-center justify-between bg-white border border-slate-200/80 p-4 rounded-xl shadow-2xs">
+                        <div>
+                          <p className="font-mono text-sm sm:text-base font-black text-[#0F4C81] m-0">{paymentConfig?.upiId || 'Pending Verification'}</p>
+                          <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5">{paymentConfig?.upiName || 'EasyDesk Digital Services'}</p>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(paymentConfig?.upiId || '', 'upi')}
+                          className="border border-[#0F4C81] text-[#0F4C81] hover:bg-blue-50 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 hover-scale-sm shadow-2xs"
+                        >
+                          <Copy className="w-3.5 h-3.5" /> Copy ID
+                        </button>
+                      </div>
 
-                  {paymentConfig?.qrCodeUrl ? (
-                    <div className="bg-white p-4 rounded-2xl border border-slate-200/80 inline-block shadow-sm hover-scale transition-transform">
-                      <img 
-                        src={paymentConfig.qrCodeUrl} 
-                        alt="EasyDesk Official Payment QR" 
-                        loading="lazy"
-                        decoding="async"
-                        referrerPolicy="no-referrer"
-                        className="w-48 h-48 object-contain mx-auto"
-                      />
-                      <p className="text-[10px] text-slate-600 font-bold mt-2.5 mb-0">{paymentConfig.upiName}</p>
-                    </div>
-                  ) : (
-                    <div className="p-8 bg-white rounded-2xl border border-slate-200 text-slate-400">
-                      QR Code Image Unavailable
+                      <p className="text-[11px] text-slate-500 leading-relaxed m-0 font-normal">
+                        Open GPay, PhonePe, Paytm, or BHIM app, select <strong>Pay via UPI ID</strong>, paste the address above, enter the total order amount, and complete the payment.
+                      </p>
                     </div>
                   )}
 
-                  <p className="text-[11px] text-slate-500 leading-relaxed max-w-sm mx-auto m-0 font-normal">
-                    Scan this QR code using GPay, PhonePe, Paytm, or BHIM to pay instantly. Note the 12-digit transaction UTR reference.
-                  </p>
-                </div>
-              )}
+                  {/* Tab 2: QR Code */}
+                  {method === PaymentMethod.QR && (
+                    <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl text-center space-y-4 text-xs">
+                      <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider block">Scan & Pay with Any UPI App</span>
 
-              {/* Tab 3: Bank Transfer */}
-              {method === PaymentMethod.BANK_TRANSFER && (
-                <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-3.5 text-xs">
-                  <div className="flex justify-between items-center border-b border-slate-200/80 pb-2">
-                    <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official Bank Account Details</span>
-                    {copiedText === 'bank' && <span className="text-emerald-600 font-bold text-[10px]">✓ Account Details Copied</span>}
-                  </div>
+                      {paymentConfig?.qrCodeUrl ? (
+                        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 inline-block shadow-sm hover-scale transition-transform">
+                          <img
+                            src={paymentConfig.qrCodeUrl}
+                            alt="EasyDesk Official Payment QR"
+                            loading="lazy"
+                            decoding="async"
+                            referrerPolicy="no-referrer"
+                            className="w-48 h-48 object-contain mx-auto"
+                          />
+                          <p className="text-[10px] text-slate-600 font-bold mt-2.5 mb-0">{paymentConfig.upiName}</p>
+                        </div>
+                      ) : (
+                        <div className="p-8 bg-white rounded-2xl border border-slate-200 text-slate-400">
+                          QR Code Image Unavailable
+                        </div>
+                      )}
 
-                  <div className="space-y-2.5 text-slate-700 bg-white p-4 rounded-xl border border-slate-200/80">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Bank Name:</span>
-                      <span className="font-bold text-slate-900">{paymentConfig?.bankName || 'State Bank of India'}</span>
+                      <p className="text-[11px] text-slate-500 leading-relaxed max-w-sm mx-auto m-0 font-normal">
+                        Scan this QR code using GPay, PhonePe, Paytm, or BHIM to pay instantly. Note the 12-digit transaction UTR reference.
+                      </p>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Account Name:</span>
-                      <span className="font-bold text-slate-900">{paymentConfig?.bankAccountName || 'EasyDesk Digital Services Pvt Ltd'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Account Number:</span>
-                      <span className="font-mono font-bold text-[#0F4C81]">{paymentConfig?.accountNumber || '40918273645'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">IFSC Code:</span>
-                      <span className="font-mono font-bold text-slate-900">{paymentConfig?.ifsc || 'SBIN0001234'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">Branch:</span>
-                      <span className="font-bold text-slate-900">{paymentConfig?.branch || 'Sector 62 Noida'}</span>
-                    </div>
-                  </div>
+                  )}
 
-                  <button
-                    onClick={() => copyToClipboard(`${paymentConfig?.accountNumber} / ${paymentConfig?.ifsc}`, 'bank')}
-                    className="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-xl font-bold text-xs py-2.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 hover-scale-sm shadow-2xs"
-                  >
-                    <Copy className="w-3.5 h-3.5" /> Copy Account & IFSC Code
-                  </button>
-                </div>
+                  {/* Tab 3: Bank Transfer */}
+                  {method === PaymentMethod.BANK_TRANSFER && (
+                    <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-3.5 text-xs">
+                      <div className="flex justify-between items-center border-b border-slate-200/80 pb-2">
+                        <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official Bank Account Details</span>
+                        {copiedText === 'bank' && <span className="text-emerald-600 font-bold text-[10px]">✓ Account Details Copied</span>}
+                      </div>
+
+                      <div className="space-y-2.5 text-slate-700 bg-white p-4 rounded-xl border border-slate-200/80">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Bank Name:</span>
+                          <span className="font-bold text-slate-900">{paymentConfig?.bankName || 'Verified Corporate Account'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Account Name:</span>
+                          <span className="font-bold text-slate-900">{paymentConfig?.bankAccountName || 'EasyDesk Digital Services'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Account Number:</span>
+                          <span className="font-mono font-bold text-[#0F4C81]">{paymentConfig?.accountNumber || 'Contact Desk for Transfer'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">IFSC Code:</span>
+                          <span className="font-mono font-bold text-slate-900">{paymentConfig?.ifsc || 'Available via Desk'}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Branch:</span>
+                          <span className="font-bold text-slate-900">{paymentConfig?.branch || 'Head Office'}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => copyToClipboard(`${paymentConfig?.accountNumber} / ${paymentConfig?.ifsc}`, 'bank')}
+                        className="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-xl font-bold text-xs py-2.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 hover-scale-sm shadow-2xs"
+                      >
+                        <Copy className="w-3.5 h-3.5" /> Copy Account & IFSC Code
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
 
               {/* Payment Instructions Note */}

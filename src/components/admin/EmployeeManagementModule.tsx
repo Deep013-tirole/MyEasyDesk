@@ -7,6 +7,7 @@ import {
 import { EmployeeProfile, EmployeeKYC, EmployeePayroll, EmployeeDocument, MasterData } from '../../types.js';
 const EmployeeIDCardModal = lazy(() => import('./EmployeeIDCardModal.js'));
 import { EmployeePhotoUpload } from './EmployeePhotoUpload.js';
+import IndianAddressFields from '../common/IndianAddressFields.js';
 
 interface EmployeeManagementModuleProps {
   adminFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
@@ -77,6 +78,16 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
     currentAddress: '',
     permanentAddress: '',
     isPermanentSameAsCurrent: true,
+    country: 'India',
+    state: '',
+    district: '',
+    city: '',
+    pinCode: '',
+    pincode: '',
+    addressLine1: '',
+    addressLine2: '',
+    locality: '',
+    landmark: '',
     profilePhoto: '',
     internalNotes: ''
   });
@@ -184,9 +195,16 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
       currentAddress: '',
       permanentAddress: '',
       isPermanentSameAsCurrent: true,
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pinCode: '400001',
+      country: 'India',
+      city: '',
+      state: '',
+      district: '',
+      pinCode: '',
+      pincode: '',
+      addressLine1: '',
+      addressLine2: '',
+      locality: '',
+      landmark: '',
       profilePhoto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200',
       highestQualification: 'Bachelor Degree',
       university: '',
@@ -1138,59 +1156,79 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Present Address</label>
-                      <textarea
-                        rows={2}
-                        value={formProfile.currentAddress || ''}
-                        onChange={(e) => setFormProfile({ ...formProfile, currentAddress: e.target.value })}
-                        placeholder="Full present address..."
-                        className="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Permanent Address</label>
-                      <textarea
-                        rows={2}
-                        value={formProfile.permanentAddress || ''}
-                        onChange={(e) => setFormProfile({ ...formProfile, permanentAddress: e.target.value })}
-                        placeholder="Full permanent address..."
-                        className="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                  </div>
+                  <div className="border border-slate-200 rounded-xl p-3 bg-slate-50/50">
+                    <h4 className="text-xs font-bold text-slate-800 mb-2 flex items-center gap-1.5">
+                      <MapPin className="w-3.5 h-3.5 text-blue-600" />
+                      Present / Communication Address
+                    </h4>
+                    <IndianAddressFields
+                      value={{
+                        country: formProfile.country || 'India',
+                        state: formProfile.state || '',
+                        district: formProfile.district || '',
+                        city: formProfile.city || '',
+                        addressLine1: formProfile.addressLine1 || formProfile.currentAddress || '',
+                        addressLine2: formProfile.addressLine2 || '',
+                        locality: formProfile.locality || '',
+                        landmark: formProfile.landmark || '',
+                        pincode: formProfile.pincode || formProfile.pinCode || '',
+                        pinCode: formProfile.pinCode || formProfile.pincode || '',
+                        address: formProfile.currentAddress || ''
+                      }}
+                      onChange={(addr) => {
+                        setFormProfile(prev => {
+                          const updated = {
+                            ...prev,
+                            country: addr.country,
+                            state: addr.state,
+                            district: addr.district,
+                            city: addr.city,
+                            addressLine1: addr.addressLine1,
+                            addressLine2: addr.addressLine2,
+                            locality: addr.locality,
+                            landmark: addr.landmark,
+                            pincode: addr.pincode,
+                            pinCode: addr.pinCode,
+                            currentAddress: addr.address || addr.addressLine1 || ''
+                          };
+                          if (prev.isPermanentSameAsCurrent) {
+                            updated.permanentAddress = updated.currentAddress;
+                          }
+                          return updated;
+                        });
+                      }}
+                    />
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">City</label>
-                      <input
-                        type="text"
-                        value={formProfile.city || ''}
-                        onChange={(e) => setFormProfile({ ...formProfile, city: e.target.value })}
-                        placeholder="City"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">State</label>
-                      <input
-                        type="text"
-                        value={formProfile.state || ''}
-                        onChange={(e) => setFormProfile({ ...formProfile, state: e.target.value })}
-                        placeholder="State"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">PIN Code</label>
-                      <input
-                        type="text"
-                        value={formProfile.pinCode || ''}
-                        onChange={(e) => setFormProfile({ ...formProfile, pinCode: e.target.value })}
-                        placeholder="e.g. 400001"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600 font-mono"
-                      />
+                    <div className="mt-3 pt-3 border-t border-slate-200 space-y-2">
+                      <label className="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={formProfile.isPermanentSameAsCurrent ?? true}
+                          onChange={(e) => {
+                            const isSame = e.target.checked;
+                            setFormProfile(prev => ({
+                              ...prev,
+                              isPermanentSameAsCurrent: isSame,
+                              permanentAddress: isSame ? (prev.currentAddress || '') : prev.permanentAddress
+                            }));
+                          }}
+                          className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                        />
+                        Permanent address is same as present address
+                      </label>
+
+                      {!(formProfile.isPermanentSameAsCurrent ?? true) && (
+                        <div>
+                          <label className="font-bold text-slate-700 block mb-1">Permanent Address Details</label>
+                          <textarea
+                            rows={2}
+                            value={formProfile.permanentAddress || ''}
+                            onChange={(e) => setFormProfile({ ...formProfile, permanentAddress: e.target.value })}
+                            placeholder="Full permanent address..."
+                            className="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-blue-600 bg-white"
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1648,8 +1686,8 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
 
       {/* PRINTABLE RECORD SHEET MODAL */}
       {printModalOpen && selectedEmployee && (
-        <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900">
+        <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 overflow-y-auto printable-modal-overlay">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
             
             {/* Top Toolbar */}
             <div className="flex items-center justify-between border-b pb-4 print:hidden">

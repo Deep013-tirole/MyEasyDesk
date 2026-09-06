@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, X, Send, Bot, Sparkles, HelpCircle, FileText, ArrowRight } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, Sparkles, HelpCircle, FileText, ArrowRight, RotateCcw } from 'lucide-react';
 import { apiFetch } from '../lib/apiClient.js';
 import { Service } from '../types.js';
 
@@ -7,6 +7,8 @@ interface ChatMessage {
   role: 'user' | 'model';
   content: string;
   timestamp: string;
+  provider?: 'gemini' | 'local-knowledge' | 'unavailable';
+  isFallback?: boolean;
 }
 
 interface AIChatAssistantProps {
@@ -82,6 +84,19 @@ export default function AIChatAssistant({ activeService }: AIChatAssistantProps)
 Please provide step-by-step guidance on document preparation, key verification checks, and tips to avoid rejection.`;
   };
 
+  const handleResetChat = () => {
+    setMessages([
+      {
+        role: 'model',
+        content: "Hello! I am your EasyDesk AI Digital Assistant. Ask me anything about passport applications, GST registration, Aadhaar, PAN card fees, or check if your documents are valid!",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setCurrentServiceContext(null);
+    setInput('');
+    setLoading(false);
+  };
+
   const handleSend = async (e?: React.FormEvent, customText?: string, overrideService?: Service | null) => {
     if (e) e.preventDefault();
     const serviceForContext = overrideService !== undefined ? overrideService : currentServiceContext;
@@ -90,7 +105,7 @@ Please provide step-by-step guidance on document preparation, key verification c
 
     const userMsg: ChatMessage = {
       role: 'user',
-      content: textToSend,
+      content: textToSend.trim(),
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
@@ -98,13 +113,20 @@ Please provide step-by-step guidance on document preparation, key verification c
     setInput('');
     setLoading(true);
 
+    // Filter out leading model welcome message so Gemini multiturn history starts with user
+    const historyPayload = messages
+      .filter((m, idx) => !(idx === 0 && m.role === 'model'))
+      .slice(-6)
+      .map(m => ({ role: m.role, content: m.content }));
+
     try {
       const response = await apiFetch('/api/ai/chat', {
         method: 'POST',
         body: {
-          message: textToSend,
-          chatHistory: messages.slice(-6).map(m => ({ role: m.role, content: m.content })),
+          message: textToSend.trim(),
+          chatHistory: historyPayload,
           contextService: serviceForContext ? {
+            id: serviceForContext.id,
             title: serviceForContext.title,
             govFees: serviceForContext.govFees,
             serviceCharge: serviceForContext.serviceCharge,
@@ -119,8 +141,10 @@ Please provide step-by-step guidance on document preparation, key verification c
       
       const aiMsg: ChatMessage = {
         role: 'model',
-        content: data.text || data.fallbackText || "I'm having a little trouble connecting. Please check details again.",
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        content: data.text || data.fallbackText || "I am currently unable to process your request. Please try again.",
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        provider: data.provider,
+        isFallback: data.isFallback
       };
       setMessages(prev => [...prev, aiMsg]);
     } catch (err) {
@@ -128,8 +152,10 @@ Please provide step-by-step guidance on document preparation, key verification c
         ...prev,
         {
           role: 'model',
-          content: "I ran into a network error, but I can recommend our main services: PAN Card, Passport assistance, MSME Setup, or GST filing. Please try again in a moment!",
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          content: "I ran into a connection error. Please verify your network or try again.",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          provider: 'unavailable',
+          isFallback: true
         }
       ]);
     } finally {
@@ -183,45 +209,66 @@ Please provide step-by-step guidance on document preparation, key verification c
                     <Sparkles className="w-2.5 h-2.5" /> Live
                   </div>
                 </div>
-                <p className="text-xs text-blue-200 mt-1">Typically replies instantly</p>
+                <p className="text-xs text-blue-200 mt-1">Official Digital Concierge</p>
               </div>
             </div>
-            <button
-              id="btn-ai-chat-close"
-              onClick={() => setIsOpen(false)}
-              className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                id="btn-ai-new-chat"
+                onClick={handleResetChat}
+                className="text-white/80 hover:text-white hover:bg-white/10 px-2 py-1.5 rounded-lg transition text-xs flex items-center gap-1 cursor-pointer"
+                title="Start new conversation and reset context"
+                aria-label="New Chat"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline text-[11px] font-medium">New Chat</span>
+              </button>
+              <button
+                id="btn-ai-chat-close"
+                onClick={() => setIsOpen(false)}
+                className="text-white/80 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition cursor-pointer"
+                aria-label="Close Chat"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
-          {/* Contextual Service Header Bar if active */}
+          {/* Contextual Service Header Bar if active (Dismissible) */}
           {currentServiceContext && (
-            <div className="bg-gradient-to-r from-indigo-50 via-cyan-50 to-blue-50 border-b border-indigo-100 p-2.5 px-3.5 flex items-center justify-between gap-2 shrink-0">
-              <div className="flex items-center gap-2 overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-50 via-cyan-50 to-blue-50 border-b border-indigo-100 p-2 px-3 flex items-center justify-between gap-2 shrink-0">
+              <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
                 <div className="bg-blue-600 text-white p-1 rounded-lg shrink-0">
                   <FileText className="w-3.5 h-3.5" />
                 </div>
                 <div className="truncate">
                   <div className="flex items-center gap-1">
                     <span className="text-[9px] font-extrabold uppercase tracking-wider text-blue-700 bg-blue-100/80 px-1.5 py-0.2 rounded">
-                      Context Loaded
+                      Context: {currentServiceContext.title}
                     </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-800 truncate leading-tight mt-0.5">
-                    {currentServiceContext.title}
-                  </p>
                 </div>
               </div>
-              <button
-                id="btn-ai-contextual-help-header"
-                onClick={() => handleSend(undefined, buildContextualPrompt(currentServiceContext), currentServiceContext)}
-                disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-2.5 py-1.5 rounded-lg shadow-sm flex items-center gap-1 shrink-0 transition active:scale-95 disabled:opacity-50 cursor-pointer"
-                title="Send active service details to AI for tailored filing advice"
-              >
-                <Sparkles className="w-3 h-3 text-cyan-300" /> Contextual Advice
-              </button>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  id="btn-ai-contextual-help-header"
+                  onClick={() => handleSend(undefined, buildContextualPrompt(currentServiceContext), currentServiceContext)}
+                  disabled={loading}
+                  className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 transition active:scale-95 disabled:opacity-50 cursor-pointer"
+                  title="Send active service details to AI for tailored filing advice"
+                >
+                  <Sparkles className="w-3 h-3 text-cyan-300" /> Advice
+                </button>
+                <button
+                  id="btn-ai-context-dismiss"
+                  onClick={() => setCurrentServiceContext(null)}
+                  className="text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 p-1 rounded-lg transition cursor-pointer"
+                  title="Dismiss service context and ask general questions"
+                  aria-label="Dismiss service context"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -237,7 +284,7 @@ Please provide step-by-step guidance on document preparation, key verification c
                     <Bot className="w-4 h-4" />
                   </div>
                 )}
-                <div>
+                <div className="flex-1 min-w-0">
                   <div
                     className={`p-3 rounded-2xl text-xs leading-relaxed ${
                       m.role === 'user'
@@ -251,7 +298,7 @@ Please provide step-by-step guidance on document preparation, key verification c
                         if (line.startsWith('**') && line.endsWith('**')) {
                           return <strong key={lIdx} className="block mt-1 font-bold">{line.replace(/\*\*/g, '')}</strong>;
                         }
-                        if (line.startsWith('* ') || line.startsWith('- ')) {
+                        if (line.startsWith('* ') || line.startsWith('- ') || line.startsWith('• ')) {
                           return <li key={lIdx} className="ml-4 list-disc text-slate-700 mt-1">{line.substring(2)}</li>;
                         }
                         if (line.startsWith('### ')) {
@@ -264,9 +311,22 @@ Please provide step-by-step guidance on document preparation, key verification c
                       })}
                     </div>
                   </div>
-                  <span className="text-[9px] text-slate-400 mt-1 block px-1 text-right">
-                    {m.timestamp}
-                  </span>
+                  <div className="flex items-center justify-between gap-1 mt-1 px-1">
+                    {m.role === 'model' && m.provider && (
+                      <span className={`text-[8px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${
+                        m.provider === 'gemini'
+                          ? 'text-cyan-800 bg-cyan-50 border border-cyan-200/60'
+                          : m.provider === 'local-knowledge'
+                            ? 'text-blue-800 bg-blue-50 border border-blue-200/60'
+                            : 'text-slate-500 bg-slate-100 border border-slate-200'
+                      }`}>
+                        {m.provider === 'gemini' ? '✨ Gemini AI' : m.provider === 'local-knowledge' ? '📚 Database Knowledge' : '⚡ Offline Mode'}
+                      </span>
+                    )}
+                    <span className="text-[9px] text-slate-400 ml-auto">
+                      {m.timestamp}
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

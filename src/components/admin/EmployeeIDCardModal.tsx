@@ -18,19 +18,19 @@ interface EmployeeIDCardModalProps {
 
 const DEFAULT_COMPANY_PROFILE: CompanyProfile = {
   companyName: 'EasyDesk Digital Services Pvt Ltd',
-  logoUrl: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=200',
-  address: 'Digital India Tower, Plot 14, Sector 62',
-  city: 'Noida',
-  state: 'Uttar Pradesh',
-  pinCode: '201301',
-  phone: '+91 99999 88888',
+  logoUrl: '',
+  address: '',
+  city: '',
+  state: '',
+  pinCode: '',
+  phone: '',
   email: 'support@easydesk.com',
   website: 'https://easydesk.com',
   primaryColor: '#1e40af', // Corporate Deep Blue
   secondaryColor: '#0f172a', // Dark Slate
   accentColor: '#2563eb',
-  authorizedSignatoryName: 'Devendra Sharma',
-  authorizedSignatoryDesignation: 'Managing Director'
+  authorizedSignatoryName: '',
+  authorizedSignatoryDesignation: 'Authorized Signatory'
 };
 
 export default function EmployeeIDCardModal({
@@ -59,11 +59,13 @@ export default function EmployeeIDCardModal({
   // Fetch Company Settings & Generate QR Code
   const fetchCompanyProfileAndGenerateQR = async () => {
     setLoading(true);
+    let activeProfile = DEFAULT_COMPANY_PROFILE;
     try {
       const res = await adminFetch('/api/company-profile');
       if (res.ok) {
         const data = await res.json();
         const merged = { ...DEFAULT_COMPANY_PROFILE, ...(data || {}) };
+        activeProfile = merged;
         setCompanyProfile(merged);
         setFormCompany(merged);
       }
@@ -75,12 +77,12 @@ export default function EmployeeIDCardModal({
 
     // Generate Verification QR Code
     try {
-      const verifyUrl = `${companyProfile.website || 'https://easydesk.com'}/verify-employee?code=${employee.employeeCode}`;
+      const verifyUrl = `${activeProfile.website || 'https://easydesk.com'}/verify-employee?code=${employee.employeeCode}`;
       const qrData = await QRCode.toDataURL(verifyUrl, {
         margin: 1,
         width: 200,
         color: {
-          dark: companyProfile.secondaryColor || '#0f172a',
+          dark: activeProfile.secondaryColor || '#0f172a',
           light: '#ffffff'
         }
       });
@@ -191,10 +193,10 @@ export default function EmployeeIDCardModal({
   const isInactive = employee.employmentStatus !== 'Active';
 
   return (
-    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto print:p-0 print:bg-white print:static">
+    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto printable-modal-overlay print:p-0 print:bg-white print:static">
       
       {/* Modal Container */}
-      <div className="bg-slate-100 rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] print:max-h-none print:shadow-none print:border-none print:bg-transparent print:w-auto">
+      <div className="bg-slate-100 rounded-3xl max-w-4xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[92vh] printable-modal-card print:max-h-none print:shadow-none print:border-none print:bg-transparent print:w-auto">
         
         {/* Header Toolbar (Hidden in Print) */}
         <div className="bg-white border-b border-slate-200 px-6 py-4 flex flex-wrap items-center justify-between gap-4 shrink-0 print:hidden">
@@ -306,19 +308,25 @@ export default function EmployeeIDCardModal({
         </div>
 
         {/* Main Preview Area */}
-        <div className="p-6 overflow-y-auto flex-1 flex flex-col items-center justify-center bg-slate-100 print:p-0 print:bg-white print:overflow-visible">
-          
-          {isInactive && (
-            <div className="mb-4 bg-amber-50 border border-amber-300 text-amber-800 rounded-2xl p-3 px-4 max-w-xl text-center text-xs flex items-center justify-center gap-2 font-medium print:hidden">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>
-                <strong>Notice:</strong> This employee is marked as <strong>{employee.employmentStatus}</strong>. ID card preview is for archival reference only.
-              </span>
+        <div className="p-6 overflow-y-auto flex-1 flex flex-col items-center justify-center bg-slate-100 print:p-0 print:bg-white print:overflow-visible min-h-[420px]">
+          {loading ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center">
+              <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-3" />
+              <p className="text-xs font-bold text-slate-600">Loading Authoritative ID Card Data...</p>
             </div>
-          )}
+          ) : (
+            <>
+              {isInactive && (
+                <div className="mb-4 bg-amber-50 border border-amber-300 text-amber-800 rounded-2xl p-3 px-4 max-w-xl text-center text-xs flex items-center justify-center gap-2 font-medium print:hidden">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span>
+                    <strong>Notice:</strong> This employee is marked as <strong>{employee.employmentStatus}</strong>. ID card preview is for archival reference only.
+                  </span>
+                </div>
+              )}
 
-          {/* PRINTABLE CONTAINER (Targeted by @media print) */}
-          <div className="id-card-print-area flex flex-wrap items-center justify-center gap-8 py-4">
+              {/* PRINTABLE CONTAINER (Targeted by @media print) */}
+              <div className="id-card-print-area flex flex-wrap items-center justify-center gap-8 py-4">
             
             {/* FRONT SIDE CARD */}
             {(activeTab === 'both' || activeTab === 'front') && (
@@ -526,11 +534,13 @@ export default function EmployeeIDCardModal({
                       <div className="flex flex-col items-center text-center">
                         <div className="w-20 h-6 border-b border-slate-400 flex items-center justify-center">
                           <span className="font-serif italic text-[10px] text-slate-700 font-bold">
-                            {companyProfile.authorizedSignatoryName || 'D. Sharma'}
+                            {(companyProfile.authorizedSignatoryName && companyProfile.authorizedSignatoryName.trim() && companyProfile.authorizedSignatoryName.trim() !== 'Devendra Sharma')
+                              ? companyProfile.authorizedSignatoryName.trim()
+                              : 'Authorized Authority'}
                           </span>
                         </div>
                         <span className="text-[7px] font-bold uppercase tracking-wider text-slate-500 mt-0.5">
-                          {companyProfile.authorizedSignatoryDesignation || 'Authorized Signatory'}
+                          {companyProfile.authorizedSignatoryDesignation?.trim() || 'Authorized Signatory'}
                         </span>
                       </div>
                     </div>
@@ -553,6 +563,8 @@ export default function EmployeeIDCardModal({
           <div className="mt-4 text-center text-slate-400 text-xs print:hidden">
             <p className="font-mono">Tip: Use <strong>Print ID Card</strong> or <strong>Download PDF</strong> for official printing.</p>
           </div>
+          </>
+          )}
 
         </div>
 
@@ -674,6 +686,29 @@ export default function EmployeeIDCardModal({
 
               <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
                 <div>
+                  <label className="block font-bold text-slate-700 mb-1">Authorized Signatory Name</label>
+                  <input
+                    type="text"
+                    value={formCompany.authorizedSignatoryName || ''}
+                    onChange={(e) => setFormCompany(prev => ({ ...prev, authorizedSignatoryName: e.target.value }))}
+                    placeholder="e.g. Authorized Authority"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Authority Designation</label>
+                  <input
+                    type="text"
+                    value={formCompany.authorizedSignatoryDesignation || ''}
+                    onChange={(e) => setFormCompany(prev => ({ ...prev, authorizedSignatoryDesignation: e.target.value }))}
+                    placeholder="e.g. Authorized Signatory"
+                    className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-slate-100">
+                <div>
                   <label className="block font-bold text-slate-700 mb-1">Primary Color (Header)</label>
                   <div className="flex items-center gap-2">
                     <input
@@ -733,31 +768,23 @@ export default function EmployeeIDCardModal({
       {/* PRINT-ONLY CSS STYLES INJECTED DYNAMICALLY */}
       <style>{`
         @media print {
-          body * {
-            visibility: hidden !important;
-          }
-          .id-card-print-area, .id-card-print-area * {
-            visibility: visible !important;
-          }
           .id-card-print-area {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
+            position: relative !important;
             width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
+            padding: 20px 0 !important;
+            margin: 0 auto !important;
             background: white !important;
             display: flex !important;
             flex-direction: row !important;
             justify-content: center !important;
             align-items: center !important;
-            gap: 20px !important;
+            gap: 24px !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
           }
           @page {
-            size: auto;
-            margin: 10mm;
+            size: A4 portrait;
+            margin: 12mm 15mm;
           }
         }
       `}</style>

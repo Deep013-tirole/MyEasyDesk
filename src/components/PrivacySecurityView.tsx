@@ -8,7 +8,7 @@ import {
   Sparkles, Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { safeParseJsonResponse } from '../lib/apiClient.js';
+import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { getClientPrivacySecurity } from '../lib/apiDataService.js';
 
 export interface PrivacySecurityData {
@@ -180,7 +180,7 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
       { step: 1, title: 'Do Not Panic', description: 'EasyDesk will never demand urgent payments or banking PINs over unsolicited calls.' },
       { step: 2, title: 'Verify Identity', description: 'Cross-check the caller number against official contact numbers on easydesk.com or check your live order tracking screen.' },
       { step: 3, title: 'Never Share Banking Credentials', description: 'Immediately decline if asked for Bank OTP, UPI PIN, Card CVV, or Net Banking passwords.' },
-      { step: 4, title: 'Contact Official Support', description: 'Reach out to support@easydesk.com or call our official desk hotline at +91 99999 88888.' },
+      { step: 4, title: 'Contact Official Support', description: 'Reach out to support@easydesk.com or call our official desk hotline.' },
       { step: 5, title: 'Report Suspicious Activity', description: 'Submit an emergency fraud alert via our online report form for immediate security response.' }
     ]
   },
@@ -188,8 +188,8 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
     title: 'Contact EasyDesk Security Team',
     securityEmail: 'security@easydesk.com',
     supportEmail: 'support@easydesk.com',
-    customerCarePhone: '+91 99999 88888',
-    emergencyHotline: '+91 99999 77777',
+    customerCarePhone: '',
+    emergencyHotline: '',
     businessHours: 'Monday – Saturday: 9:00 AM – 7:00 PM IST',
     officeAddress: 'Digital India Tower, Plot 14, Sector 62, Noida, UP - 201301'
   },
@@ -215,7 +215,14 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
     } catch {}
     return DEFAULT_PRIVACY_SECURITY_FALLBACK;
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem('easydesk_cache_privacy_security');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
@@ -232,6 +239,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
   const [scamDetails, setScamDetails] = useState('');
   const [scamSubmitting, setScamSubmitting] = useState(false);
   const [scamSuccess, setScamSuccess] = useState('');
+  const [scamError, setScamError] = useState('');
 
   // Data deletion form
   const [delName, setDelName] = useState('');
@@ -241,18 +249,23 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
   const [delReason, setDelReason] = useState('');
   const [delSubmitting, setDelSubmitting] = useState(false);
   const [delSuccess, setDelSuccess] = useState('');
+  const [delError, setDelError] = useState('');
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e?.detail && typeof e.detail === 'object' && e.detail.hero) {
+        setData(e.detail);
+      }
+    };
+    window.addEventListener('easydesk_privacy_security_updated', handleUpdate);
+    return () => window.removeEventListener('easydesk_privacy_security_updated', handleUpdate);
+  }, []);
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
         // 1. Try Server API
-        const res = await fetch(`/api/privacy-security?_t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
-          }
-        });
+        const res = await apiFetch(`/api/privacy-security?_t=${Date.now()}`);
         if (res.ok) {
           const json = await safeParseJsonResponse<any>(res);
           if (json && json.hero) {
@@ -291,24 +304,23 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
     fetchContent().finally(() => setLoading(false));
   }, []);
 
-
   const handleReportScam = async (e: React.FormEvent) => {
     e.preventDefault();
     setScamSubmitting(true);
+    setScamError('');
     try {
-      const res = await fetch('/api/security/report-scam', {
+      const res = await apiFetch('/api/security/report-scam', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           reporterName: scamName,
           reporterEmail: scamEmail,
           reporterPhone: scamPhone,
           impersonatorContact: scamImpersonator,
           channelUsed: scamChannel,
           scamDetails: scamDetails
-        })
+        }
       });
-      const resJson = await res.json();
+      const resJson = await safeParseJsonResponse<any>(res);
       if (res.ok) {
         setScamSuccess('Report submitted successfully! Our Security Incident Team is investigating.');
         setTimeout(() => {
@@ -320,9 +332,12 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
           setScamImpersonator('');
           setScamDetails('');
         }, 2500);
+      } else {
+        setScamError(resJson?.message || `Failed to submit fraud report (HTTP ${res.status}).`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Failed to submit scam report:', err);
+      setScamError(err?.message || 'Network error occurred while submitting scam report.');
     } finally {
       setScamSubmitting(false);
     }
@@ -331,21 +346,21 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
   const handleRequestDeletion = async (e: React.FormEvent) => {
     e.preventDefault();
     setDelSubmitting(true);
+    setDelError('');
     try {
-      const res = await fetch('/api/security/request-data-deletion', {
+      const res = await apiFetch('/api/security/request-data-deletion', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           customerName: delName,
           customerEmail: delEmail,
           customerPhone: delPhone,
           orderId: delOrderId,
           reason: delReason
-        })
+        }
       });
-      const resJson = await res.json();
+      const resJson = await safeParseJsonResponse<any>(res);
       if (res.ok) {
-        setDelSuccess(resJson.message);
+        setDelSuccess(resJson?.message || 'Data deletion request recorded. Our Security Officer will process your purge within 24-48 business hours.');
         setTimeout(() => {
           setShowDeletionModal(false);
           setDelSuccess('');
@@ -355,9 +370,12 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
           setDelOrderId('');
           setDelReason('');
         }, 2500);
+      } else {
+        setDelError(resJson?.message || `Failed to submit data deletion request (HTTP ${res.status}).`);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error('Failed to submit deletion request:', err);
+      setDelError(err?.message || 'Network error occurred while submitting deletion request.');
     } finally {
       setDelSubmitting(false);
     }
@@ -831,7 +849,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
                   <span className="text-[10px] text-slate-400 font-extrabold uppercase block">Customer Care Helpline</span>
                   <p className="font-black text-slate-900 flex items-center gap-1.5 m-0">
                     <Phone className="w-3.5 h-3.5 text-[#0F4C81]" />
-                    {data.securityContact.customerCarePhone}
+                    {data.securityContact.customerCarePhone || 'Desk Hotline Available'}
                   </p>
                 </div>
 
@@ -839,7 +857,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
                   <span className="text-[10px] text-red-600 font-extrabold uppercase block">Emergency Scam Line</span>
                   <p className="font-black text-red-900 flex items-center gap-1.5 m-0">
                     <ShieldAlert className="w-3.5 h-3.5 text-red-600" />
-                    {data.securityContact.emergencyHotline}
+                    {data.securityContact.emergencyHotline || 'Official Security Desk'}
                   </p>
                 </div>
               </div>
@@ -939,6 +957,12 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
               </div>
             ) : (
               <form onSubmit={handleReportScam} className="space-y-3.5 text-xs">
+                {scamError && (
+                  <div className="p-3 bg-red-50 text-red-800 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{scamError}</span>
+                  </div>
+                )}
                 <div>
                   <label htmlFor="scam-reporter-name" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Your Name *</label>
                   <input 
@@ -1070,6 +1094,12 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
               </div>
             ) : (
               <form onSubmit={handleRequestDeletion} className="space-y-3.5 text-xs">
+                {delError && (
+                  <div className="p-3 bg-red-50 text-red-800 border border-red-200 rounded-xl text-xs font-bold flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600 shrink-0" />
+                    <span>{delError}</span>
+                  </div>
+                )}
                 <div>
                   <label htmlFor="del-cust-name" className="block text-[10px] font-extrabold text-slate-600 uppercase mb-1">Customer Name *</label>
                   <input 

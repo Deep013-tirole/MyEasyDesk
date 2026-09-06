@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Phone, Mail, MapPin, Clock, Save, MessageSquare, 
-  CheckCircle2, AlertCircle, Search, Filter, Check, Shield 
+  CheckCircle2, AlertCircle, Search, Filter, Check, Shield, RefreshCw
 } from 'lucide-react';
-import { apiFetch } from '../../lib/apiClient.js';
+import { apiFetch, safeParseJsonResponse } from '../../lib/apiClient.js';
 import { updateCachedContactSettings } from '../../lib/whatsapp.js';
 
 export default function ContactUsAdminModule() {
@@ -35,15 +35,18 @@ export default function ContactUsAdminModule() {
 
   const fetchContactModuleData = async () => {
     try {
-      const res = await fetch(`/api/contact-settings?_t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
+      const [resSettings, resMessages] = await Promise.allSettled([
+        apiFetch(`/api/contact-settings?_t=${Date.now()}`),
+        apiFetch(`/api/admin/contact-messages?_t=${Date.now()}`, { isAdmin: true })
+      ]);
+
+      if (resSettings.status === 'fulfilled' && resSettings.value.ok) {
+        const data = await safeParseJsonResponse<any>(resSettings.value);
         if (data && typeof data === 'object') setContactSettings(data);
       }
 
-      const msgRes = await fetch(`/api/admin/contact-messages?_t=${Date.now()}`);
-      if (msgRes.ok) {
-        const msgData = await msgRes.json();
+      if (resMessages.status === 'fulfilled' && resMessages.value.ok) {
+        const msgData = await safeParseJsonResponse<any>(resMessages.value);
         if (Array.isArray(msgData)) setMessages(msgData);
       }
     } catch (err) {
@@ -57,6 +60,18 @@ export default function ContactUsAdminModule() {
 
   useEffect(() => {
     fetchContactModuleData();
+  }, [activeSubTab]);
+
+  useEffect(() => {
+    const handleNewInquiry = (e: any) => {
+      if (e?.detail && typeof e.detail === 'object') {
+        setMessages(prev => [e.detail, ...prev.filter(m => m.id !== e.detail.id)]);
+      } else {
+        fetchContactModuleData();
+      }
+    };
+    window.addEventListener('easydesk_contact_inquiry_submitted', handleNewInquiry);
+    return () => window.removeEventListener('easydesk_contact_inquiry_submitted', handleNewInquiry);
   }, []);
 
   const handleSaveContactSettings = async (e: React.FormEvent) => {
@@ -73,12 +88,12 @@ export default function ContactUsAdminModule() {
       });
 
       if (res.ok) {
-        const responseData = await res.json().catch(() => ({}));
+        const responseData = await safeParseJsonResponse<any>(res) || {};
         const updated = responseData.contactSettings || contactSettings;
         updateCachedContactSettings(updated);
         setMsg('Contact details and official address saved successfully!');
       } else {
-        const errorData = await res.json().catch(() => ({}));
+        const errorData = await safeParseJsonResponse<any>(res) || {};
         setErrMsg(errorData.message || 'Failed to save contact settings.');
       }
     } catch (err: any) {
@@ -100,7 +115,7 @@ export default function ContactUsAdminModule() {
         setMsg(`Message marked as ${newStatus}`);
         fetchContactModuleData();
       } else {
-        const errorData = await res.json().catch(() => ({}));
+        const errorData = await safeParseJsonResponse<any>(res) || {};
         setErrMsg(errorData.message || 'Failed updating message status.');
       }
     } catch (err: any) {
@@ -108,11 +123,17 @@ export default function ContactUsAdminModule() {
     }
   };
 
-  const filteredMessages = messages.filter(m => 
-    m.name.toLowerCase().includes(search.toLowerCase()) ||
-    m.email.toLowerCase().includes(search.toLowerCase()) ||
-    m.subject.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredMessages = messages.filter(m => {
+    if (!m) return false;
+    const q = search.toLowerCase();
+    return (
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.email || '').toLowerCase().includes(q) ||
+      (m.subject || '').toLowerCase().includes(q) ||
+      (m.message || '').toLowerCase().includes(q) ||
+      (m.phone || '').toLowerCase().includes(q)
+    );
+  });
 
   if (loading) {
     return (
@@ -328,7 +349,18 @@ export default function ContactUsAdminModule() {
                 className="bg-transparent outline-none text-xs w-64"
               />
             </div>
-            <span className="text-slate-400 text-[11px] font-bold">Total: {filteredMessages.length} inquiries</span>
+            <div className="flex items-center gap-3">
+              <span className="text-slate-400 text-[11px] font-bold">Total: {filteredMessages.length} inquiries</span>
+              <button
+                type="button"
+                onClick={() => fetchContactModuleData()}
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:text-blue-600 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition cursor-pointer shadow-2xs"
+                title="Refresh Inquiries Inbox"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Refresh</span>
+              </button>
+            </div>
           </div>
 
           <div className="space-y-3">

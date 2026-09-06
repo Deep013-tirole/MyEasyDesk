@@ -6,6 +6,7 @@ import {
   Calendar, Briefcase, ChevronRight, ExternalLink, RefreshCw, ShoppingBag
 } from 'lucide-react';
 import { CustomerRecord, Order, Service, OrderStatus, PaymentStatus } from '../../types.js';
+import IndianAddressFields from '../common/IndianAddressFields.js';
 
 interface CustomerManagementModuleProps {
   adminFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
@@ -93,10 +94,14 @@ export default function CustomerManagementModule({
     email: '',
     mobile: '',
     whatsappMobile: '',
+    country: 'India',
     address: '',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pincode: '400001',
+    addressLine1: '',
+    addressLine2: '',
+    district: '',
+    city: '',
+    state: '',
+    pincode: '',
     status: 'Active',
     gstin: '',
     panNumber: '',
@@ -195,10 +200,14 @@ export default function CustomerManagementModule({
       email: '',
       mobile: '',
       whatsappMobile: '',
+      country: 'India',
       address: '',
-      city: 'Mumbai',
-      state: 'Maharashtra',
-      pincode: '400001',
+      addressLine1: '',
+      addressLine2: '',
+      district: '',
+      city: '',
+      state: '',
+      pincode: '',
       status: 'Active',
       gstin: '',
       panNumber: '',
@@ -1370,50 +1379,45 @@ export default function CustomerManagementModule({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div className="sm:col-span-2">
-                      <label className="font-bold text-slate-700 block mb-1">Full Address</label>
-                      <input
-                        type="text"
-                        value={formCustomer.address}
-                        onChange={(e) => setFormCustomer({ ...formCustomer, address: e.target.value })}
-                        placeholder="Street, Building, Flat"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">City</label>
-                      <input
-                        type="text"
-                        value={formCustomer.city}
-                        onChange={(e) => setFormCustomer({ ...formCustomer, city: e.target.value })}
-                        placeholder="e.g. Mumbai"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">State</label>
-                      <input
-                        type="text"
-                        value={formCustomer.state}
-                        onChange={(e) => setFormCustomer({ ...formCustomer, state: e.target.value })}
-                        placeholder="e.g. Maharashtra"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600"
-                      />
-                    </div>
+                  {/* Structured Indian Address Section */}
+                  <div className="bg-slate-50/80 border border-slate-200/80 rounded-2xl p-4 space-y-2">
+                    <span className="font-bold text-xs text-slate-800 uppercase tracking-wide block mb-1">
+                      Customer Address
+                    </span>
+                    <IndianAddressFields
+                      value={{
+                        country: formCustomer.country || 'India',
+                        state: formCustomer.state || '',
+                        district: formCustomer.district || '',
+                        city: formCustomer.city || '',
+                        addressLine1: formCustomer.addressLine1 || formCustomer.address || '',
+                        addressLine2: formCustomer.addressLine2 || '',
+                        locality: formCustomer.locality || '',
+                        landmark: formCustomer.landmark || '',
+                        pincode: formCustomer.pincode || formCustomer.pinCode || '',
+                        pinCode: formCustomer.pinCode || formCustomer.pincode || '',
+                        address: formCustomer.address || ''
+                      }}
+                      onChange={(addr) => {
+                        setFormCustomer(prev => ({
+                          ...prev,
+                          country: addr.country,
+                          state: addr.state,
+                          district: addr.district,
+                          city: addr.city,
+                          addressLine1: addr.addressLine1,
+                          addressLine2: addr.addressLine2,
+                          locality: addr.locality,
+                          landmark: addr.landmark,
+                          pincode: addr.pincode,
+                          pinCode: addr.pinCode,
+                          address: addr.address
+                        }));
+                      }}
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="font-bold text-slate-700 block mb-1">Pincode</label>
-                      <input
-                        type="text"
-                        value={formCustomer.pincode}
-                        onChange={(e) => setFormCustomer({ ...formCustomer, pincode: e.target.value })}
-                        placeholder="400001"
-                        className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-blue-600 font-mono"
-                      />
-                    </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="font-bold text-slate-700 block mb-1">Record Status</label>
                       <select
@@ -1795,8 +1799,8 @@ export default function CustomerManagementModule({
       {/* PRINTABLE CUSTOMER RECORD MODAL                           */}
       {/* ========================================================= */}
       {printModalOpen && selectedCustomer && (
-        <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900">
+        <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 overflow-y-auto printable-modal-overlay">
+          <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
             
             <div className="flex items-center justify-between border-b pb-4 print:hidden">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Official Customer Master Record</span>
@@ -1875,8 +1879,8 @@ export default function CustomerManagementModule({
       {/* PRINTABLE CUSTOMER SERVICE HISTORY DOSSIER MODAL          */}
       {/* ========================================================= */}
       {dossierPrintModalOpen && (dossierCustomer || historyCustomer) && (
-        <div className="fixed inset-0 bg-slate-900/80 z-[70] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900">
+        <div className="fixed inset-0 bg-slate-900/80 z-[70] flex items-center justify-center p-4 overflow-y-auto printable-modal-overlay">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
             
             {/* Header Controls - hidden when printing */}
             <div className="flex items-center justify-between border-b border-slate-200 pb-4 print:hidden">

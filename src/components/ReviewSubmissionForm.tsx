@@ -150,22 +150,19 @@ export default function ReviewSubmissionForm({
         comment: reviewText.trim()
       };
 
-      const response = await fetch('/api/reviews', {
+      const response = await apiFetch('/api/reviews', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        body: payload
       });
 
-      const data = await response.json();
+      const data = await safeParseJsonResponse<any>(response);
 
       if (!response.ok) {
-        throw new Error(data.message || 'Failed to save review to database.');
+        throw new Error(data?.message || 'Failed to save review to database.');
       }
 
-      setSubmittedReview(data.review);
-      if (onSuccess) {
+      setSubmittedReview(data?.review);
+      if (onSuccess && data?.review) {
         onSuccess(data.review);
       }
     } catch (err: any) {

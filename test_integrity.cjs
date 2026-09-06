@@ -1,6 +1,8 @@
 const http = require('http');
+const { app } = require('./dist/server.cjs');
 
 const CSRF_TOKEN = 'easydesk_secure_csrf_token_2026_val';
+let localServer = null;
 
 function req(options, body) {
   return new Promise((resolve, reject) => {
@@ -29,6 +31,15 @@ async function runAllTests() {
   console.log('================================================================');
   console.log('EASYDESK — FINAL PRODUCTION DATA INTEGRITY TEST SUITE');
   console.log('================================================================\n');
+
+  // Ensure server is accessible
+  await new Promise((resolve) => {
+    const probe = http.request({ hostname: 'localhost', port: 3000, path: '/api/security/csrf', method: 'GET' }, () => resolve(true));
+    probe.on('error', () => {
+      localServer = app.listen(3000, () => resolve(true));
+    });
+    probe.end();
+  });
 
   // Verify CSRF Endpoint
   const csrfRes = await req({
@@ -427,16 +438,18 @@ async function runAllTests() {
   const createCustRes = await req({
     hostname: 'localhost',
     port: 3000,
-    path: '/api/auth/register',
+    path: '/api/admin/customers',
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' }
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
   }, {
     name: 'Anjali Sharma',
     email: testCustEmail,
     mobile: '9123456780',
-    password: 'CustomerPass123!'
+    city: 'Mumbai',
+    state: 'Maharashtra',
+    country: 'India'
   });
-  console.log('7a. Register customer HTTP status:', createCustRes.status);
+  console.log('7a. Create customer HTTP status:', createCustRes.status);
 
   const readCustRes = await req({
     hostname: 'localhost',
@@ -522,6 +535,15 @@ async function runAllTests() {
   } else {
     console.log('PERSISTENCE VERIFICATION FAILED');
   }
+
+  if (localServer) {
+    localServer.close();
+  }
 }
 
-runAllTests().catch(console.error);
+runAllTests().then(() => {
+  setTimeout(() => process.exit(0), 100);
+}).catch(err => {
+  console.error(err);
+  process.exit(1);
+});

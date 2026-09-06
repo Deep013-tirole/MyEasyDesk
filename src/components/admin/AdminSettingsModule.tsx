@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Settings, Globe, Shield, Save, CheckCircle2, AlertCircle, RefreshCw, Key, ToggleLeft, ToggleRight,
-  Database, Plus, Trash2, Edit3, Check, X, Layers, Briefcase, User, Mail, Phone, MessageSquare, MapPin, Clock, Lock
+  Database, Plus, Trash2, Edit3, Check, X, Layers, Briefcase, User, Mail, Phone, MessageSquare, MapPin, Clock, Lock, Share2
 } from 'lucide-react';
 import { apiFetch } from '../../lib/apiClient.js';
 import { MediaInput } from './MediaInput';
+import SocialMediaAdminModule from './SocialMediaAdminModule.js';
 import { normalizeWhatsAppNumber, updateCachedContactSettings } from '../../lib/whatsapp.js';
 import { useScrollToTopOnChange } from '../../lib/scrollUtils.js';
 
 export default function AdminSettingsModule() {
-  const [activeTab, setActiveTab] = useState<'profile' | 'contact' | 'general'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'contact' | 'general' | 'social'>('profile');
 
   // Reset scroll position on settings tab switch
   useScrollToTopOnChange([activeTab]);
@@ -24,17 +25,17 @@ export default function AdminSettingsModule() {
 
   // Contact & WhatsApp state
   const [contactSettings, setContactSettings] = useState<any>({
-    companyName: 'EasyDesk Digital Services',
-    phone: '+91 98765 43210',
-    whatsapp: '919876543210',
+    companyName: '',
+    phone: '',
+    whatsapp: '',
     whatsappEnabled: true,
-    email: 'support@easydesk.com',
+    email: '',
     alternateEmail: '',
-    address: 'BKC Signature IT Park, Mumbai, Maharashtra 400051',
-    city: 'Mumbai',
-    state: 'Maharashtra',
-    pinCode: '400051',
-    workingHours: 'Mon - Sat: 9:00 AM - 7:00 PM IST',
+    address: '',
+    city: '',
+    state: '',
+    pinCode: '',
+    workingHours: '',
     googleMapsUrl: ''
   });
   const [savingContact, setSavingContact] = useState(false);
@@ -98,7 +99,7 @@ export default function AdminSettingsModule() {
         if (cData && typeof cData === 'object') {
           setContactSettings({
             ...cData,
-            whatsapp: normalizeWhatsAppNumber(cData.whatsapp || '919876543210')
+            whatsapp: cData.whatsapp ? normalizeWhatsAppNumber(cData.whatsapp) : ''
           });
         }
       }
@@ -368,6 +369,16 @@ export default function AdminSettingsModule() {
           >
             <Globe className="w-3.5 h-3.5" />
             <span>Branding & Master</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setActiveTab('social'); setMsg(''); setErrMsg(''); }}
+            className={`px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shrink-0 whitespace-nowrap ${
+              activeTab === 'social' ? 'bg-white text-purple-700 shadow-xs font-black' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span>Social Media</span>
           </button>
         </div>
       </div>
@@ -811,6 +822,13 @@ export default function AdminSettingsModule() {
           </div>
 
         </form>
+      )}
+
+      {/* Tab: Social Media Links CMS */}
+      {activeTab === 'social' && (
+        <div className="pt-2 animate-in fade-in duration-150">
+          <SocialMediaAdminModule />
+        </div>
       )}
 
     </div>

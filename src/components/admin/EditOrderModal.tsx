@@ -4,6 +4,7 @@ import {
   Sparkles, FileText, User, ShieldAlert, Calendar, Clock 
 } from 'lucide-react';
 import { Order, Service, ServiceCategory, OrderStatus, PaymentMethod, PaymentStatus } from '../../types.js';
+import IndianAddressFields from '../common/IndianAddressFields.js';
 
 interface EditOrderModalProps {
   isOpen: boolean;
@@ -28,8 +29,10 @@ export default function EditOrderModal({
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [district, setDistrict] = useState('');
   const [city, setCity] = useState('');
   const [state, setState] = useState('');
+  const [country, setCountry] = useState('India');
   const [pinCode, setPinCode] = useState('');
   const [serviceId, setServiceId] = useState('');
   const [totalAmount, setTotalAmount] = useState<number>(0);
@@ -51,9 +54,11 @@ export default function EditOrderModal({
       setMobile(order.mobile || '');
       setEmail(order.email || '');
       setAddress(order.address || '');
+      setDistrict(order.district || '');
       setCity(order.city || '');
       setState(order.state || '');
-      setPinCode(order.pinCode || '');
+      setCountry(order.country || 'India');
+      setPinCode(order.pinCode || (order as any).pincode || '');
       setServiceId(order.serviceId || '');
       setTotalAmount(order.totalAmount || 0);
       setPriority(order.priority || 'Normal');
@@ -72,8 +77,8 @@ export default function EditOrderModal({
       }
 
       setAdditionalNotes(order.additionalNotes || '');
-      setPaymentMethod(order.paymentMethod || 'UPI');
-      setPaymentStatus(order.paymentStatus || 'Pending Verification');
+      setPaymentMethod((order.paymentMethod as any) || 'UPI');
+      setPaymentStatus((order.paymentStatus as any) || 'Pending Verification');
       setUtr(order.utr || '');
       setErrorMessage('');
     }
@@ -106,9 +111,12 @@ export default function EditOrderModal({
         mobile: mobile.trim(),
         email: email.trim(),
         address: address.trim(),
+        district: district.trim(),
         city: city.trim(),
         state: state.trim(),
         pinCode: pinCode.trim(),
+        pincode: pinCode.trim(),
+        country: country.trim() || 'India',
         serviceId,
         totalAmount: Number(totalAmount),
         priority,
@@ -264,25 +272,28 @@ export default function EditOrderModal({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              <div className="sm:col-span-2">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">Street Address</label>
-                <input
-                  type="text"
-                  value={address}
-                  onChange={e => setAddress(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block mb-1">City</label>
-                <input
-                  type="text"
-                  value={city}
-                  onChange={e => setCity(e.target.value)}
-                  className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600"
-                />
-              </div>
+            <div className="pt-2">
+              <IndianAddressFields
+                compact
+                showLandmark={false}
+                value={{
+                  country,
+                  state,
+                  district,
+                  city,
+                  addressLine1: address,
+                  pinCode,
+                  pincode: pinCode
+                }}
+                onChange={(addr) => {
+                  setCountry(addr.country || 'India');
+                  setState(addr.state || '');
+                  setDistrict(addr.district || '');
+                  setCity(addr.city || '');
+                  setPinCode(addr.pinCode || addr.pincode || '');
+                  setAddress(addr.addressLine1 || addr.address || '');
+                }}
+              />
             </div>
           </div>
 

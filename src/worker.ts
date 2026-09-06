@@ -193,8 +193,10 @@ export default {
 
     const url = new URL(request.url);
 
-    // Direct edge R2 storage streaming for uploaded assets if available
-    if (url.pathname.startsWith('/uploads/') && env && env.STORAGE && typeof env.STORAGE.get === 'function') {
+    // Direct edge R2 storage streaming for public uploaded assets if available
+    const isPublicMedia = (url.pathname.startsWith('/uploads/media/') || url.pathname.startsWith('/uploads/employees/')) && !url.pathname.includes('..');
+
+    if (isPublicMedia && env && env.STORAGE && typeof env.STORAGE.get === 'function') {
       const cleanKey = url.pathname.replace(/^\/uploads\//, '');
       try {
         const r2Obj = await env.STORAGE.get(cleanKey);
@@ -211,8 +213,8 @@ export default {
       }
     }
 
-    // Direct edge Firebase Storage bucket streaming for permanent binary files
-    if (url.pathname.startsWith('/uploads/')) {
+    // Direct edge Firebase Storage bucket streaming for public permanent binary files
+    if (isPublicMedia) {
       const cleanKey = url.pathname.replace(/^\/uploads\//, '');
       const fbBucket = env?.FIREBASE_STORAGE_BUCKET || process.env.FIREBASE_STORAGE_BUCKET || (defaultFirebaseConfig as any)?.storageBucket || 'khaki-fact-snzsc.firebasestorage.app';
       const apiKey = env?.FIREBASE_API_KEY || process.env.FIREBASE_API_KEY || (defaultFirebaseConfig as any)?.apiKey || '';

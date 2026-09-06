@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, ShieldAlert, CheckCircle2, Clock, RotateCcw, 
   ArrowRight, FileText, UploadCloud, Printer, AlertCircle, RefreshCw,
@@ -30,9 +30,8 @@ export default function TrackingView() {
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string>('');
   const [reviewErrorMsg, setReviewErrorMsg] = useState<string>('');
 
-  const handleTrack = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!orderId.trim()) return;
+  const executeTrack = async (targetId: string, targetMobile: string = '') => {
+    if (!targetId.trim()) return;
 
     setLoading(true);
     setError('');
@@ -42,7 +41,7 @@ export default function TrackingView() {
     setReviewErrorMsg('');
 
     try {
-      const url = `/api/orders/track?orderId=${encodeURIComponent(orderId.trim())}${mobile ? `&mobile=${encodeURIComponent(mobile.trim())}` : ''}`;
+      const url = `/api/orders/track?orderId=${encodeURIComponent(targetId.trim())}${targetMobile ? `&mobile=${encodeURIComponent(targetMobile.trim())}` : ''}`;
       const response = await fetch(url);
       
       if (response.ok) {
@@ -64,6 +63,22 @@ export default function TrackingView() {
       setLoading(false);
     }
   };
+
+  const handleTrack = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await executeTrack(orderId, mobile);
+  };
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const queryOrderId = params.get('orderId') || params.get('id');
+    const queryMobile = params.get('mobile') || '';
+    if (queryOrderId) {
+      setOrderId(queryOrderId);
+      if (queryMobile) setMobile(queryMobile);
+      executeTrack(queryOrderId, queryMobile);
+    }
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFileError('');
@@ -131,7 +146,8 @@ export default function TrackingView() {
         body: {
           docName: selectedFile.name,
           fileData: fileBase64,
-          mimeType: selectedFile.type || 'application/pdf'
+          mimeType: selectedFile.type || 'application/pdf',
+          mobile: mobile || order.mobile
         }
       });
       const data = await response.json().catch(() => ({}));
@@ -163,10 +179,9 @@ export default function TrackingView() {
     setReviewSuccessMsg('');
 
     try {
-      const response = await fetch('/api/reviews', {
+      const response = await apiFetch('/api/reviews', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           orderId: order.id,
           customerId: order.customerId || order.userId,
           customerName: order.name,
@@ -176,10 +191,10 @@ export default function TrackingView() {
           rating: Number(rating),
           reviewText: reviewText.trim(),
           comment: reviewText.trim()
-        })
+        }
       });
 
-      const data = await response.json();
+      const data = await safeParseJsonResponse<any>(response);
 
       if (response.ok) {
         setReviewSuccessMsg('Thank you for rating your experience! Your review has been saved and is currently pending administrator verification.');
@@ -188,8 +203,8 @@ export default function TrackingView() {
         setOrder({
           ...order,
           submittedReview: {
-            id: data.review?.id || `rev-${Date.now()}`,
-            reviewId: data.review?.id,
+            id: data?.review?.id || `rev-${Date.now()}`,
+            reviewId: data?.review?.id,
             rating: Number(rating),
             reviewText: reviewText.trim(),
             status: 'Pending',
@@ -197,7 +212,7 @@ export default function TrackingView() {
           }
         });
       } else {
-        setReviewErrorMsg(data.message || 'Failed to submit review. Please try again.');
+        setReviewErrorMsg(data?.message || 'Failed to submit review. Please try again.');
       }
     } catch (err: any) {
       setReviewErrorMsg('Failed to submit review due to a network connection error.');
@@ -233,7 +248,7 @@ export default function TrackingView() {
 
   const handlePrint = () => {
     const trackEl = document.getElementById('easydesk-tracking');
-    printElement(trackEl, `Receipt - Order #${order?.id || orderId || 'Receipt'}`);
+    printElement(trackEl, `EasyDesk-Tracking-Receipt-${order?.id || orderId || 'Receipt'}`);
   };
 
   const isOrderCompleted = order && (
@@ -338,9 +353,10 @@ export default function TrackingView() {
         )}
       </div>
 
-      {/* Order Status Display Section */}
+      {/* Order Status Display Section (Screen View + Printable Slip) */}
       {order && (
-        <div className="space-y-6">
+        <>
+          <div className="space-y-6 print:hidden">
           
           {/* Header Summary Card */}
           <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
@@ -357,7 +373,16 @@ export default function TrackingView() {
                 </p>
               </div>
 
-              <div className="shrink-0">
+              <div className="shrink-0 flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={handlePrint}
+                  className="bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs px-3.5 py-1.5 rounded-full border border-blue-200 flex items-center gap-1.5 transition cursor-pointer"
+                  title="Print / Download Official Acknowledgement Receipt"
+                >
+                  <Printer className="w-3.5 h-3.5" />
+                  <span>Print Receipt</span>
+                </button>
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase border tracking-wider ${getStatusColor(order.orderStatus)}`}>
                   {order.orderStatus === OrderStatus.COMPLETED ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
                   {order.orderStatus}
@@ -735,7 +760,242 @@ export default function TrackingView() {
           </div>
 
         </div>
-      )}
+
+        {/* ========================================================================= */}
+        {/* DEDICATED OFFICIAL PRINTABLE ACKNOWLEDGEMENT & TRACKING RECEIPT (PRINT-ONLY) */}
+        {/* ========================================================================= */}
+        <div className="print-only printable-tracking-document w-full bg-white text-slate-900 font-sans p-0 m-0 text-xs">
+
+          {/* 1. Official Letterhead / Header */}
+          <div className="border-b-2 border-slate-900 pb-4 mb-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-[#0F4C81] text-white rounded-xl flex items-center justify-center font-black text-xl tracking-tighter">
+                  ED
+                </div>
+                <div>
+                  <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
+                    EasyDesk Solutions Private Limited
+                  </h1>
+                  <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                    Government Services Citizen Advisory & Digital Documentation Facilitation Portal
+                  </p>
+                  <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                    CIN: U72900MH2024PTC123456 • ISO 9001:2015 Certified Citizen Desk
+                  </p>
+                </div>
+              </div>
+              <div className="text-right text-[10px] text-slate-600">
+                <p className="font-bold text-slate-900 uppercase tracking-wider">Official Acknowledgement Slip</p>
+                <p className="font-mono">Printed on: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                <p className="font-mono text-[9px] text-slate-400">Time: {new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Document Title Banner */}
+          <div className="bg-slate-100 border border-slate-300 rounded-lg p-3 mb-4 flex items-center justify-between">
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-slate-500 block">Citizen Copy</span>
+              <h2 className="text-sm font-black text-slate-900 tracking-wide uppercase">
+                Application Acknowledgement & Service Status Record
+              </h2>
+            </div>
+            <div className="text-right">
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block">Current Status</span>
+              <span className="font-black text-xs uppercase px-3 py-1 rounded border border-slate-400 bg-white inline-block">
+                {order.orderStatus}
+              </span>
+            </div>
+          </div>
+
+          {/* 3. Four-Box Metadata Bar */}
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            <div className="border border-slate-300 rounded-lg p-2.5 bg-slate-50/50">
+              <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Application ID</span>
+              <span className="font-mono font-black text-sm text-blue-900 block mt-0.5">#{order.id}</span>
+            </div>
+            <div className="border border-slate-300 rounded-lg p-2.5 bg-slate-50/50">
+              <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Submission Date</span>
+              <span className="font-medium text-xs text-slate-800 block mt-0.5">
+                {new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+              </span>
+            </div>
+            <div className="border border-slate-300 rounded-lg p-2.5 bg-slate-50/50">
+              <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Payment Status</span>
+              <span className="font-bold text-xs text-emerald-700 block mt-0.5 uppercase">
+                {order.paymentStatus || 'Verified / Paid'}
+              </span>
+            </div>
+            <div className="border border-slate-300 rounded-lg p-2.5 bg-slate-50/50">
+              <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Service Category</span>
+              <span className="font-medium text-xs text-slate-800 block mt-0.5 truncate">
+                {order.category || 'Citizen Advisory'}
+              </span>
+            </div>
+          </div>
+
+          {/* 4. Applicant & Service Information (2 Columns) */}
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            {/* Left Column: Applicant Profile */}
+            <div className="border border-slate-300 rounded-lg p-3.5 space-y-2">
+              <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                Applicant & Communication Details
+              </h3>
+              <div className="space-y-1 text-xs">
+                <p><span className="text-slate-500 font-semibold inline-block w-24">Full Name:</span> <strong className="text-slate-900">{order.name}</strong></p>
+                <p><span className="text-slate-500 font-semibold inline-block w-24">Mobile:</span> <strong className="font-mono text-slate-900">+91 {order.mobile}</strong></p>
+                <p><span className="text-slate-500 font-semibold inline-block w-24">Email:</span> <span className="font-mono text-slate-800">{order.email}</span></p>
+                <div className="pt-1">
+                  <span className="text-slate-500 font-semibold block text-[10px] uppercase">Registered Address:</span>
+                  <p className="text-slate-800 leading-snug mt-0.5 font-medium">
+                    {order.addressLine1 || order.address}
+                    {order.addressLine2 ? `, ${order.addressLine2}` : ''}
+                    {order.landmark ? `, Near ${order.landmark}` : ''}
+                    <br />
+                    {order.district && order.district.toLowerCase() !== (order.city || '').toLowerCase() ? `${order.district}, ` : ''}
+                    {order.city}, {order.state} - <strong className="font-mono">{order.pinCode || order.pincode}</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Service Specifications */}
+            <div className="border border-slate-300 rounded-lg p-3.5 space-y-2">
+              <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                Service & Fulfillment Specifications
+              </h3>
+              <div className="space-y-1 text-xs">
+                <p><span className="text-slate-500 font-semibold inline-block w-28">Service Applied:</span> <strong className="text-slate-900">{order.serviceTitle}</strong></p>
+                <p><span className="text-slate-500 font-semibold inline-block w-28">Fulfillment Mode:</span> <span className="text-slate-800">{order.documentDeliveryStatus || 'Digital Clearance & Physical Dispatch'}</span></p>
+                <p><span className="text-slate-500 font-semibold inline-block w-28">Application Channel:</span> <span className="text-slate-800">EasyDesk Assisted Online Portal</span></p>
+                <p><span className="text-slate-500 font-semibold inline-block w-28">Assigned Desk:</span> <span className="text-slate-800">{order.assignedEmployeeName ? `${order.assignedEmployeeName} (${order.assignedEmployeeCode || 'Desk'})` : 'Citizen Services Central Desk'}</span></p>
+                <div className="pt-1">
+                  <span className="text-slate-500 font-semibold block text-[10px] uppercase">Enclosed Documents ({order.uploadedDocuments?.length || 0}):</span>
+                  {(!order.uploadedDocuments || order.uploadedDocuments.length === 0) ? (
+                    <p className="text-slate-400 italic text-[10px] mt-0.5">No digital copies attached during submission</p>
+                  ) : (
+                    <ul className="text-[10px] text-slate-700 list-disc list-inside mt-0.5 space-y-0.5 font-mono">
+                      {order.uploadedDocuments.map((doc, idx) => (
+                        <li key={idx} className="truncate">{doc.name}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 5. Payment & Transaction Summary Table */}
+          <div className="border border-slate-300 rounded-lg overflow-hidden mb-4 print-avoid-break">
+            <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300">
+              <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+                Payment & Consultancy Billing Summary
+              </h3>
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase border-b border-slate-300">
+                  <th className="py-2 px-3 text-left">Description</th>
+                  <th className="py-2 px-3 text-left">Payment Mode</th>
+                  <th className="py-2 px-3 text-left">Transaction / UTR Ref</th>
+                  <th className="py-2 px-3 text-left">Payment Status</th>
+                  <th className="py-2 px-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b border-slate-200">
+                  <td className="py-2 px-3 font-semibold text-slate-900">{order.serviceTitle} — Citizen Advisory & Filing Fee</td>
+                  <td className="py-2 px-3 uppercase font-medium">{order.paymentMethod || 'Online'}</td>
+                  <td className="py-2 px-3 font-mono text-[10px] text-slate-600">{order.utr || `TXN-ED-${order.id}`}</td>
+                  <td className="py-2 px-3">
+                    <span className="font-bold text-emerald-700 uppercase text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
+                      {order.paymentStatus || 'Verified'}
+                    </span>
+                  </td>
+                  <td className="py-2 px-3 text-right font-black text-slate-900">₹{order.totalAmount}</td>
+                </tr>
+              </tbody>
+              <tfoot>
+                <tr className="bg-slate-50 font-bold">
+                  <td colSpan={4} className="py-2 px-3 text-right text-slate-700 text-xs uppercase tracking-wider">
+                    Total Amount Paid (Inclusive of Taxes & Platform Charges):
+                  </td>
+                  <td className="py-2 px-3 text-right font-black text-sm text-slate-900">
+                    ₹{order.totalAmount}
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* 6. Milestone Verification Logs Table */}
+          {order.logs && order.logs.length > 0 && (
+            <div className="border border-slate-300 rounded-lg overflow-hidden mb-4 print-avoid-break">
+              <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300">
+                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+                  Application Verification & Action Logs
+                </h3>
+              </div>
+              <table className="w-full text-xs">
+                <thead>
+                  <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase border-b border-slate-300">
+                    <th className="py-1.5 px-3 text-left w-36">Stage / Milestone</th>
+                    <th className="py-1.5 px-3 text-left">Officer Remarks / Audit Details</th>
+                    <th className="py-1.5 px-3 text-right w-44">Date & Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200">
+                  {order.logs.map((log, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50/50">
+                      <td className="py-1.5 px-3 font-bold text-slate-900 text-[11px]">{log.status}</td>
+                      <td className="py-1.5 px-3 text-slate-700 text-[11px]">{log.comment}</td>
+                      <td className="py-1.5 px-3 text-right font-mono text-[10px] text-slate-500">
+                        {new Date(log.timestamp).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} {new Date(log.timestamp).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* 7. Important Citizen Guidelines */}
+          <div className="border border-slate-300 rounded-lg p-3 mb-4 bg-slate-50/70 text-[10px] text-slate-600 print-avoid-break">
+            <span className="font-black text-slate-800 uppercase tracking-wider block mb-1">
+              Important Instructions for the Applicant:
+            </span>
+            <ol className="list-decimal list-inside space-y-0.5 leading-relaxed">
+              <li>Please preserve this Application Acknowledgement & Reference ID <strong>#{order.id}</strong> for future correspondence and verification.</li>
+              <li>SMS alerts and WhatsApp status notifications will be transmitted to registered mobile <strong>+91 {order.mobile}</strong>.</li>
+              <li>In the event of "Documents Required" notification, promptly upload the requested credentials via the Live Tracking portal.</li>
+              <li>Final government-attested certificates/clearance records will be made available for secure digital download upon department sign-off.</li>
+            </ol>
+          </div>
+
+          {/* 8. Electronic Verification Seal & Footer */}
+          <div className="border-t-2 border-slate-900 pt-3 flex items-center justify-between text-[9px] text-slate-500 print-avoid-break">
+            <div className="space-y-0.5">
+              <p className="font-bold text-slate-800">
+                🔒 Electronically Generated Official Document
+              </p>
+              <p>
+                Generated under the Information Technology Act, 2000. Valid without physical handwritten signature.
+              </p>
+              <p className="font-mono text-slate-400">
+                Verification Security ID: AUTH-ED-{order.id.replace(/[^a-zA-Z0-9]/g, '')}-{order.createdAt.replace(/[^0-9]/g, '').slice(0, 8)}
+              </p>
+            </div>
+            <div className="text-right space-y-0.5">
+              <p className="font-bold text-slate-800">EasyDesk Citizen Helpdesk</p>
+              <p>Email: support@easydesk.in • Web: www.easydesk.in</p>
+              <p className="font-mono text-slate-400">National Helpline: 1800-889-DESK (Mon–Sat 9AM–7PM)</p>
+            </div>
+          </div>
+
+        </div>
+      </>
+    )}
 
     </div>
   );

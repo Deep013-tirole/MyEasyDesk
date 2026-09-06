@@ -23,6 +23,7 @@ import { useCatalog } from './hooks/useCatalog.js';
 import { useScrollToTopOnChange } from './lib/scrollUtils.js';
 import { auth, onAuthStateChanged } from './lib/firebaseClient.js';
 import { LanguageProvider } from './context/LanguageContext.js';
+import { syncContactSettingsFromServer } from './lib/whatsapp.js';
 import { WifiOff, RefreshCw } from 'lucide-react';
 
 function ViewLoadingFallback() {
@@ -72,6 +73,7 @@ export default function App() {
     const handleOnline = () => {
       setIsOnline(true);
       fetchPlatformCatalogs();
+      syncContactSettingsFromServer(true);
     };
     const handleOffline = () => {
       setIsOnline(false);
@@ -285,6 +287,7 @@ export default function App() {
     );
 
     fetchPlatformCatalogs();
+    syncContactSettingsFromServer(true);
 
     return () => unsubscribe();
   }, []);

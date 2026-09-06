@@ -33,22 +33,22 @@ interface ContactSettings {
 
 const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
   companyName: 'EasyDesk Digital Services Pvt Ltd',
-  phone: '+91 99999 88888',
-  whatsapp: '+91 99999 88888',
+  phone: '',
+  whatsapp: '',
   email: 'support@easydesk.com',
   alternateEmail: 'info@easydesk.com',
-  address: 'Digital India Tower, Plot 14, Sector 62',
-  city: 'Noida',
-  state: 'Uttar Pradesh',
-  pinCode: '201301',
+  address: '',
+  city: '',
+  state: '',
+  pinCode: '',
   workingHours: 'Monday - Saturday: 9:00 AM - 7:00 PM IST',
-  googleMapsUrl: 'https://maps.google.com/?q=Sector+62+Noida',
+  googleMapsUrl: '',
   socialMedia: {
-    facebook: 'https://facebook.com/easydesk',
-    instagram: 'https://instagram.com/easydesk',
-    youtube: 'https://youtube.com/easydesk',
-    linkedin: 'https://linkedin.com/company/easydesk',
-    twitter: 'https://twitter.com/easydesk'
+    facebook: '',
+    instagram: '',
+    youtube: '',
+    linkedin: '',
+    twitter: ''
   }
 };
 
@@ -65,7 +65,14 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
     } catch {}
     return DEFAULT_CONTACT_SETTINGS;
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem('easydesk_cache_contact_settings');
+      return !cached;
+    } catch {
+      return true;
+    }
+  });
 
   // Form fields
   const [name, setName] = useState('');
@@ -82,49 +89,55 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
     let isMounted = true;
     const fetchContactInfo = async () => {
       try {
-        const res = await fetch(`/api/contact-settings?_t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache'
+        try {
+          const res = await fetch(`/api/contact-settings?_t=${Date.now()}`, {
+            cache: 'no-store',
+            headers: {
+              'Cache-Control': 'no-cache, no-store, must-revalidate',
+              'Pragma': 'no-cache'
+            }
+          });
+          if (res.ok) {
+            const data = await safeParseJsonResponse<any>(res);
+            if (data && (data.phone || data.email || data.companyName) && isMounted) {
+              setContactInfo(prev => {
+                const updated = { ...prev, ...data };
+                try {
+                  localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+              return;
+            }
           }
-        });
-        if (res.ok) {
-          const data = await safeParseJsonResponse<any>(res);
-          if (data && (data.phone || data.email || data.companyName) && isMounted) {
-            setContactInfo(prev => {
-              const updated = { ...prev, ...data };
-              try {
-                localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(updated));
-              } catch {}
-              return updated;
-            });
-            return;
+        } catch (err: any) {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            console.warn('Failed to load contact settings via API:', err?.message || err);
           }
         }
-      } catch (err: any) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          console.warn('Failed to load contact settings via API:', err?.message || err);
-        }
-      }
 
-      // Authoritative Direct API Fallback
-      try {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          const directContact = await getClientContactSettings();
-          if (directContact && isMounted) {
-            setContactInfo(prev => {
-              const updated = { ...prev, ...directContact };
-              try {
-                localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(updated));
-              } catch {}
-              return updated;
-            });
+        // Authoritative Direct API Fallback
+        try {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            const directContact = await getClientContactSettings();
+            if (directContact && isMounted) {
+              setContactInfo(prev => {
+                const updated = { ...prev, ...directContact };
+                try {
+                  localStorage.setItem('easydesk_cache_contact_settings', JSON.stringify(updated));
+                } catch {}
+                return updated;
+              });
+            }
+          }
+        } catch (fsErr: any) {
+          if (typeof navigator === 'undefined' || navigator.onLine !== false) {
+            console.warn('Failed to load direct fallback contact settings:', fsErr?.message || fsErr);
           }
         }
-      } catch (fsErr: any) {
-        if (typeof navigator === 'undefined' || navigator.onLine !== false) {
-          console.warn('Failed to load direct fallback contact settings:', fsErr?.message || fsErr);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
       }
     };
@@ -146,19 +159,22 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
         body: { name, email, phone, subject, message }
       });
 
-      const data = await res.json().catch(() => ({}));
+      const data = await safeParseJsonResponse<any>(res);
       if (res.ok) {
         setSuccessMsg('Thank you! Your message has been received. A desk assistance officer will contact you shortly.');
+        try {
+          window.dispatchEvent(new CustomEvent('easydesk_contact_inquiry_submitted', { detail: data?.messageData || data?.inquiry }));
+        } catch {}
         setName('');
         setEmail('');
         setPhone('');
         setSubject('');
         setMessage('');
       } else {
-        setErrorMsg(data.message || 'Failed to send message. Please try again.');
+        setErrorMsg(data?.message || 'Failed to send message. Please try again.');
       }
     } catch (err: any) {
-      setErrorMsg(err.message || 'Network error sending message. Please try again.');
+      setErrorMsg(err?.message || 'Network error sending message. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -246,8 +262,8 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Phone Support</span>
-                  <a href={`tel:${contactInfo?.phone}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors">
-                    {contactInfo?.phone || '+91 98765 43210'}
+                  <a href={contactInfo?.phone ? `tel:${contactInfo.phone}` : '#'} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors">
+                    {contactInfo?.phone || 'Desk Hotline Available'}
                   </a>
                 </div>
               </div>
@@ -263,7 +279,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                     onClick={() => openGeneralWhatsApp()}
                     className="font-black text-sm text-emerald-600 hover:underline text-left cursor-pointer p-0 bg-transparent border-0 flex items-center gap-1.5"
                   >
-                    <span>{contactInfo?.whatsapp || '+91 98765 43210'}</span>
+                    <span>{contactInfo?.whatsapp ? `+${contactInfo.whatsapp}` : 'Online WhatsApp Support'}</span>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Chat Live</span>
                   </button>
                 </div>

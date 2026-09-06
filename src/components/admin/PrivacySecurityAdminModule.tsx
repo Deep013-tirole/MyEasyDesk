@@ -5,12 +5,14 @@ import {
   RefreshCw, Check, X, FileSpreadsheet, Layers, Info
 } from 'lucide-react';
 import { PrivacySecurityData } from '../PrivacySecurityView.js';
+import { apiFetch, safeParseJsonResponse } from '../../lib/apiClient.js';
 
 export default function PrivacySecurityAdminModule() {
   const [data, setData] = useState<PrivacySecurityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   // Subtabs
   const [activeSubtab, setActiveSubtab] = useState<'hero' | 'requests' | 'protection' | 'retention' | 'scam' | 'faqs' | 'reports'>('hero');
@@ -27,27 +29,23 @@ export default function PrivacySecurityAdminModule() {
     setLoading(true);
     try {
       const results = await Promise.allSettled([
-        fetch(`/api/privacy-security?_t=${Date.now()}`),
-        fetch(`/api/admin/scam-reports?_t=${Date.now()}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token')}` }
-        }),
-        fetch(`/api/admin/data-deletion-requests?_t=${Date.now()}`, {
-          headers: { 'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token')}` }
-        })
+        apiFetch(`/api/privacy-security?_t=${Date.now()}`),
+        apiFetch(`/api/admin/scam-reports?_t=${Date.now()}`),
+        apiFetch(`/api/admin/data-deletion-requests?_t=${Date.now()}`)
       ]);
 
       const [resConfig, resScams, resPurges] = results;
 
       if (resConfig.status === 'fulfilled' && resConfig.value.ok) {
-        const json = await resConfig.value.json();
+        const json = await safeParseJsonResponse<any>(resConfig.value);
         if (json && typeof json === 'object') setData(json);
       }
       if (resScams.status === 'fulfilled' && resScams.value.ok) {
-        const jsonScams = await resScams.value.json();
+        const jsonScams = await safeParseJsonResponse<any>(resScams.value);
         if (Array.isArray(jsonScams)) setScamReports(jsonScams);
       }
       if (resPurges.status === 'fulfilled' && resPurges.value.ok) {
-        const jsonPurges = await resPurges.value.json();
+        const jsonPurges = await safeParseJsonResponse<any>(resPurges.value);
         if (Array.isArray(jsonPurges)) setPurgeRequests(jsonPurges);
       }
     } catch (err) {
@@ -63,28 +61,36 @@ export default function PrivacySecurityAdminModule() {
     if (!data) return;
     setSaving(true);
     setSaveSuccess('');
+    setSaveError('');
     try {
       const adminUser = JSON.parse(localStorage.getItem('easydesk_admin_user') || '{}');
-      const res = await fetch('/api/admin/privacy-security', {
+      const res = await apiFetch('/api/admin/privacy-security', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token')}`
-        },
-        body: JSON.stringify({
+        body: {
           privacySecuritySettings: data,
           updaterId: adminUser.id || 'admin-1',
           updaterName: adminUser.name || 'Admin',
           updaterRole: adminUser.role || 'ADMIN'
-        })
+        }
       });
 
       if (res.ok) {
-        setSaveSuccess('Privacy & Security CMS settings saved successfully!');
-        setTimeout(() => setSaveSuccess(''), 3500);
+        const resJson = await safeParseJsonResponse<any>(res);
+        const persisted = resJson?.privacySecuritySettings || data;
+        setData(persisted);
+        try {
+          localStorage.setItem('easydesk_cache_privacy_security', JSON.stringify(persisted));
+          window.dispatchEvent(new CustomEvent('easydesk_privacy_security_updated', { detail: persisted }));
+        } catch {}
+        setSaveSuccess('Privacy & Security CMS settings saved and persisted successfully!');
+        setTimeout(() => setSaveSuccess(''), 4000);
+      } else {
+        const errJson = await safeParseJsonResponse<any>(res);
+        setSaveError(errJson?.message || `Failed to save CMS settings (HTTP ${res.status}).`);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to save settings:', err);
+      setSaveError(err?.message || 'Network error occurred while saving CMS settings.');
     } finally {
       setSaving(false);
     }
@@ -92,37 +98,29 @@ export default function PrivacySecurityAdminModule() {
 
   const handleUpdateScamStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/admin/scam-reports/${id}`, {
+      const res = await apiFetch(`/api/admin/scam-reports/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token')}`
-        },
-        body: JSON.stringify({ status })
+        body: { status }
       });
       if (res.ok) {
         setScamReports(prev => prev.map(r => r.id === id ? { ...r, status } : r));
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to update scam report status:', err);
     }
   };
 
   const handleUpdatePurgeStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/admin/data-deletion-requests/${id}`, {
+      const res = await apiFetch(`/api/admin/data-deletion-requests/${id}`, {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('easydesk_admin_token')}`
-        },
-        body: JSON.stringify({ status })
+        body: { status }
       });
       if (res.ok) {
         setPurgeRequests(prev => prev.map(p => p.id === id ? { ...p, status } : p));
       }
     } catch (err) {
-      console.error(err);
+      console.error('Failed to update purge request status:', err);
     }
   };
 
@@ -169,6 +167,13 @@ export default function PrivacySecurityAdminModule() {
         <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           {saveSuccess}
+        </div>
+      )}
+
+      {saveError && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 text-rose-600" />
+          {saveError}
         </div>
       )}
 
