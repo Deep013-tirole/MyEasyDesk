@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { 
-  ArrowLeft, CheckCircle2, Clock, ShieldCheck, FileText, 
-  HelpCircle, MessageSquare, Bot, Star, ChevronDown, 
-  ChevronUp, Sparkles, Building2, Award, Zap, CheckSquare, 
+import {
+  ArrowLeft, CheckCircle2, Clock, Calendar, ShieldCheck, FileText,
+  HelpCircle, MessageSquare, Bot, Star, ChevronDown,
+  ChevronUp, Sparkles, Building2, Award, Zap, CheckSquare,
   Users, AlertCircle, ArrowRight, Share2, Copy, Check,
   Maximize2, X, ZoomIn
 } from 'lucide-react';
@@ -21,6 +21,7 @@ interface ServiceDetailsViewProps {
   setView: (view: string) => void;
   setSelectedServiceId: (id: string | null) => void;
   onRefreshCatalogs?: () => void;
+  isLoadingCatalogs?: boolean;
 }
 
 export default function ServiceDetailsView({
@@ -30,7 +31,8 @@ export default function ServiceDetailsView({
   reviews,
   setView,
   setSelectedServiceId,
-  onRefreshCatalogs
+  onRefreshCatalogs,
+  isLoadingCatalogs
 }: ServiceDetailsViewProps) {
   const [activeNavTab, setActiveNavTab] = useState<string>('overview');
   const [openFaqIndices, setOpenFaqIndices] = useState<number[]>([]);
@@ -66,9 +68,12 @@ export default function ServiceDetailsView({
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [serviceId]);
 
-  // Find active service
+  // Find active service by either exact ID or slug
   const service = useMemo(() => {
-    return services.find(s => s.id === serviceId) || null;
+    if (!serviceId) return null;
+    return services.find(
+      s => s.id === serviceId || (s.slug && s.slug.toLowerCase() === serviceId.toLowerCase())
+    ) || null;
   }, [services, serviceId]);
 
   // Find category
@@ -93,32 +98,38 @@ export default function ServiceDetailsView({
   // Approved reviews for this service (with fallback to approved top reviews)
   const approvedReviews = useMemo(() => {
     const valid = reviews.filter(r => r.status === 'Approved' || (r.status !== 'Rejected' && r.status !== 'Pending' && r.status !== 'Hidden'));
-    
+
     // Service-specific reviews
     const svcReviews = valid.filter(r => r.serviceId === serviceId || (r.serviceTitle && service && r.serviceTitle.toLowerCase() === service.title.toLowerCase()));
-    
+
     if (svcReviews.length >= 2) {
       return svcReviews;
     }
-    
+
     // Supplement with general approved reviews if fewer than 2
     const general = valid.filter(r => !svcReviews.some(sr => sr.id === r.id));
     return [...svcReviews, ...general].slice(0, 4);
   }, [reviews, serviceId, service]);
 
-  // Calculate average rating
+  // Calculate average rating strictly from real approved reviews (no fake defaults)
   const ratingSummary = useMemo(() => {
     if (approvedReviews.length === 0) {
-      return { avg: 4.9, count: 18 };
+      return { avg: null, count: 0 };
     }
     const sum = approvedReviews.reduce((acc, r) => acc + (r.rating || 5), 0);
     const avg = (sum / approvedReviews.length).toFixed(1);
     return { avg: parseFloat(avg), count: approvedReviews.length };
   }, [approvedReviews]);
 
+  // Interactive Document Readiness Checklist state
+  const [checkedDocs, setCheckedDocs] = useState<Record<number, boolean>>({});
+  const toggleDocCheck = (idx: number) => {
+    setCheckedDocs(prev => ({ ...prev, [idx]: !prev[idx] }));
+  };
+
   // Toggle FAQ accordion item
   const toggleFaq = (idx: number) => {
-    setOpenFaqIndices(prev => 
+    setOpenFaqIndices(prev =>
       prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx]
     );
   };
@@ -140,6 +151,15 @@ export default function ServiceDetailsView({
 
   // Fallback if service not found (404 / content unavailable)
   if (!service) {
+    if (isLoadingCatalogs) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-xs text-slate-400 font-sans">
+          <div className="w-8 h-8 border-4 border-[#0F4C81] border-t-transparent rounded-full animate-spin" />
+          <span>Loading service details...</span>
+        </div>
+      );
+    }
+
     return (
       <ContentUnavailable
         id="service-details-not-found"
@@ -162,9 +182,53 @@ export default function ServiceDetailsView({
 
   const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
 
+  const hasTimeline = Boolean(service?.timeline?.enabled && service.timeline?.startDate && service.timeline?.endDate);
+
+  const formatDateDisplay = (dateStr?: string | null) => {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+      const d = new Date(dateStr);
+      if (!isNaN(d.getTime())) {
+        const day = String(d.getDate()).padStart(2, '0');
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      }
+      return dateStr;
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getTimelineStatus = (startDateStr?: string | null, endDateStr?: string | null) => {
+    if (!startDateStr || !endDateStr) return { label: 'Active Schedule', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' };
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const start = new Date(startDateStr);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(endDateStr);
+      end.setHours(23, 59, 59, 999);
+      if (today < start) {
+        return { label: 'Upcoming', badgeClass: 'bg-amber-50 text-amber-700 border-amber-200' };
+      } else if (today <= end) {
+        return { label: 'Applications Open', badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+      } else {
+        return { label: 'Application Closed', badgeClass: 'bg-slate-100 text-slate-600 border-slate-200' };
+      }
+    } catch {
+      return { label: 'Active Schedule', badgeClass: 'bg-blue-50 text-blue-700 border-blue-200' };
+    }
+  };
+
   // Available tabs determination
   const availableTabs = [
     { id: 'overview', label: 'Overview' },
+    ...(hasTimeline ? [{ id: 'timeline', label: 'Timeline' }] : []),
     { id: 'documents', label: 'Required Documents' },
     { id: 'how-it-works', label: 'How It Works' },
     { id: 'fees', label: 'Fee & Charges' },
@@ -174,34 +238,34 @@ export default function ServiceDetailsView({
 
   return (
     <div id="easydesk-service-details-page" className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50/60 font-sans text-slate-900 pb-20">
-      
+
       {/* 1. BREADCRUMBS BAR */}
       <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-xs w-full max-w-full">
         <div className="portal-container py-3">
           <div className="flex items-center justify-between gap-2 sm:gap-4 text-xs font-medium min-w-0">
             <nav className="flex items-center gap-1.5 text-slate-500 overflow-x-auto whitespace-nowrap scrollbar-none min-w-0 flex-1 py-0.5">
-              <button 
-                onClick={() => setView('home')} 
+              <button
+                onClick={() => setView('home')}
                 className="hover:text-[#0F4C81] transition cursor-pointer shrink-0"
               >
                 Home
               </button>
               <span className="text-slate-300 shrink-0">/</span>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedServiceId(null);
                   setView('services');
-                }} 
+                }}
                 className="hover:text-[#0F4C81] transition cursor-pointer shrink-0"
               >
                 Services
               </button>
               <span className="text-slate-300 shrink-0">/</span>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedServiceId(null);
                   setView('services');
-                }} 
+                }}
                 className="hover:text-[#0F4C81] transition cursor-pointer shrink-0"
               >
                 {categoryName}
@@ -239,10 +303,10 @@ export default function ServiceDetailsView({
       <section className="bg-white border-b border-slate-200/80 pt-6 sm:pt-8 pb-8 sm:pb-10 w-full max-w-full">
         <div className="portal-container">
           <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 items-start w-full min-w-0">
-            
+
             {/* Left Hero Content */}
             <div className="lg:col-span-8 space-y-4 min-w-0 w-full">
-              
+
               {/* Category & Badge Info Row */}
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                 <span className="text-[10px] font-extrabold tracking-wider uppercase bg-blue-50 text-[#0F4C81] border border-blue-100 px-2.5 sm:px-3 py-1 rounded-full shadow-2xs">
@@ -255,10 +319,23 @@ export default function ServiceDetailsView({
                 <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
                   ID: {service.id}
                 </span>
-                <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
-                  <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
-                  <span>{ratingSummary.avg} ({ratingSummary.count} reviews)</span>
-                </span>
+                {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
+                    <Calendar className="w-3 h-3 text-[#0F4C81]" />
+                    <span>Timeline: {formatDateDisplay(service.timeline.startDate)} – {formatDateDisplay(service.timeline.endDate)}</span>
+                  </span>
+                )}
+                {ratingSummary.count > 0 ? (
+                  <span className="text-[10px] font-bold text-amber-800 bg-amber-50 border border-amber-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                    <span>{ratingSummary.avg} ({ratingSummary.count} {ratingSummary.count === 1 ? 'review' : 'reviews'})</span>
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    <span>Verified Catalog Item</span>
+                  </span>
+                )}
               </div>
 
               {/* Service Title */}
@@ -293,23 +370,23 @@ export default function ServiceDetailsView({
             <div className="lg:col-span-4 min-w-0 w-full">
               <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 shadow-xs overflow-hidden w-full">
                 {(service.image || service.imageUrl || service.bannerImage) && !imageError ? (
-                  <div 
+                  <div
                     onClick={() => setIsImageModalOpen(true)}
                     className="relative rounded-xl overflow-hidden bg-slate-900/5 border border-slate-200/80 min-h-[190px] sm:min-h-[220px] max-h-[340px] flex items-center justify-center group cursor-pointer"
                     title="Click to view full banner"
                   >
                     {/* Ambient background fill to prevent harsh letterbox voids without cropping */}
-                    <img 
-                      src={service.image || service.imageUrl || service.bannerImage} 
-                      alt="" 
+                    <img
+                      src={service.image || service.imageUrl || service.bannerImage}
+                      alt=""
                       aria-hidden="true"
                       className="absolute inset-0 w-full h-full object-cover blur-xl opacity-25 scale-125 select-none pointer-events-none"
                     />
-                    
+
                     {/* 100% Uncropped full banner image */}
-                    <img 
-                      src={service.image || service.imageUrl || service.bannerImage} 
-                      alt={service.title} 
+                    <img
+                      src={service.image || service.imageUrl || service.bannerImage}
+                      alt={service.title}
                       onError={() => setImageError(true)}
                       className="relative z-10 w-full h-auto max-h-[280px] sm:max-h-[320px] object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                       referrerPolicy="no-referrer"
@@ -376,10 +453,10 @@ export default function ServiceDetailsView({
       {/* 3. MAIN SECTION WITH TWO-COLUMN CONTENT + STICKY SIDEBAR */}
       <div className="portal-container pt-6 sm:pt-8 w-full max-w-full">
         <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 items-start w-full min-w-0">
-          
+
           {/* LEFT COLUMN: NAVIGATION + CONTENT MODULES */}
           <div className="lg:col-span-8 space-y-5 sm:space-y-6 min-w-0 w-full">
-            
+
             {/* HORIZONTAL SECTION TABS NAVIGATION */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 shadow-xs sticky top-28 z-20 overflow-x-auto scrollbar-none w-full max-w-full">
               <div className="flex items-center gap-1 min-w-max">
@@ -415,11 +492,11 @@ export default function ServiceDetailsView({
               </div>
 
               <div className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
-                {service.fullDescription || service.description ? (
-                  renderRichText(service.fullDescription || service.description)
+                {service.description || service.fullDescription ? (
+                  renderRichText(service.description || service.fullDescription)
                 ) : (
-                  <p>
-                    EasyDesk provides comprehensive end-to-end guidance for {service.title}. Our dedicated desk officers verify every document and submission requirement to ensure swift processing without rejection.
+                  <p className="text-slate-400 italic">
+                    Service description is not available.
                   </p>
                 )}
               </div>
@@ -440,29 +517,111 @@ export default function ServiceDetailsView({
               )}
             </div>
 
+            {/* CONDITIONAL SECTION: APPLICATION TIMELINE */}
+            {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
+              <div id="section-timeline" className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#0F4C81]" />
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900">Application Timeline</h2>
+                  </div>
+                  {(() => {
+                    const status = getTimelineStatus(service.timeline.startDate, service.timeline.endDate);
+                    return (
+                      <span className={`text-[10px] font-extrabold uppercase tracking-wider px-2.5 py-1 rounded-full border ${status.badgeClass}`}>
+                        {status.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 sm:p-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-[#0F4C81] shrink-0">
+                      <Calendar className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Application Start Date</span>
+                      <span className="text-sm font-black text-slate-900 font-mono">
+                        {formatDateDisplay(service.timeline.startDate)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 sm:p-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-700 shrink-0">
+                      <Clock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 block">Application Last Date</span>
+                      <span className="text-sm font-black text-slate-900 font-mono">
+                        {formatDateDisplay(service.timeline.endDate)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-slate-500 bg-blue-50/40 p-3 rounded-xl border border-blue-100">
+                  📌 <strong>Application Deadline:</strong> Official portal filing closes on the specified last date. We advise submitting your application early to avoid last-minute portal congestions.
+                </p>
+              </div>
+            )}
+
             {/* SECTION 2: REQUIRED DOCUMENTS */}
             <div id="section-documents" className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <CheckSquare className="w-4 h-4 text-[#0F4C81]" />
-                  <h2 className="text-sm sm:text-base font-bold text-slate-900">Required Documents Checklist</h2>
+                  <h2 className="text-sm sm:text-base font-bold text-slate-900">Document Readiness Checklist</h2>
                 </div>
-                <span className="text-[11px] text-slate-400 font-medium">Keep soft copies ready</span>
+                {(service.requiredDocuments || []).length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-600">
+                      Readiness: <strong className="text-[#0F4C81]">{Object.values(checkedDocs).filter(Boolean).length} of {(service.requiredDocuments || []).length}</strong> ({Math.round((Object.values(checkedDocs).filter(Boolean).length / (service.requiredDocuments || []).length) * 100)}%)
+                    </span>
+                  </div>
+                )}
               </div>
+
+              {(service.requiredDocuments || []).length > 0 && (
+                <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                  <div
+                    className="bg-[#059669] h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${Math.round((Object.values(checkedDocs).filter(Boolean).length / (service.requiredDocuments || []).length) * 100)}%` }}
+                  />
+                </div>
+              )}
 
               {service.requiredDocuments && service.requiredDocuments.length > 0 ? (
                 <div className="grid sm:grid-cols-2 gap-3">
-                  {service.requiredDocuments.map((doc, idx) => (
-                    <div key={idx} className="flex items-start gap-3 bg-slate-50 border border-slate-200/80 p-3 rounded-xl hover:border-blue-200 transition">
-                      <div className="w-5 h-5 rounded-full bg-blue-100 text-[#0F4C81] flex items-center justify-center font-bold text-[10px] shrink-0 mt-0.5">
-                        {idx + 1}
+                  {service.requiredDocuments.map((doc, idx) => {
+                    const isChecked = Boolean(checkedDocs[idx]);
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => toggleDocCheck(idx)}
+                        className={`flex items-start gap-3 p-3 rounded-xl border transition cursor-pointer select-none ${
+                          isChecked
+                            ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
+                            : 'bg-slate-50 border-slate-200/80 hover:border-blue-200'
+                        }`}
+                      >
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center text-xs shrink-0 mt-0.5 transition ${
+                          isChecked ? 'bg-[#059669] text-white' : 'border border-slate-300 bg-white text-transparent'
+                        }`}>
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className={`text-xs font-bold block ${isChecked ? 'line-through text-slate-500' : 'text-slate-800'}`}>
+                            {doc}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {isChecked ? 'Ready for filing' : 'Click to mark as ready'}
+                          </span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-xs font-bold text-slate-800 block">{doc}</span>
-                        <span className="text-[10px] text-slate-400">Clear photo or scanned PDF</span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="bg-blue-50/60 border border-blue-100 p-4 rounded-xl text-xs text-blue-900 flex items-center gap-2.5">
@@ -471,8 +630,9 @@ export default function ServiceDetailsView({
                 </div>
               )}
 
-              <p className="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/60">
-                💡 <strong>Tip:</strong> You can directly share clear photos of these documents via WhatsApp when our desk officer contacts you.
+              <p className="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-200/60 flex items-center gap-2">
+                <span>💡</span>
+                <span><strong>Fast Processing Tip:</strong> You can directly share clear smartphone photos of these documents via WhatsApp when our desk officer contacts you.</span>
               </p>
             </div>
 
@@ -643,10 +803,10 @@ export default function ServiceDetailsView({
 
           {/* RIGHT COLUMN: STICKY SERVICE ACTION CARD */}
           <div className="lg:col-span-4 space-y-5 lg:sticky lg:top-28 min-w-0 w-full">
-            
+
             {/* Primary Action Card */}
             <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-sm space-y-5 w-full min-w-0">
-              
+
               {/* Pricing Header */}
               <div>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -783,8 +943,8 @@ export default function ServiceDetailsView({
           {relatedServices.map(rel => {
             const relPrice = (rel.govFees || 0) + (rel.serviceCharge || 0);
             return (
-              <div 
-                key={rel.id} 
+              <div
+                key={rel.id}
                 className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-md transition flex flex-col justify-between"
               >
                 <div>
@@ -832,7 +992,7 @@ export default function ServiceDetailsView({
       {/* 5. CUSTOMER REVIEWS SECTION */}
       <section className="portal-container pt-16">
         <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-8 shadow-xs">
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-6 mb-6">
             <div>
               <div className="flex items-center gap-2">
@@ -845,17 +1005,24 @@ export default function ServiceDetailsView({
             </div>
 
             <div className="flex items-center gap-3">
-              <div className="text-right">
-                <div className="flex items-center justify-end gap-1">
-                  <span className="text-xl font-black text-slate-900">{ratingSummary.avg}</span>
-                  <div className="flex text-amber-400">
-                    {[1, 2, 3, 4, 5].map(i => (
-                      <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
-                    ))}
+              {ratingSummary.count > 0 ? (
+                <div className="text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span className="text-xl font-black text-slate-900 tabular-nums">{ratingSummary.avg}</span>
+                    <div className="flex text-amber-400">
+                      {[1, 2, 3, 4, 5].map(i => (
+                        <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
+                      ))}
+                    </div>
                   </div>
+                  <span className="text-[10px] text-slate-400 font-medium tabular-nums">{ratingSummary.count} verified {ratingSummary.count === 1 ? 'rating' : 'ratings'}</span>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">{ratingSummary.count} verified ratings</span>
-              </div>
+              ) : (
+                <div className="text-right">
+                  <span className="text-xs font-semibold text-slate-600 block">Verified Filing Desk</span>
+                  <span className="text-[10px] text-slate-400">No public reviews yet</span>
+                </div>
+              )}
 
               <button
                 id="btn-open-review-modal"
@@ -963,11 +1130,11 @@ export default function ServiceDetailsView({
 
       {/* Full Banner Image Lightbox Modal */}
       {isImageModalOpen && (service.image || service.imageUrl || service.bannerImage) && (
-        <div 
+        <div
           className="fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-in fade-in duration-200"
           onClick={() => setIsImageModalOpen(false)}
         >
-          <div 
+          <div
             className="relative bg-slate-900 border border-slate-700/80 rounded-2xl sm:rounded-3xl max-w-4xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >

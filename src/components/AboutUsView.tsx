@@ -11,6 +11,8 @@ import { FAQItem } from '../types.js';
 import { openGeneralWhatsApp } from '../lib/whatsapp.js';
 import { safeParseJsonResponse } from '../lib/apiClient.js';
 import { getClientAboutUs } from '../lib/apiDataService.js';
+import Breadcrumbs from './ui/Breadcrumbs.js';
+import TrustBadge from './ui/TrustBadge.js';
 
 interface AboutUsData {
   aboutText: string;
@@ -289,19 +291,15 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
           <div className="absolute top-1/3 -right-20 w-80 h-80 bg-emerald-200/30 rounded-full blur-3xl" />
         </div>
 
-        <div className="portal-container relative z-10">
+        <div className="portal-container relative z-10 space-y-6">
+          <Breadcrumbs items={[{ label: 'About Us', active: true }]} />
+
           <div className="max-w-4xl mx-auto text-center space-y-5">
             
-            {/* Top Pill Badge */}
-            <motion.div 
-              initial={{ opacity: 0, y: -12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-100/90 text-[#0F4C81] border border-blue-200/60 text-xs font-extrabold shadow-2xs pulse-badge"
-            >
-              <Building2 className="w-3.5 h-3.5 text-[#0F4C81]" />
-              <span>Next-Generation Citizen E-Governance & Digital Desk</span>
-            </motion.div>
+            {/* Top Badge */}
+            <div className="flex justify-center">
+              <TrustBadge title="E-Governance & Document Assistance Desk" variant="pill" />
+            </div>
 
             {/* Main Headline */}
             <motion.h1 
@@ -327,7 +325,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                 'EasyDesk revolutionizes government applications, legal affidavits, and corporate documentation across India through streamlined online workflows, automated audit checks, and verified expert desk personnel.'}
             </motion.p>
 
-            {/* Key Micro Metric Badges */}
+            {/* Key Civic Value Proposition Badges (Real & Verifiable) */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -339,8 +337,8 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <span className="block font-black text-slate-900">10,000+</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Services Delivered</span>
+                  <span className="block font-black text-slate-900">Pre-Audit Filing</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Rejection-Proof Verification</span>
                 </div>
               </div>
 
@@ -349,8 +347,8 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <span className="block font-black text-slate-900">99.8%</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Approval Accuracy</span>
+                  <span className="block font-black text-slate-900">Pan-India Reach</span>
+                  <span className="text-[11px] text-slate-500 font-medium">State & Central Coverage</span>
                 </div>
               </div>
 
@@ -359,8 +357,8 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                   <Clock className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <span className="block font-black text-slate-900">24-48 Hours</span>
-                  <span className="text-[11px] text-slate-500 font-medium">Average Processing</span>
+                  <span className="block font-black text-slate-900">WhatsApp Desk</span>
+                  <span className="text-[11px] text-slate-500 font-medium">Direct Officer Guidance</span>
                 </div>
               </div>
             </motion.div>

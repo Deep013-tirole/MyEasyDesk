@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, BookOpen, Layers, MessageSquare, ArrowRight, 
+import React, { useState, useMemo, useEffect } from 'react';
+import {
+  Search, BookOpen, Layers, MessageSquare, ArrowRight,
   ShieldCheck, HelpCircle, X, Sparkles, Filter, Newspaper,
   ChevronRight, CheckCircle2, Lock, Headphones, Zap, CheckCircle,
   ArrowUpDown, SlidersHorizontal, FileText, Bot
@@ -14,15 +14,43 @@ import FeaturedBlogCard from './blog/FeaturedBlogCard.js';
 import BlogDetailView from './blog/BlogDetailView.js';
 import BlogSidebar from './blog/BlogSidebar.js';
 import ContentUnavailable from './ContentUnavailable.js';
+import Breadcrumbs from './ui/Breadcrumbs.js';
+import TrustBadge from './ui/TrustBadge.js';
 
 interface BlogsViewProps {
   blogs: Blog[];
   blogCategories?: BlogCategory[];
   updateBlogs?: (blogs: Blog[]) => void;
+  selectedBlogId?: string | null;
+  onSelectBlogId?: (id: string | null) => void;
+  onCloseBlog?: () => void;
 }
 
-export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: BlogsViewProps) {
-  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(null);
+export default function BlogsView({
+  blogs,
+  blogCategories = [],
+  updateBlogs,
+  selectedBlogId,
+  onSelectBlogId,
+  onCloseBlog
+}: BlogsViewProps) {
+  const [selectedBlog, setSelectedBlog] = useState<Blog | null>(() => {
+    if (!selectedBlogId) return null;
+    return blogs.find(b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId) || null;
+  });
+
+  // Re-sync if selectedBlogId changes from outside (e.g. popstate / Back button or initial async load)
+  useEffect(() => {
+    if (selectedBlogId) {
+      const match = blogs.find(b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId);
+      if (match) {
+        setSelectedBlog(match);
+      }
+    } else if (!selectedBlogId) {
+      setSelectedBlog(null);
+    }
+  }, [selectedBlogId, blogs]);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'latest' | 'oldest'>('latest');
@@ -85,10 +113,10 @@ export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: B
   const filteredAndSortedBlogs = useMemo(() => {
     let result = publicBlogs.filter(blog => {
       const res = resolveBlogCategory(blog);
-      const matchesCategory = 
-        selectedCategory === 'all' || 
-        blog.categoryId === selectedCategory || 
-        res.id === selectedCategory || 
+      const matchesCategory =
+        selectedCategory === 'all' ||
+        blog.categoryId === selectedCategory ||
+        res.id === selectedCategory ||
         res.name.toLowerCase() === selectedCategory.toLowerCase();
 
       const q = searchQuery.toLowerCase().trim();
@@ -136,7 +164,11 @@ export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: B
     // Increment view count locally
     const updatedBlog = { ...blog, views: (blog.views || 0) + 1 };
     setSelectedBlog(updatedBlog);
-    
+    const identifier = blog.slug || blog.id;
+    if (onSelectBlogId) {
+      onSelectBlogId(identifier);
+    }
+
     if (updateBlogs) {
       const updatedBlogs = blogs.map(b => b.id === blog.id ? updatedBlog : b);
       updateBlogs(updatedBlogs);
@@ -152,10 +184,22 @@ export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: B
         blog={selectedBlog}
         blogs={publicBlogs}
         blogCategories={blogCategories}
-        onBack={() => setSelectedBlog(null)}
+        onBack={() => {
+          setSelectedBlog(null);
+          if (onCloseBlog) {
+            onCloseBlog();
+          } else if (onSelectBlogId) {
+            onSelectBlogId(null);
+          }
+        }}
         onSelectCategory={(catId) => {
           setSelectedCategory(catId);
           setSelectedBlog(null);
+          if (onCloseBlog) {
+            onCloseBlog();
+          } else if (onSelectBlogId) {
+            onSelectBlogId(null);
+          }
         }}
         onSelectBlog={handleSelectBlog}
         updateBlogs={updateBlogs}
@@ -168,28 +212,29 @@ export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: B
   // -----------------------------------------------------------------
   return (
     <div id="easydesk-blogs-view" className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-slate-900 w-full max-w-full overflow-x-hidden">
-      
+
       {/* 1. HERO SECTION (Matching AboutUs Gradient Banner & Micro Metrics) */}
       <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white py-12 sm:py-16 border-b border-slate-200/60">
-        
+
         {/* Subtle Decorative Background Blur */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
           <div className="absolute -top-24 -left-20 w-80 h-80 bg-blue-200/40 rounded-full blur-3xl" />
           <div className="absolute top-1/2 -right-20 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
         </div>
 
-        <div className="portal-container relative z-10 space-y-8">
-          <motion.div 
+        <div className="portal-container relative z-10 space-y-6">
+          <Breadcrumbs items={[{ label: 'Knowledge Hub', active: true }]} />
+
+          <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className="max-w-3xl space-y-4"
           >
-            
-            {/* Top Pulse Badge */}
-            <div className="inline-flex items-center gap-2 bg-blue-100/90 border border-blue-200/70 px-4 py-1.5 rounded-full text-xs font-black text-[#0F4C81] shadow-2xs pulse-badge">
-              <Sparkles className="w-3.5 h-3.5 text-[#0F4C81]" />
-              <span>E-Governance & Knowledge Hub</span>
+
+            {/* Top Badge */}
+            <div>
+              <TrustBadge title="E-Governance & Knowledge Hub" variant="pill" />
             </div>
 
             {/* Title */}
@@ -315,7 +360,7 @@ export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: B
 
       {/* 3. MAIN CONTENT CONTAINER */}
       <main className="portal-container pt-8 space-y-8">
-        
+
         {/* Active Filter Indicator & Results Info */}
         <div className="flex items-center justify-between text-xs text-slate-500 font-medium">
           <div className="flex items-center gap-2 flex-wrap">
@@ -358,7 +403,7 @@ export default function BlogsView({ blogs, blogCategories = [], updateBlogs }: B
 
         {/* 5. ARTICLES & SIDEBAR LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* LEFT/CENTER: Article Cards Grid (8 of 12 cols on desktop) */}
           <div className="lg:col-span-8 space-y-6">
             {publicBlogs.length === 0 && !searchQuery ? (

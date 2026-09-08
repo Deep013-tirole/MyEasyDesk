@@ -422,6 +422,12 @@ export interface FAQItem {
   answer: string;
 }
 
+export interface ServiceTimeline {
+  enabled: boolean;
+  startDate: string | null;
+  endDate: string | null;
+}
+
 export interface Service {
   id: string;
   categoryId: string;
@@ -430,6 +436,7 @@ export interface Service {
   description: string;
   shortDescription?: string;
   fullDescription?: string;
+  timeline?: ServiceTimeline;
   bannerImage?: string;
   imageUrl?: string;
   image?: string;

@@ -4111,8 +4111,21 @@ app.get('/api/services', async (req, res) => {
   const categories = await readCollectionWithFallback('categories', () => dbState.categories || []);
   const mapped = services.map(s => {
     const cat = categories.find(c => c.id === s.categoryId);
+    const desc = s.description || s.fullDescription || '';
+    const shortDesc = s.shortDescription !== undefined ? s.shortDescription : (desc.length > 160 ? desc.slice(0, 160) : desc);
+    const fullDesc = s.fullDescription || desc;
+    const timeline = (s.timeline && typeof s.timeline === 'object') ? {
+      enabled: Boolean(s.timeline.enabled),
+      startDate: s.timeline.startDate || null,
+      endDate: s.timeline.endDate || null
+    } : { enabled: false, startDate: null, endDate: null };
+
     return {
       ...s,
+      description: desc,
+      shortDescription: shortDesc,
+      fullDescription: fullDesc,
+      timeline,
       categoryName: cat ? cat.name : s.categoryId
     };
   });
@@ -4128,8 +4141,21 @@ app.get('/api/services/:id', async (req, res) => {
   }
   const categories = await readCollectionWithFallback('categories', () => dbState.categories || []);
   const cat = categories.find(c => c.id === service.categoryId);
+  const desc = service.description || service.fullDescription || '';
+  const shortDesc = service.shortDescription !== undefined ? service.shortDescription : (desc.length > 160 ? desc.slice(0, 160) : desc);
+  const fullDesc = service.fullDescription || desc;
+  const timeline = (service.timeline && typeof service.timeline === 'object') ? {
+    enabled: Boolean(service.timeline.enabled),
+    startDate: service.timeline.startDate || null,
+    endDate: service.timeline.endDate || null
+  } : { enabled: false, startDate: null, endDate: null };
+
   res.json({
     ...service,
+    description: desc,
+    shortDescription: shortDesc,
+    fullDescription: fullDesc,
+    timeline,
     categoryName: cat ? cat.name : service.categoryId
   });
 });
@@ -7948,6 +7974,23 @@ app.post('/api/admin/services', authenticateToken, requireRole(['SUPER_ADMIN', '
   }
   if (!categoryId) categoryId = 'cat-gst';
 
+  // Timeline validation
+  let timeline = { enabled: false, startDate: null, endDate: null };
+  if (service.timeline && typeof service.timeline === 'object') {
+    const enabled = Boolean(service.timeline.enabled);
+    if (enabled) {
+      const startDate = service.timeline.startDate ? String(service.timeline.startDate).trim() : '';
+      const endDate = service.timeline.endDate ? String(service.timeline.endDate).trim() : '';
+      if (!startDate || !endDate) {
+        return res.status(400).json({ message: 'Start date and End date are required when timeline is enabled.' });
+      }
+      if (startDate > endDate) {
+        return res.status(400).json({ message: 'Timeline Start date cannot be after End date.' });
+      }
+      timeline = { enabled: true, startDate, endDate };
+    }
+  }
+
   let baseId = service.id || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
   if (!baseId) baseId = `svc-${Date.now()}`;
   let id = baseId;
@@ -7956,6 +7999,10 @@ app.post('/api/admin/services', authenticateToken, requireRole(['SUPER_ADMIN', '
   }
 
   const existingIdx = dbState.services.findIndex(s => s.id === id);
+  const desc = service.description || service.fullDescription || '';
+  const shortDesc = service.shortDescription !== undefined ? service.shortDescription : (desc.length <= 160 ? desc : desc.slice(0, 160));
+  const fullDesc = service.fullDescription || desc || '';
+
   const newSvc = {
     id,
     categoryId,
@@ -7963,9 +8010,10 @@ app.post('/api/admin/services', authenticateToken, requireRole(['SUPER_ADMIN', '
     title,
     name: title,
     price: Number(service.price ?? service.serviceCharge ?? 0),
-    description: service.description || '',
-    shortDescription: service.shortDescription || service.description?.slice(0, 160) || '',
-    fullDescription: service.fullDescription || service.description || '',
+    description: desc,
+    shortDescription: shortDesc,
+    fullDescription: fullDesc,
+    timeline,
     icon: service.icon || 'FileText',
     bannerImage: service.bannerImage || service.imageUrl || service.image || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400',
     imageUrl: service.imageUrl || service.bannerImage || service.image || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400',
@@ -7982,7 +8030,7 @@ app.post('/api/admin/services', authenticateToken, requireRole(['SUPER_ADMIN', '
     howItWorks: service.howItWorks || '',
     faqs: Array.isArray(service.faqs) ? service.faqs : [],
     seoTitle: service.seoTitle || title,
-    seoDescription: service.seoDescription || service.shortDescription || service.description || '',
+    seoDescription: service.seoDescription || shortDesc || desc || '',
     slug: service.slug || id,
     status: service.status ? service.status.toLowerCase() : 'active',
     whatsAppEnabled: service.whatsAppEnabled !== false,
@@ -8008,19 +8056,108 @@ app.put('/api/admin/services/:id', authenticateToken, requireRole(['SUPER_ADMIN'
   const idx = dbState.services.findIndex(s => s.id === req.params.id);
   if (idx === -1) return res.status(404).json({ message: 'Service not found' });
   
-  const title = service.title || service.name || dbState.services[idx].title;
-  const price = service.price !== undefined ? Number(service.price) : dbState.services[idx].price;
-  const serviceCharge = service.serviceCharge !== undefined ? Number(service.serviceCharge) : (service.price !== undefined ? Number(service.price) : dbState.services[idx].serviceCharge);
+  const existing = dbState.services[idx];
 
-  dbState.services[idx] = { 
-    ...dbState.services[idx], 
+  // Timeline validation
+  let timeline = existing.timeline || { enabled: false, startDate: null, endDate: null };
+  if (service.timeline !== undefined) {
+    if (!service.timeline || typeof service.timeline !== 'object') {
+      timeline = { enabled: false, startDate: null, endDate: null };
+    } else {
+      const enabled = Boolean(service.timeline.enabled);
+      if (enabled) {
+        const startDate = service.timeline.startDate ? String(service.timeline.startDate).trim() : '';
+        const endDate = service.timeline.endDate ? String(service.timeline.endDate).trim() : '';
+        if (!startDate || !endDate) {
+          return res.status(400).json({ message: 'Start date and End date are required when timeline is enabled.' });
+        }
+        if (startDate > endDate) {
+          return res.status(400).json({ message: 'Timeline Start date cannot be after End date.' });
+        }
+        timeline = { enabled: true, startDate, endDate };
+      } else {
+        timeline = { enabled: false, startDate: null, endDate: null };
+      }
+    }
+  }
+
+  const title = service.title || service.name || existing.title;
+  const price = service.price !== undefined ? Number(service.price) : existing.price;
+  const serviceCharge = service.serviceCharge !== undefined ? Number(service.serviceCharge) : (service.price !== undefined ? Number(service.price) : existing.serviceCharge);
+  const description = service.description !== undefined ? String(service.description) : (service.fullDescription !== undefined ? String(service.fullDescription) : existing.description);
+  const shortDescription = service.shortDescription !== undefined ? String(service.shortDescription) : (existing.shortDescription !== undefined ? existing.shortDescription : (description.length <= 160 ? description : description.slice(0, 160)));
+  const fullDescription = service.fullDescription !== undefined ? String(service.fullDescription) : (existing.fullDescription !== undefined ? existing.fullDescription : description);
+
+  dbState.services[idx] = {
+    ...existing,
     ...service,
+    id: req.params.id,
+    categoryId: service.categoryId || existing.categoryId,
     title,
     name: title,
     price,
     serviceCharge,
+    description,
+    shortDescription,
+    fullDescription,
+    timeline
+  };
+  logSystemAction(updaterId || (req as any).user?.id || 'super-admin-deepak', updaterName || (req as any).user?.name || 'Deepak', updaterRole || (req as any).user?.role || 'SUPER_ADMIN', 'SERVICE_UPDATE', `Updated service ${dbState.services[idx].title}`);
+  await persistDatabase('services', dbState.services[idx].id);
+  res.json(dbState.services[idx]);
+});
+
+app.patch('/api/admin/services/:id', authenticateToken, requireRole(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'OPERATOR']), async (req, res) => {
+  const { updaterId, updaterName, updaterRole } = req.body || {};
+  const service = req.body?.service || req.body || {};
+  const idx = dbState.services.findIndex(s => s.id === req.params.id);
+  if (idx === -1) return res.status(404).json({ message: 'Service not found' });
+
+  const existing = dbState.services[idx];
+
+  // Timeline validation
+  let timeline = existing.timeline || { enabled: false, startDate: null, endDate: null };
+  if (service.timeline !== undefined) {
+    if (!service.timeline || typeof service.timeline !== 'object') {
+      timeline = { enabled: false, startDate: null, endDate: null };
+    } else {
+      const enabled = Boolean(service.timeline.enabled);
+      if (enabled) {
+        const startDate = service.timeline.startDate ? String(service.timeline.startDate).trim() : '';
+        const endDate = service.timeline.endDate ? String(service.timeline.endDate).trim() : '';
+        if (!startDate || !endDate) {
+          return res.status(400).json({ message: 'Start date and End date are required when timeline is enabled.' });
+        }
+        if (startDate > endDate) {
+          return res.status(400).json({ message: 'Timeline Start date cannot be after End date.' });
+        }
+        timeline = { enabled: true, startDate, endDate };
+      } else {
+        timeline = { enabled: false, startDate: null, endDate: null };
+      }
+    }
+  }
+
+  const title = service.title || service.name || existing.title;
+  const price = service.price !== undefined ? Number(service.price) : existing.price;
+  const serviceCharge = service.serviceCharge !== undefined ? Number(service.serviceCharge) : (service.price !== undefined ? Number(service.price) : existing.serviceCharge);
+  const description = service.description !== undefined ? String(service.description) : (service.fullDescription !== undefined ? String(service.fullDescription) : existing.description);
+  const shortDescription = service.shortDescription !== undefined ? String(service.shortDescription) : (existing.shortDescription !== undefined ? existing.shortDescription : (description.length <= 160 ? description : description.slice(0, 160)));
+  const fullDescription = service.fullDescription !== undefined ? String(service.fullDescription) : (existing.fullDescription !== undefined ? existing.fullDescription : description);
+
+  dbState.services[idx] = {
+    ...existing,
+    ...service,
     id: req.params.id,
-    categoryId: service.categoryId || dbState.services[idx].categoryId
+    categoryId: service.categoryId || existing.categoryId,
+    title,
+    name: title,
+    price,
+    serviceCharge,
+    description,
+    shortDescription,
+    fullDescription,
+    timeline
   };
   logSystemAction(updaterId || (req as any).user?.id || 'super-admin-deepak', updaterName || (req as any).user?.name || 'Deepak', updaterRole || (req as any).user?.role || 'SUPER_ADMIN', 'SERVICE_UPDATE', `Updated service ${dbState.services[idx].title}`);
   await persistDatabase('services', dbState.services[idx].id);

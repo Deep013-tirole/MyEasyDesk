@@ -10,6 +10,8 @@ import {
 import { motion } from 'motion/react';
 import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { getClientPrivacySecurity } from '../lib/apiDataService.js';
+import Breadcrumbs from './ui/Breadcrumbs.js';
+import TrustBadge from './ui/TrustBadge.js';
 
 export interface PrivacySecurityData {
   hero: {
@@ -454,16 +456,17 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
           <div className="absolute top-1/2 -right-20 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
         </div>
 
-        <div className="portal-container relative z-10">
+        <div className="portal-container relative z-10 space-y-6">
+          <Breadcrumbs items={[{ label: 'Privacy & Security', active: true }]} />
+
           <motion.div 
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className="max-w-4xl 2xl:max-w-5xl mx-auto text-center space-y-5"
           >
-            <div className="inline-flex items-center gap-2 bg-blue-100/90 border border-blue-200/70 px-4 py-1.5 rounded-full text-xs font-black text-[#0F4C81] shadow-2xs pulse-badge">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>{data.hero.badgeText}</span>
+            <div className="flex justify-center">
+              <TrustBadge title={data.hero.badgeText || "Privacy & Security Notice"} variant="pill" />
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">

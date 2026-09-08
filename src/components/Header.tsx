@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { 
-  Menu, X, ShieldAlert, LogOut, MessageSquare, Bot, ShieldCheck, User as UserIcon, Globe, Search
+import {
+  Menu, X, LogOut, MessageSquare, ShieldCheck, Search, Shield
 } from 'lucide-react';
-import { User, UserRole } from '../types.js';
+import { User } from '../types.js';
 import { openGeneralWhatsApp } from '../lib/whatsapp.js';
 import { auth, signOut } from '../lib/firebaseClient.js';
 import { useLanguage } from '../context/LanguageContext.js';
@@ -14,13 +14,15 @@ interface HeaderProps {
   currentUser: User | null;
   setCurrentUser: (user: User | null) => void;
   allUsers: User[];
+  onOpenSearch?: () => void;
 }
 
-export default function Header({ 
-  currentView, 
-  setView, 
-  currentUser, 
-  setCurrentUser 
+export default function Header({
+  currentView,
+  setView,
+  currentUser,
+  setCurrentUser,
+  onOpenSearch
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
@@ -37,169 +39,145 @@ export default function Header({
     localStorage.removeItem('easydesk_admin_token');
     localStorage.removeItem('easydesk_admin_refresh');
     localStorage.removeItem('easydesk_admin_user');
-    
+
     setCurrentUser(null);
     setView('home');
   };
 
+  const handleTriggerSearch = () => {
+    if (onOpenSearch) {
+      onOpenSearch();
+    } else {
+      window.dispatchEvent(new CustomEvent('easydesk-open-command-palette'));
+    }
+  };
+
+  const navLinks = [
+    { id: 'home', label: t('nav.home', 'Home'), action: () => setView('home') },
+    { id: 'services', label: t('nav.services', 'Services'), action: () => setView('services') },
+    { id: 'track', label: t('nav.track', 'Track Application'), action: () => setView('track') },
+    { id: 'blogs', label: t('nav.blogs', 'Knowledge Hub'), action: () => setView('blogs') },
+    { id: 'about', label: t('nav.about', 'About Us'), action: () => setView('about') },
+    { id: 'contact', label: t('nav.contact', 'Contact'), action: () => setView('contact') },
+    { id: 'payment', label: t('nav.payment', 'Payment'), action: () => setView('payment') },
+    { id: 'privacy-security', label: t('nav.privacy', 'Privacy & Security'), action: () => setView('privacy-security') },
+  ];
+
   return (
-    <header id="easydesk-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-[#E5E7EB] font-sans text-[#111827] w-full max-w-full">
+    <header id="easydesk-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 font-sans text-slate-900 w-full max-w-full">
       <div className="portal-container w-full max-w-full">
-        <div className="flex justify-between items-center h-16 w-full min-w-0">
-          
-          {/* Logo Brand */}
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView('home')}>
-            <div className="w-8 h-8 bg-[#0F4C81] rounded-xl flex items-center justify-center shadow-xs">
-              <div className="w-4 h-4 border-2 border-white rounded-xs"></div>
+        <div className="flex justify-between items-center h-16 w-full min-w-0 gap-3">
+
+          {/* Brand Logo */}
+          <div
+            className="flex items-center gap-2.5 cursor-pointer shrink-0 focus-civic rounded-xl p-1"
+            onClick={() => setView('home')}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === 'Enter' && setView('home')}
+            aria-label="EasyDesk Home"
+          >
+            <div className="w-8 h-8 bg-gradient-to-br from-[#0F4C81] to-[#0A2540] rounded-xl flex items-center justify-center shadow-xs text-white">
+              <Shield className="w-4 h-4 text-cyan-300" />
             </div>
             <div>
               <span className="text-xl font-black tracking-tight text-[#0F4C81] leading-none block">
                 EasyDesk
               </span>
-              <span className="block text-[8px] text-[#6B7280] font-bold tracking-widest uppercase mt-0.5">
+              <span className="block text-[9px] text-slate-500 font-extrabold tracking-wider uppercase mt-0.5">
                 {t('nav.portalSubtitle', 'Digital Service Portal')}
               </span>
             </div>
           </div>
 
           {/* Desktop Navigation Links */}
-          <nav className="hidden md:flex items-center space-x-1">
-            <button
-              onClick={() => setView('home')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                currentView === 'home' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              {t('nav.home', 'Home')}
-            </button>
-            <button
-              onClick={() => setView('services')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                currentView === 'services' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              {t('nav.services', 'Services')}
-            </button>
-            <button
-              onClick={() => setView('track')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                currentView === 'track' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              <Search className="w-3.5 h-3.5 text-[#0F4C81]" />
-              <span>{t('nav.track', 'Track Application')}</span>
-            </button>
-            <button
-              onClick={() => setView('blogs')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                currentView === 'blogs' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              {t('nav.blogs', 'Blogs')}
-            </button>
-            <button
-              onClick={() => setView('about')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                currentView === 'about' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              {t('nav.about', 'About Us')}
-            </button>
-            <button
-              onClick={() => setView('contact')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                currentView === 'contact' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              {t('nav.contact', 'Contact')}
-            </button>
-            <button
-              onClick={() => setView('payment')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                currentView === 'payment' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              {t('nav.payment', 'Payment')}
-            </button>
-            <button
-              onClick={() => setView('privacy-security')}
-              className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
-                currentView === 'privacy-security' 
-                  ? 'bg-blue-50 text-[#0F4C81]' 
-                  : 'text-[#6B7280] hover:text-[#111827] hover:bg-slate-50'
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-[#10B981]" />
-              <span>{t('nav.privacy', 'Privacy & Security')}</span>
-            </button>
-            
-            {/* Conditional Admin Access */}
+          <nav className="hidden xl:flex items-center space-x-1" aria-label="Main Navigation">
+            {navLinks.map(link => {
+              const isActive = currentView === link.id ||
+                (link.id === 'services' && currentView === 'service-details');
+              return (
+                <button
+                  key={link.id}
+                  onClick={link.action}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer focus-civic ${
+                    isActive
+                      ? 'bg-blue-50 text-[#0F4C81] border border-blue-200/60 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
+                  }`}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  {link.label}
+                </button>
+              );
+            })}
+
+            {/* Admin Panel Link if logged in or direct login */}
             {['ADMIN', 'SUPER_ADMIN', 'STAFF', 'OPERATOR'].includes(currentUser?.role as string) ? (
               <button
                 onClick={() => setView('admin')}
-                className={`px-3 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  currentView === 'admin' 
-                    ? 'bg-blue-100 text-[#0F4C81]' 
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer focus-civic ${
+                  currentView === 'admin'
+                    ? 'bg-blue-100 text-[#0F4C81]'
                     : 'text-[#0F4C81] hover:bg-blue-50'
                 }`}
               >
-                {t('nav.admin', 'Admin Panel')}
+                {t('nav.admin', 'Admin')}
               </button>
             ) : (
               <button
                 onClick={() => setView('admin-login')}
-                className="px-3 py-2 text-xs font-bold text-[#6B7280] hover:text-[#0F4C81] transition cursor-pointer"
+                className="px-2.5 py-1.5 text-xs font-semibold text-slate-400 hover:text-slate-700 transition cursor-pointer focus-civic rounded-lg"
               >
-                {t('nav.adminLogin', 'Admin Login')}
+                {t('nav.adminLogin', 'Officer Desk')}
               </button>
             )}
           </nav>
 
-          {/* Right Header Action Buttons & Language Switcher */}
-          <div className="hidden md:flex items-center gap-2.5">
+          {/* Right Action Bar */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Spotlight Search Trigger */}
+            <button
+              type="button"
+              onClick={handleTriggerSearch}
+              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs transition cursor-pointer focus-civic"
+              title="Search services and guides (Ctrl + K)"
+              aria-label="Search services and guides"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden lg:inline text-[11px] font-medium text-slate-600">Search</span>
+              <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-white border border-slate-200 text-slate-400">⌘K</kbd>
+            </button>
+
             {/* Language Switcher Dropdown */}
             <LanguageSwitcher />
 
+            {/* WhatsApp Quick Desk CTA */}
             <button
               onClick={() => openGeneralWhatsApp('Hello EasyDesk, I would like to inquire about digital document services.')}
-              className="px-4 py-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold rounded-xl text-xs transition cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-xs active:scale-95 btn-glow-emerald"
             >
-              <MessageSquare className="w-3.5 h-3.5" /> {t('nav.orderWhatsApp', 'Order on WhatsApp')}
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>{t('nav.orderWhatsApp', 'WhatsApp Desk')}</span>
             </button>
 
+            {/* Sign Out for Admin User */}
             {currentUser && (
               <button
                 onClick={handleLogout}
-                className="p-2 text-[#6B7280] hover:text-red-600 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+                className="p-2 text-slate-500 hover:text-red-600 rounded-xl hover:bg-slate-100 transition cursor-pointer focus-civic"
                 title={t('nav.signOut', 'Sign Out')}
+                aria-label="Sign Out"
               >
                 <LogOut className="w-4 h-4" />
               </button>
             )}
-          </div>
 
-          {/* Mobile Right Controls: Compact Language Switcher + Menu Button */}
-          <div className="flex md:hidden items-center gap-1.5">
-            <LanguageSwitcher />
-
+            {/* Mobile Hamburger Toggle (for extra links: about, contact, payment, privacy) */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-[#6B7280] hover:text-[#111827] rounded-xl hover:bg-slate-100 transition cursor-pointer"
+              className="xl:hidden p-2 text-slate-700 hover:text-slate-950 rounded-xl hover:bg-slate-100 transition cursor-pointer focus-civic"
               aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
@@ -208,100 +186,60 @@ export default function Header({
         </div>
       </div>
 
-      {/* Mobile Drawer Navigation */}
+      {/* Mobile Drawer Navigation (Extended Menu) */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-white border-b border-[#E5E7EB] px-4 pt-2 pb-6 space-y-2 animate-in slide-in-from-top duration-200">
-          {/* Mobile Language Selection Grid */}
-          <LanguageSwitcher variant="mobile" className="mb-3" />
+        <div className="xl:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-1 animate-in slide-in-from-top duration-150">
+          <div className="pb-2 border-b border-slate-100 mb-2">
+            <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+              Navigation
+            </span>
+          </div>
 
-          <button
-            onClick={() => { setView('home'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-              currentView === 'home' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            {t('nav.home', 'Home')}
-          </button>
-          <button
-            onClick={() => { setView('services'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-              currentView === 'services' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            {t('nav.services', 'Services')}
-          </button>
-          <button
-            onClick={() => { setView('track'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              currentView === 'track' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            <Search className="w-4 h-4 text-[#0F4C81]" />
-            <span>{t('nav.track', 'Track Application')}</span>
-          </button>
-          <button
-            onClick={() => { setView('blogs'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-              currentView === 'blogs' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            {t('nav.blogs', 'Blogs')}
-          </button>
-          <button
-            onClick={() => { setView('about'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-              currentView === 'about' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            {t('nav.about', 'About Us')}
-          </button>
-          <button
-            onClick={() => { setView('contact'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-              currentView === 'contact' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            {t('nav.contact', 'Contact')}
-          </button>
-          <button
-            onClick={() => { setView('payment'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition ${
-              currentView === 'payment' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            {t('nav.payment', 'Payment')}
-          </button>
-          <button
-            onClick={() => { setView('privacy-security'); setMobileMenuOpen(false); }}
-            className={`w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-2 ${
-              currentView === 'privacy-security' ? 'bg-blue-50 text-[#0F4C81]' : 'text-[#111827] hover:bg-slate-50'
-            }`}
-          >
-            <ShieldCheck className="w-4 h-4 text-[#10B981]" /> {t('nav.privacy', 'Privacy & Security')}
-          </button>
-          {['ADMIN', 'SUPER_ADMIN', 'STAFF', 'OPERATOR'].includes(currentUser?.role as string) ? (
-            <button
-              onClick={() => { setView('admin'); setMobileMenuOpen(false); }}
-              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-[#0F4C81] bg-blue-50 hover:bg-blue-100"
-            >
-              {t('nav.admin', 'Admin Panel')}
-            </button>
-          ) : (
-            <button
-              onClick={() => { setView('admin-login'); setMobileMenuOpen(false); }}
-              className="w-full text-left px-3 py-2.5 rounded-xl text-xs font-bold text-[#6B7280] hover:bg-slate-50"
-            >
-              {t('nav.adminLogin', 'Admin Login')}
-            </button>
-          )}
+          {navLinks.map(link => {
+            const isActive = currentView === link.id;
+            return (
+              <button
+                key={link.id}
+                onClick={() => {
+                  link.action();
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                  isActive ? 'bg-blue-50 text-[#0F4C81] border border-blue-200/60' : 'text-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {link.label}
+              </button>
+            );
+          })}
 
-          <div className="pt-2">
+          <div className="pt-3 border-t border-slate-100 mt-2 space-y-2">
             <button
-              onClick={() => { openGeneralWhatsApp(); setMobileMenuOpen(false); }}
-              className="w-full py-3 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold rounded-xl text-xs shadow-sm flex items-center justify-center gap-2 transition cursor-pointer"
+              onClick={() => {
+                openGeneralWhatsApp('Hello EasyDesk, I need help with an application.');
+                setMobileMenuOpen(false);
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-[#10B981] text-white py-2.5 rounded-xl text-xs font-bold shadow-xs"
             >
-              <MessageSquare className="w-4 h-4" /> {t('nav.orderWhatsApp', 'Order on WhatsApp')}
+              <MessageSquare className="w-4 h-4" />
+              <span>Connect on WhatsApp Desk</span>
             </button>
+
+            {['ADMIN', 'SUPER_ADMIN', 'STAFF', 'OPERATOR'].includes(currentUser?.role as string) ? (
+              <button
+                onClick={() => { setView('admin'); setMobileMenuOpen(false); }}
+                className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-50 text-[#0F4C81]"
+              >
+                Admin Control Dashboard
+              </button>
+            ) : (
+              <button
+                onClick={() => { setView('admin-login'); setMobileMenuOpen(false); }}
+                className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-500"
+              >
+                Officer / Admin Access
+              </button>
+            )}
           </div>
         </div>
       )}

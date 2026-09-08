@@ -10,6 +10,8 @@ import { openGeneralWhatsApp } from '../lib/whatsapp.js';
 import { BaseCard, BaseCardBody } from './BaseCard.js';
 import { getClientContactSettings, formatFullAddress } from '../lib/apiDataService.js';
 import { onContactSettingsUpdated, updateCachedContactSettings } from '../lib/whatsapp.js';
+import Breadcrumbs from './ui/Breadcrumbs.js';
+import TrustBadge from './ui/TrustBadge.js';
 
 interface ContactSettings {
   companyName: string;
@@ -203,16 +205,17 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
           <div className="absolute top-1/2 -right-20 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
         </div>
 
-        <div className="portal-container relative z-10">
+        <div className="portal-container relative z-10 space-y-6">
+          <Breadcrumbs items={[{ label: 'Contact Us', active: true }]} />
+
           <motion.div 
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4 }}
             className="max-w-3xl space-y-4"
           >
-            <div className="inline-flex items-center gap-2 bg-blue-100/90 border border-blue-200/70 px-4 py-1.5 rounded-full text-xs font-black text-[#0F4C81] shadow-2xs pulse-badge">
-              <Headphones className="w-4 h-4 text-[#0F4C81]" />
-              <span>Official Support Desk & Direct Inquiry</span>
+            <div>
+              <TrustBadge title="Official Support Desk & Direct Inquiry" variant="pill" />
             </div>
 
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">

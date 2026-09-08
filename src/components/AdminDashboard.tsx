@@ -1,9 +1,9 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { 
-  ShieldAlert, Settings, Users, FileText, IndianRupee, Clock, CheckCircle, 
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+import {
+  ShieldAlert, Settings, Users, FileText, IndianRupee, Clock, CheckCircle,
   Trash2, Plus, MessageSquare, Ticket, Send, Eye, RefreshCw, UserCheck,
-  Layers, Image, HelpCircle, Star, Edit, Shield, Activity, BellRing, 
-  Lock, LogOut, Check, Info, FileCode, CheckCircle2, AlertCircle, 
+  Layers, Image, HelpCircle, Star, Edit, Shield, Activity, BellRing,
+  Lock, LogOut, Check, Info, FileCode, CheckCircle2, AlertCircle,
   Copy, FolderOpen, Search, Filter, UploadCloud, CopyCheck, ArrowUpDown,
   Building2, Phone, CreditCard, Sliders, Key, ShieldCheck, Globe, Loader2,
   UserPlus, Menu, X, ChevronDown, ChevronRight, LayoutGrid, List, Sparkles, Share2
@@ -38,6 +38,38 @@ import { MediaInput } from './admin/MediaInput.js';
 import { fetchServicesWithCache, fetchCategoriesWithCache, fetchBlogCategoriesWithCache, fetchBlogsWithCache, setCachedCatalog, invalidateAllCatalogsCache, CATALOG_CACHE_KEYS } from '../services/catalogService.js';
 import { useScrollToTopOnChange } from '../lib/scrollUtils.js';
 
+export type AdminTabType = 'analytics' | 'orders' | 'services' | 'category_management' | 'blogs' | 'reviews' | 'faqs' | 'banners' | 'pages' | 'media' | 'users' | 'notifications' | 'audit' | 'settings' | 'about_us' | 'contact_us' | 'payment_settings' | 'admin_settings' | 'social_media' | 'employee_records' | 'customer_records' | 'master_data' | 'record_integrity' | 'roles_management' | 'privacy_security' | 'calendar';
+
+export function normalizeAdminTab(rawTab?: string): AdminTabType {
+  if (!rawTab) return 'analytics';
+  const clean = rawTab.toLowerCase().trim().replace(/-/g, '_');
+
+  if (clean === 'customers' || clean === 'customer') return 'customer_records';
+  if (clean === 'employees' || clean === 'employee') return 'employee_records';
+  if (clean === 'categories' || clean === 'category') return 'category_management';
+  if (clean === 'admin' || clean === 'admin_config') return 'admin_settings';
+  if (clean === 'payment' || clean === 'payments') return 'payment_settings';
+  if (clean === 'about') return 'about_us';
+  if (clean === 'contact') return 'contact_us';
+  if (clean === 'roles' || clean === 'role') return 'roles_management';
+  if (clean === 'privacy' || clean === 'security') return 'privacy_security';
+  if (clean === 'social') return 'social_media';
+  if (clean === 'events') return 'calendar';
+
+  const validTabs: AdminTabType[] = [
+    'analytics', 'orders', 'services', 'category_management', 'blogs', 'reviews',
+    'faqs', 'banners', 'pages', 'media', 'users', 'notifications', 'audit',
+    'settings', 'about_us', 'contact_us', 'payment_settings', 'admin_settings',
+    'social_media', 'employee_records', 'customer_records', 'master_data',
+    'record_integrity', 'roles_management', 'privacy_security', 'calendar'
+  ];
+
+  if (validTabs.includes(clean as AdminTabType)) {
+    return clean as AdminTabType;
+  }
+  return 'analytics';
+}
+
 function AdminModuleFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[300px] p-8 gap-3 bg-white rounded-2xl border border-slate-200/80 text-xs text-slate-400 font-sans shadow-xs">
@@ -49,9 +81,11 @@ function AdminModuleFallback() {
 
 interface AdminDashboardProps {
   onRefreshCatalogs?: () => void;
+  initialTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
-export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProps = {}) {
+export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabChange }: AdminDashboardProps = {}) {
   // Session & Authentication
   const [adminUser, setAdminUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('easydesk_admin_user');
@@ -106,8 +140,30 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
     instructions: ''
   });
 
-  // Navigation tab
-  const [activeTab, setActiveTab] = useState<'analytics' | 'orders' | 'services' | 'category_management' | 'blogs' | 'reviews' | 'faqs' | 'banners' | 'pages' | 'media' | 'users' | 'notifications' | 'audit' | 'settings' | 'about_us' | 'contact_us' | 'payment_settings' | 'admin_settings' | 'social_media' | 'employee_records' | 'customer_records' | 'master_data' | 'record_integrity' | 'roles_management' | 'privacy_security' | 'calendar'>('analytics');
+  // Navigation tab with URL state awareness
+  const [activeTab, setActiveTabState] = useState<AdminTabType>(() => {
+    return normalizeAdminTab(initialTab);
+  });
+
+  // Synchronize when initialTab changes from external navigation (popstate / browser Back/Forward)
+  useEffect(() => {
+    if (initialTab) {
+      const normalized = normalizeAdminTab(initialTab);
+      setActiveTabState(prev => prev !== normalized ? normalized : prev);
+    }
+  }, [initialTab]);
+
+  const setActiveTab = useCallback((tab: AdminTabType) => {
+    setActiveTabState(tab);
+    if (onTabChange) {
+      onTabChange(tab);
+    } else if (typeof window !== 'undefined') {
+      const targetPath = tab === 'analytics' ? '/admin' : `/admin/${tab}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState(null, '', targetPath);
+      }
+    }
+  }, [onTabChange]);
 
   // Reset scroll to top on admin module/tab change
   useScrollToTopOnChange([activeTab]);
@@ -127,7 +183,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
 
   // Reusable multi-purpose form state
   const [formData, setFormData] = useState<any>({
-    title: '', name: '', question: '', answer: '', content: '', categoryId: '', 
+    title: '', name: '', question: '', answer: '', content: '', categoryId: '',
     govFees: 0, serviceCharge: 0, processingTime: '', requiredDocuments: '',
     status: 'active', imageUrl: '', linkUrl: '', tags: '', author: '', role: 'USER',
     email: '', mobile: '', message: '', icon: '', color: ''
@@ -231,9 +287,9 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
       if (!isOffline) {
         console.warn('[AdminDashboard] Fetch error for', input, netErr?.message || netErr);
       }
-      return new Response(JSON.stringify({ 
-        message: 'Network offline / connection unavailable', 
-        offline: true 
+      return new Response(JSON.stringify({
+        message: 'Network offline / connection unavailable',
+        offline: true
       }), {
         status: 503,
         statusText: 'Service Unavailable (Offline)',
@@ -245,8 +301,8 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
       const clone = response.clone();
       const data = await clone.json().catch(() => ({}));
       const isAuthIssue = data.message && (
-        data.message.includes('token') || 
-        data.message.includes('Authorization') || 
+        data.message.includes('token') ||
+        data.message.includes('Authorization') ||
         data.message.includes('expired') ||
         data.message.includes('denied')
       );
@@ -259,7 +315,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
             const csrfToken = await fetchCsrfToken();
             const refRes = await fetch('/api/auth/admin/refresh', {
               method: 'POST',
-              headers: { 
+              headers: {
                 'Content-Type': 'application/json',
                 'x-csrf-token': csrfToken
               },
@@ -271,7 +327,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                 token = refData.accessToken;
                 localStorage.setItem('easydesk_admin_token', token);
                 headers['Authorization'] = `Bearer ${token}`;
-                
+
                 // Retry request with fresh token
                 const retryRes = await fetch(input, {
                   ...init,
@@ -307,7 +363,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
         const csrfToken = await fetchCsrfToken();
         const res = await fetch('/api/auth/admin/login', {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'x-csrf-token': csrfToken
           },
@@ -627,7 +683,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                 const csrfToken = await fetchCsrfToken();
                 const refRes = await fetch('/api/auth/admin/refresh', {
                   method: 'POST',
-                  headers: { 
+                  headers: {
                     'Content-Type': 'application/json',
                     'x-csrf-token': csrfToken
                   },
@@ -703,9 +759,9 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
     const activeBlogCats = blogCategories.filter(c => (c.status || 'Active') === 'Active');
     setFormData({
       title: '', name: '', question: '', answer: '', content: '', description: '',
-      categoryId: type === 'blog' 
+      categoryId: type === 'blog'
         ? (activeBlogCats[0]?.id || activeBlogCats[0]?.name || 'blog-cat-gov')
-        : (activeCats[0]?.id || categories[0]?.id || 'gov'), 
+        : (activeCats[0]?.id || categories[0]?.id || 'gov'),
       govFees: 200, serviceCharge: 150, processingTime: '3 Working Days', requiredDocuments: 'Aadhaar Card, Photo',
       status: 'active', imageUrl: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400', linkUrl: '/services', tags: 'PAN, Aadhaar', author: adminUser?.name || 'Admin', role: 'USER',
       walletBalance: 0, email: '', mobile: '', message: '', icon: 'FileText', color: 'blue'
@@ -726,7 +782,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
     }
     setFormType(type);
     setEditId(item.id || item.code || null);
-    
+
     // Map existing structure
     setFormData({
       title: item.title || '',
@@ -847,7 +903,10 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
             categoryId: formData.categoryId,
             govFees: Number(formData.govFees),
             serviceCharge: Number(formData.serviceCharge),
-            description: formData.description || '',
+            description: formData.description || formData.fullDescription || '',
+            shortDescription: formData.shortDescription || (formData.description && formData.description.length <= 160 ? formData.description : formData.description?.slice(0, 160)) || '',
+            fullDescription: formData.fullDescription || formData.description || '',
+            timeline: formData.timeline,
             estimatedTime: formData.processingTime,
             processingTime: formData.processingTime,
             requiredDocuments: typeof formData.requiredDocuments === 'string'
@@ -1212,20 +1271,20 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
 
   const filteredOrders = orders.filter(o => {
     const term = searchQuery.toLowerCase().trim();
-    const matchesSearch = !term || 
-      (o.id && o.id.toLowerCase().includes(term)) || 
-      (o.name && o.name.toLowerCase().includes(term)) || 
+    const matchesSearch = !term ||
+      (o.id && o.id.toLowerCase().includes(term)) ||
+      (o.name && o.name.toLowerCase().includes(term)) ||
       (o.mobile && o.mobile.includes(term)) ||
       (o.email && o.email.toLowerCase().includes(term)) ||
       (o.sourceReference && o.sourceReference.toLowerCase().includes(term)) ||
       (o.serviceTitle && o.serviceTitle.toLowerCase().includes(term));
 
-    const matchesSource = 
-      orderSourceFilter === 'ALL' || 
+    const matchesSource =
+      orderSourceFilter === 'ALL' ||
       (orderSourceFilter === 'Website' ? (!o.orderSource || o.orderSource === 'Website') : o.orderSource === orderSourceFilter);
 
-    const matchesStatus = 
-      orderStatusTabFilter === 'ALL' || 
+    const matchesStatus =
+      orderStatusTabFilter === 'ALL' ||
       o.orderStatus === orderStatusTabFilter;
 
     return matchesSearch && matchesSource && matchesStatus;
@@ -1236,9 +1295,9 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
     return (
       <div id="easydesk-admin-login" className="min-h-[85vh] flex items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50/50">
         <div className="w-full max-w-md bg-white/70 backdrop-blur-xl border border-slate-200/60 p-8 rounded-3xl shadow-2xl relative overflow-hidden font-sans">
-          
+
           <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 to-cyan-400" />
-          
+
           <div className="text-center mb-6">
             <div className="w-12 h-12 bg-blue-600 text-white rounded-2xl flex items-center justify-center mx-auto shadow-md">
               <Shield className="w-6 h-6" />
@@ -1278,8 +1337,8 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide block">Security Key / Password</label>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={() => setForgotMode(true)}
                     className="text-[10px] text-blue-600 hover:underline font-bold"
                   >
@@ -1354,8 +1413,8 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
           <div className="mt-6 pt-5 border-t border-slate-100">
             <span className="text-[9px] font-bold text-slate-400 tracking-wider uppercase block mb-2 text-center">Super Admin Access</span>
             <div className="grid grid-cols-1 gap-2">
-              <button 
-                onClick={() => handleQuickLogin('tideepak8@gmail.com')} 
+              <button
+                onClick={() => handleQuickLogin('tideepak8@gmail.com')}
                 className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-[10px] font-bold text-indigo-950 p-2.5 rounded-xl text-left flex items-center justify-between transition cursor-pointer"
               >
                 <div>
@@ -1379,7 +1438,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
 
   return (
     <div className="notranslate portal-container py-8 font-sans text-slate-800" translate="no">
-      
+
       {/* Toast Notification Banner */}
       {actionNotif && (
         <div className="fixed top-4 right-4 bg-slate-900 text-white font-bold text-xs px-4 py-3 rounded-2xl border border-slate-700/50 shadow-2xl z-50 flex items-center gap-2 animate-bounce">
@@ -1408,7 +1467,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
             <p className="font-bold leading-none">{adminUser.name}</p>
             <p className="text-[9px] text-slate-400 mt-1 font-mono">{adminUser.email}</p>
           </div>
-          <button 
+          <button
             onClick={handleLogout}
             className="ml-4 bg-slate-50 hover:bg-slate-100 p-2 rounded-xl border border-slate-200/50 text-slate-500 hover:text-red-600 transition"
             title="Log Out Securely"
@@ -1872,7 +1931,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
 
       {/* Main Control Panel Dashboard Layout */}
       <div className="grid md:grid-cols-5 gap-8">
-        
+
         {/* Left Side Control Panel Navigation Menu (Desktop Only) */}
         <div className="hidden md:block md:col-span-1 space-y-2">
           <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm">
@@ -2227,7 +2286,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                       </span>
                     );
 
-                    const formattedDate = order.createdAt 
+                    const formattedDate = order.createdAt
                       ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                       : '—';
 
@@ -2365,7 +2424,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                           </span>
                         );
 
-                        const formattedDate = order.createdAt 
+                        const formattedDate = order.createdAt
                           ? new Date(order.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
                           : '—';
 
@@ -3082,10 +3141,10 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
 
                       return (
                         <div key={blog.id} className="bg-slate-50/50 border border-slate-200/60 rounded-2xl p-4 flex gap-4 hover:border-slate-300 transition">
-                          <img 
-                            src={blog.image || 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=400'} 
-                            alt={blog.title} 
-                            className="w-20 h-20 object-cover rounded-xl shrink-0 border border-slate-200/60" 
+                          <img
+                            src={blog.image || 'https://images.unsplash.com/photo-1554415707-6e8cfc93fe23?w=400'}
+                            alt={blog.title}
+                            className="w-20 h-20 object-cover rounded-xl shrink-0 border border-slate-200/60"
                           />
                           <div className="flex-1 flex flex-col justify-between">
                             <div>
@@ -3570,7 +3629,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
                   <h3 className="font-bold text-xs text-slate-900 leading-none">Security System Audit Records</h3>
                   <p className="text-[9px] text-slate-400 mt-1">Track administrator activity, configurations shifts, and secret dispatches</p>
                 </div>
-                <button 
+                <button
                   onClick={fetchTabData}
                   className="bg-slate-50 border border-slate-200 hover:bg-slate-100 text-slate-600 font-bold px-3 py-1.5 rounded-xl text-[10px] flex items-center gap-1 transition"
                 >
@@ -3738,8 +3797,8 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
           {/* Active Tab: Customer Record Management Module */}
           {activeTab === 'customer_records' && (
             <div className="animate-in fade-in duration-150">
-              <CustomerManagementModule 
-                adminFetch={adminFetch} 
+              <CustomerManagementModule
+                adminFetch={adminFetch}
                 triggerAlert={triggerAlert}
                 onViewOrder={(order) => setSelectedOrder(order)}
                 services={services}
@@ -3757,12 +3816,12 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
           {/* Active Tab: Record Integrity & Relationship Validation Module */}
           {activeTab === 'record_integrity' && (
             <div className="animate-in fade-in duration-150">
-              <RecordIntegrityAdminModule 
-                adminUser={adminUser} 
+              <RecordIntegrityAdminModule
+                adminUser={adminUser}
                 onRefreshData={() => {
                   fetchTabData();
                   onRefreshCatalogs?.();
-                }} 
+                }}
               />
             </div>
           )}
@@ -3784,7 +3843,7 @@ export default function AdminDashboard({ onRefreshCatalogs }: AdminDashboardProp
             </div>
 
             <form onSubmit={handleFormSubmit} className="space-y-3.5 font-semibold">
-              
+
               {formType === 'service' && (
                 <>
                   <div>

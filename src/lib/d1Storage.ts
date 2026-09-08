@@ -795,7 +795,14 @@ export async function saveRelationalMirror(
       const title = String(d.title || id);
       const slug = String(d.slug || id.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
       const subCategory = d.subCategory || null;
-      const description = String(d.description || d.shortDescription || title);
+      const description = String(d.description || d.fullDescription || d.shortDescription || title);
+      const shortDescription = d.shortDescription ? String(d.shortDescription) : (description.length > 160 ? description.slice(0, 160) : description);
+      const fullDescription = String(d.fullDescription || description);
+      const timeline = (d.timeline && typeof d.timeline === 'object') ? {
+        enabled: Boolean(d.timeline.enabled),
+        startDate: d.timeline.startDate ? String(d.timeline.startDate) : null,
+        endDate: d.timeline.endDate ? String(d.timeline.endDate) : null
+      } : { enabled: false, startDate: null, endDate: null };
       const govFees = typeof d.govFees === 'number' ? d.govFees : 0;
       const serviceCharge = typeof d.serviceCharge === 'number' ? d.serviceCharge : 0;
       const processingTime = d.processingTime || d.estimatedTime || '3-5 Business Days';
@@ -806,6 +813,9 @@ export async function saveRelationalMirror(
       const faqs = Array.isArray(d.faqs) ? JSON.stringify(d.faqs) : JSON.stringify([]);
       const metadata = JSON.stringify({
         originalCategoryId: d.categoryId || null,
+        shortDescription,
+        fullDescription,
+        timeline,
         highlights: d.highlights || [],
         eligibility: d.eligibility || '',
         howItWorks: d.howItWorks || '',
@@ -1851,6 +1861,14 @@ export async function queryServicesRelational(
 
   return rows.map((r: any) => {
     const meta = r.metadata ? JSON.parse(r.metadata) : {};
+    const shortDescription = meta.shortDescription !== undefined ? meta.shortDescription : (r.description && r.description.length > 160 ? r.description.slice(0, 160) : r.description);
+    const fullDescription = meta.fullDescription || r.description;
+    const timeline = (meta.timeline && typeof meta.timeline === 'object') ? {
+      enabled: Boolean(meta.timeline.enabled),
+      startDate: meta.timeline.startDate || null,
+      endDate: meta.timeline.endDate || null
+    } : { enabled: false, startDate: null, endDate: null };
+
     return {
       id: r.id,
       categoryId: r.category_id || meta.originalCategoryId || null,
@@ -1859,7 +1877,6 @@ export async function queryServicesRelational(
       name: r.title,
       slug: r.slug,
       subCategory: r.sub_category,
-      description: r.description,
       govFees: Number(r.gov_fees || 0),
       gov_fees: Number(r.gov_fees || 0),
       serviceCharge: Number(r.service_charge || 0),
@@ -1874,7 +1891,11 @@ export async function queryServicesRelational(
       faqs: r.faqs ? JSON.parse(r.faqs) : [],
       createdAt: r.created_at ? new Date(r.created_at).toISOString() : undefined,
       updatedAt: r.updated_at ? new Date(r.updated_at).toISOString() : undefined,
-      ...meta
+      ...meta,
+      description: r.description,
+      shortDescription,
+      fullDescription,
+      timeline
     };
   });
 }
@@ -3857,7 +3878,14 @@ export async function migrateServicesToRelational(optionsOrDb?: MigrationOptions
         const title = String(d.title || id);
         const slug = String(d.slug || id.toLowerCase().replace(/[^a-z0-9]+/g, '-'));
         const subCategory = d.subCategory || null;
-        const description = String(d.description || d.shortDescription || title);
+        const description = String(d.description || d.fullDescription || d.shortDescription || title);
+        const shortDescription = d.shortDescription ? String(d.shortDescription) : (description.length > 160 ? description.slice(0, 160) : description);
+        const fullDescription = String(d.fullDescription || description);
+        const timeline = (d.timeline && typeof d.timeline === 'object') ? {
+          enabled: Boolean(d.timeline.enabled),
+          startDate: d.timeline.startDate ? String(d.timeline.startDate) : null,
+          endDate: d.timeline.endDate ? String(d.timeline.endDate) : null
+        } : { enabled: false, startDate: null, endDate: null };
         const govFees = typeof d.govFees === 'number' ? d.govFees : 0;
         const serviceCharge = typeof d.serviceCharge === 'number' ? d.serviceCharge : 0;
         const processingTime = d.processingTime || d.estimatedTime || '3-5 Business Days';
@@ -3868,6 +3896,9 @@ export async function migrateServicesToRelational(optionsOrDb?: MigrationOptions
         const faqs = Array.isArray(d.faqs) ? JSON.stringify(d.faqs) : JSON.stringify([]);
         const metadata = JSON.stringify({
           originalCategoryId: rawCatId,
+          shortDescription,
+          fullDescription,
+          timeline,
           highlights: d.highlights || [],
           eligibility: d.eligibility || '',
           howItWorks: d.howItWorks || '',

@@ -121,7 +121,7 @@ export default function BlogDetailView({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900 animate-in fade-in duration-150 w-full max-w-full overflow-x-hidden">
+    <div id="blog-detail-view" className="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900 animate-in fade-in duration-150 w-full max-w-full overflow-x-hidden">
       
       {/* 1. Header Navigation & Breadcrumbs Bar */}
       <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-2xs">

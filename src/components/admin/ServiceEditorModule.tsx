@@ -10,6 +10,7 @@ import {
   MessageCircle, 
   Globe, 
   Clock, 
+  Calendar,
   FileText, 
   Sparkles, 
   AlertCircle, 
@@ -76,8 +77,15 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
     initialService?.categoryId || (categories.find(c => (c.status || 'Active') === 'Active')?.id || categories[0]?.id || '')
   );
   const [subCategory, setSubCategory] = useState(initialService?.subCategory || '');
-  const [shortDescription, setShortDescription] = useState(initialService?.shortDescription || initialService?.description?.slice(0, 160) || '');
-  const [fullDescription, setFullDescription] = useState(initialService?.fullDescription || initialService?.description || '');
+  const [shortDescription, setShortDescription] = useState(
+    initialService?.shortDescription ?? (initialService?.description && initialService.description.length <= 160 ? initialService.description : '')
+  );
+  const [fullDescription, setFullDescription] = useState(
+    initialService?.description || initialService?.fullDescription || ''
+  );
+  const [timelineEnabled, setTimelineEnabled] = useState<boolean>(Boolean(initialService?.timeline?.enabled));
+  const [timelineStartDate, setTimelineStartDate] = useState<string>(initialService?.timeline?.startDate || '');
+  const [timelineEndDate, setTimelineEndDate] = useState<string>(initialService?.timeline?.endDate || '');
   const [imageUrl, setImageUrl] = useState(initialService?.imageUrl || initialService?.bannerImage || initialService?.image || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400');
   
   // Pricing & Timeline
@@ -129,8 +137,13 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       setTitle(initialService.title || '');
       setCategoryId(initialService.categoryId || (categories.find(c => (c.status || 'Active') === 'Active')?.id || categories[0]?.id || ''));
       setSubCategory(initialService.subCategory || '');
-      setShortDescription(initialService.shortDescription || initialService.description?.slice(0, 160) || '');
-      setFullDescription(initialService.fullDescription || initialService.description || '');
+      setShortDescription(
+        initialService.shortDescription ?? (initialService.description && initialService.description.length <= 160 ? initialService.description : '')
+      );
+      setFullDescription(initialService.description || initialService.fullDescription || '');
+      setTimelineEnabled(Boolean(initialService.timeline?.enabled));
+      setTimelineStartDate(initialService.timeline?.startDate || '');
+      setTimelineEndDate(initialService.timeline?.endDate || '');
       setImageUrl(initialService.imageUrl || initialService.bannerImage || initialService.image || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400');
       setGovFees(initialService.govFees ?? 0);
       setServiceCharge(initialService.serviceCharge ?? 0);
@@ -161,6 +174,9 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       setSubCategory('');
       setShortDescription('');
       setFullDescription('');
+      setTimelineEnabled(false);
+      setTimelineStartDate('');
+      setTimelineEndDate('');
       setImageUrl('https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400');
       setGovFees(0);
       setServiceCharge(0);
@@ -273,6 +289,22 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       newErrors.shortDescription = 'Short description is required for catalog previews';
     }
 
+    if (!fullDescription.trim()) {
+      newErrors.fullDescription = 'Main service description is required for the Service Details page';
+    }
+
+    if (timelineEnabled) {
+      if (!timelineStartDate) {
+        newErrors.timelineStartDate = 'Application start date is required when timeline is enabled';
+      }
+      if (!timelineEndDate) {
+        newErrors.timelineEndDate = 'Application end date is required when timeline is enabled';
+      }
+      if (timelineStartDate && timelineEndDate && timelineStartDate > timelineEndDate) {
+        newErrors.timelineEndDate = 'Application end date cannot be earlier than start date';
+      }
+    }
+
     if (documents.length === 0) {
       newErrors.documents = 'Please list at least one required document (e.g. Aadhaar Card)';
     }
@@ -295,15 +327,26 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
 
     const finalStatus = forceDraft ? 'draft' : (status || 'active');
 
+    const timelinePayload = timelineEnabled ? {
+      enabled: true,
+      startDate: timelineStartDate || null,
+      endDate: timelineEndDate || null
+    } : {
+      enabled: false,
+      startDate: null,
+      endDate: null
+    };
+
     const cleanSlug = slug.trim() || title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     const servicePayload: Partial<Service> = {
       id: initialService?.id || cleanSlug || `svc-${Date.now()}`,
       title: title.trim(),
       categoryId: categoryId || (categories[0]?.id || ''),
       subCategory: subCategory.trim() || undefined,
-      description: shortDescription.trim() || fullDescription.trim(),
-      shortDescription: shortDescription.trim() || fullDescription.trim().slice(0, 160),
+      description: fullDescription.trim() || shortDescription.trim(),
+      shortDescription: shortDescription.trim() || (fullDescription.trim().length <= 160 ? fullDescription.trim() : fullDescription.trim().slice(0, 160)),
       fullDescription: fullDescription.trim() || shortDescription.trim(),
+      timeline: timelinePayload,
       bannerImage: imageUrl,
       imageUrl: imageUrl,
       image: imageUrl,
@@ -449,7 +492,7 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
                   <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
-                    Short Description <span className="text-red-500">*</span>
+                    Short Description (Cards & Listing Summary) <span className="text-red-500">*</span>
                   </label>
                   <span className={`text-[10px] font-bold ${shortDescription.length > 160 ? 'text-amber-600' : 'text-slate-400'}`}>
                     {shortDescription.length}/160 characters
@@ -462,11 +505,12 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                     setShortDescription(e.target.value);
                     markDirty();
                   }}
-                  placeholder="Brief 1-2 sentence overview summarizing what this service achieves and how EasyDesk assists."
+                  placeholder="Brief 1-2 sentence overview summarizing what this service achieves. Displayed on public service cards."
                   className={`w-full bg-white border rounded-xl p-3 text-xs text-slate-800 font-normal leading-relaxed placeholder-slate-400 focus:outline-none transition ${
                     errors.shortDescription ? 'border-red-400 ring-2 ring-red-400/10' : 'border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10'
                   }`}
                 />
+                <p className="text-[10px] text-slate-400">Brief summary displayed on service cards/listing.</p>
                 {errors.shortDescription && (
                   <p className="text-[11px] font-bold text-red-500 flex items-center gap-1 mt-1">
                     <AlertCircle className="w-3 h-3" /> {errors.shortDescription}
@@ -477,16 +521,106 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
               {/* Full Description (Rich Text Formatting Editor) */}
               <div className="pt-2">
                 <RichFormattingEditor
-                  label="Full Service Description & Guidelines"
+                  label="Main Service Description (Public Service Details Page)"
                   value={fullDescription}
                   onChange={(val) => {
                     setFullDescription(val);
                     markDirty();
                   }}
                   placeholder="Provide comprehensive details, eligibility steps, government portal procedures, and guidelines..."
-                  helperText="Supports Markdown headings (##), bold text (**text**), bullet points (- ), and guidance notes (> [IMPORTANT])."
+                  helperText="Detailed service information displayed on the Service Details page. Supports Markdown headings (##), bold text (**text**), bullet points (- ), and guidance notes (> [IMPORTANT])."
                   minHeight="min-h-[200px]"
                 />
+                {errors.fullDescription && (
+                  <p className="text-[11px] font-bold text-red-500 flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" /> {errors.fullDescription}
+                  </p>
+                )}
+              </div>
+
+              {/* Application Timeline (Optional) */}
+              <div className="pt-4 border-t border-slate-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-[#0F4C81]" />
+                    <div>
+                      <span className="text-xs font-extrabold text-slate-800 block">Application Timeline (Optional)</span>
+                      <span className="text-[10px] text-slate-400">Configure application opening and closing dates for time-sensitive services</span>
+                    </div>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={timelineEnabled}
+                      onChange={(e) => {
+                        setTimelineEnabled(e.target.checked);
+                        markDirty();
+                      }}
+                      className="sr-only peer"
+                    />
+                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#0F4C81]"></div>
+                  </label>
+                </div>
+
+                {timelineEnabled ? (
+                  <div className="bg-blue-50/50 border border-blue-100 rounded-xl p-3.5 space-y-3 animate-in fade-in duration-150">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                          Application Start Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={timelineStartDate}
+                          onChange={(e) => {
+                            setTimelineStartDate(e.target.value);
+                            markDirty();
+                          }}
+                          className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none transition ${
+                            errors.timelineStartDate ? 'border-red-400 ring-2 ring-red-400/10' : 'border-slate-200 focus:border-blue-500'
+                          }`}
+                        />
+                        {errors.timelineStartDate && (
+                          <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-1">
+                            <AlertCircle className="w-3 h-3" /> {errors.timelineStartDate}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block mb-1">
+                          Application End / Last Date <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="date"
+                          value={timelineEndDate}
+                          onChange={(e) => {
+                            setTimelineEndDate(e.target.value);
+                            markDirty();
+                          }}
+                          className={`w-full bg-white border rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none transition ${
+                            errors.timelineEndDate ? 'border-red-400 ring-2 ring-red-400/10' : 'border-slate-200 focus:border-blue-500'
+                          }`}
+                        />
+                        {errors.timelineEndDate && (
+                          <p className="text-[10px] font-bold text-red-500 flex items-center gap-1 mt-1">
+                            <AlertCircle className="w-3 h-3" /> {errors.timelineEndDate}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-[11px] text-blue-800 font-medium">
+                      <Info className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                      <span>This timeline will appear prominently on the public service view. Start date must be before or equal to end date.</span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="bg-slate-50 border border-slate-200/70 rounded-xl p-2.5 text-[11px] text-slate-500 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-slate-300" />
+                    <span>Timeline is disabled for this service. No timeline section or dates will appear on the public page.</span>
+                  </div>
+                )}
               </div>
 
             </div>

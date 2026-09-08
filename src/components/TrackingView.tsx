@@ -8,6 +8,8 @@ import { Order, OrderStatus } from '../types.js';
 import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { printElement } from '../lib/printUtils.js';
 import ContentUnavailable from './ContentUnavailable.js';
+import Breadcrumbs from './ui/Breadcrumbs.js';
+import TrustBadge from './ui/TrustBadge.js';
 
 export default function TrackingView() {
   const [orderId, setOrderId] = useState('');
@@ -271,10 +273,13 @@ export default function TrackingView() {
     <div id="easydesk-tracking" className="portal-container max-w-5xl py-10 font-sans text-slate-800 print:bg-white print:p-0 w-full max-w-full overflow-x-hidden">
       
       {/* Title */}
-      <div className="mb-8 print:hidden">
-        <span className="text-[10px] bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-extrabold tracking-widest uppercase">Live Tracking</span>
-        <h1 className="text-2xl sm:text-3xl font-black mt-3 text-slate-900">Track Digital Certificate File Status</h1>
-        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-xl">
+      <div className="mb-8 print:hidden space-y-4">
+        <Breadcrumbs items={[{ label: 'Track Order', active: true }]} />
+        <div>
+          <TrustBadge title="Live Order Tracking & Status Check" variant="pill" />
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-black mt-2 text-slate-900">Track Digital Certificate File Status</h1>
+        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-xl font-normal">
           Enter your unique Order Reference ID (e.g. ORD-10021) and registered phone number to verify document verification logs, government clearance schedules, rate completed services, and download receipts.
         </p>
       </div>

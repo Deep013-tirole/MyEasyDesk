@@ -157,9 +157,14 @@ export function validateAndNormalizeServices(
     const govFees = typeof item.govFees === 'number' && !isNaN(item.govFees) ? Math.max(0, item.govFees) : 0;
     const serviceCharge = typeof item.serviceCharge === 'number' && !isNaN(item.serviceCharge) ? Math.max(0, item.serviceCharge) : 0;
 
-    const desc = String(item.description || item.shortDescription || item.fullDescription || '').trim();
-    const shortDesc = String(item.shortDescription || (desc.length > 160 ? desc.slice(0, 160) + '...' : desc)).trim();
+    const desc = String(item.description || item.fullDescription || item.shortDescription || '').trim();
+    const shortDesc = String(item.shortDescription !== undefined ? item.shortDescription : (desc.length > 160 ? desc.slice(0, 160) : desc)).trim();
     const fullDesc = String(item.fullDescription || desc).trim();
+    const timeline = (item.timeline && typeof item.timeline === 'object') ? {
+      enabled: Boolean(item.timeline.enabled),
+      startDate: item.timeline.startDate ? String(item.timeline.startDate).trim() : null,
+      endDate: item.timeline.endDate ? String(item.timeline.endDate).trim() : null
+    } : { enabled: false, startDate: null, endDate: null };
     const status = (item.status === 'inactive' || item.status === 'draft' || item.status === 'archived') ? item.status : 'active';
     const image = String(item.imageUrl || item.bannerImage || item.image || '').trim();
 
@@ -169,9 +174,10 @@ export function validateAndNormalizeServices(
       title: rawTitle || 'Untitled Service',
       categoryId: finalCategoryId,
       subCategory: item.subCategory ? String(item.subCategory).trim() : undefined,
-      description: desc || shortDesc,
+      description: desc || fullDesc,
       shortDescription: shortDesc,
       fullDescription: fullDesc,
+      timeline,
       bannerImage: image,
       imageUrl: image,
       image: image,
