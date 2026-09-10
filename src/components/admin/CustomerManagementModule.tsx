@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { CustomerRecord, Order, Service, OrderStatus, PaymentStatus } from '../../types.js';
 import IndianAddressFields from '../common/IndianAddressFields.js';
+import { printElement } from '../../lib/printUtils.js';
 
 interface CustomerManagementModuleProps {
   adminFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
@@ -150,6 +151,7 @@ export default function CustomerManagementModule({
   // Fetch Customer Order History
   const fetchCustomerOrders = async (cust: CustomerRecord) => {
     setLoadingOrders(true);
+    setCustomerOrders([]); // Immediately clear stale orders to guarantee strict isolation
     try {
       const res = await adminFetch(`/api/admin/customers/${cust.id}/orders`);
       if (res.ok) {
@@ -180,10 +182,10 @@ export default function CustomerManagementModule({
 
   const handleOpenDossierPrint = (cust: CustomerRecord) => {
     setDossierCustomer(cust);
+    setHistoryCustomer(cust);
+    setCustomerOrders([]);
     setDossierPrintModalOpen(true);
-    if (!historyCustomer || historyCustomer.id !== cust.id) {
-      fetchCustomerOrders(cust);
-    }
+    fetchCustomerOrders(cust);
   };
 
   const handleOpenCreate = () => {
@@ -234,7 +236,30 @@ export default function CustomerManagementModule({
 
   const handleOpenPrint = (cust: CustomerRecord) => {
     setSelectedCustomer(cust);
+    setCustomerOrders([]);
     setPrintModalOpen(true);
+    fetchCustomerOrders(cust);
+  };
+
+  const handlePrintRecord = () => {
+    if (!selectedCustomer) return;
+    const printEl = document.getElementById(`customer-printable-sheet-${selectedCustomer.id}`);
+    if (printEl) {
+      printElement(printEl, `EasyDesk-Customer-Record-${selectedCustomer.code}`);
+    } else {
+      window.print();
+    }
+  };
+
+  const handlePrintDossier = () => {
+    const cust = dossierCustomer || historyCustomer;
+    if (!cust) return;
+    const printEl = document.getElementById(`customer-dossier-sheet-${cust.id}`);
+    if (printEl) {
+      printElement(printEl, `EasyDesk-Customer-Dossier-${cust.code}`);
+    } else {
+      window.print();
+    }
   };
 
   const handleSaveCustomer = async (e: React.FormEvent) => {
@@ -464,7 +489,9 @@ export default function CustomerManagementModule({
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Header bar */}
+      {/* Interactive Controls & Directory Table (hidden during printing) */}
+      <div className="space-y-6 print:hidden">
+        {/* Header bar */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -783,6 +810,7 @@ export default function CustomerManagementModule({
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* ========================================================= */}
@@ -1796,19 +1824,25 @@ export default function CustomerManagementModule({
       )}
 
       {/* ========================================================= */}
-      {/* PRINTABLE CUSTOMER RECORD MODAL                           */}
+      {/* 4. PRINTABLE CUSTOMER RECORD MODAL                        */}
       {/* ========================================================= */}
       {printModalOpen && selectedCustomer && (
         <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 overflow-y-auto printable-modal-overlay">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
             
-            <div className="flex items-center justify-between border-b pb-4 print:hidden">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Official Customer Master Record</span>
+            {/* Top Toolbar - Hidden during print */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4 print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-wider">
+                  Official Client Master Document
+                </span>
+                <span className="text-xs text-slate-500 font-mono font-bold">Code: {selectedCustomer.code}</span>
+              </div>
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-2 cursor-pointer"
+                  onClick={handlePrintRecord}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Print Document Now
                 </button>
@@ -1822,53 +1856,232 @@ export default function CustomerManagementModule({
               </div>
             </div>
 
-            <div className="text-center border-b border-slate-200 pb-6 space-y-1">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">EASYDESK DIGITAL SERVICES</h1>
-              <p className="text-xs text-slate-500">Customer Master Account Sheet</p>
-              <p className="text-[10px] text-slate-400 font-mono">Printed on: {new Date().toLocaleDateString()}</p>
-            </div>
-
-            <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-6">
-              <div className="space-y-2 text-xs flex-1">
-                <h2 className="text-lg font-black text-slate-900">{selectedCustomer.name}</h2>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                  <p><span className="text-slate-500 font-bold">Customer Code:</span> <strong className="font-mono">{selectedCustomer.code}</strong></p>
-                  <p><span className="text-slate-500 font-bold">Customer Type:</span> {selectedCustomer.customerType}</p>
-                  <p><span className="text-slate-500 font-bold">Contact Person:</span> {selectedCustomer.contactPersonName || selectedCustomer.name}</p>
-                  <p><span className="text-slate-500 font-bold">Account Status:</span> {selectedCustomer.status}</p>
+            {/* Target Printable Sheet */}
+            <div id={`customer-printable-sheet-${selectedCustomer.id}`} className="space-y-4 text-slate-900 bg-white">
+              
+              {/* 1. Official Corporate Letterhead */}
+              <div className="border-b-2 border-slate-900 pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 bg-[#0F4C81] text-white rounded-xl flex items-center justify-center font-black text-xl tracking-tighter shrink-0">
+                      ED
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase leading-none">
+                        EasyDesk Solutions Private Limited
+                      </h1>
+                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
+                        Customer Relationship & Client Account Registry • Operations Management
+                      </p>
+                      <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                        A51, Vijay Nagar, Indore, Madhya Pradesh - 452010 • Desk Helpline: +91 9575538590 • support@easydesk.com
+                      </p>
+                      <p className="text-[8px] text-slate-400 font-mono">
+                        CIN: U72900MH2024PTC123456 • ISO 9001:2015 Certified Citizen & Business Registry
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right text-[10px] text-slate-600 shrink-0">
+                    <span className="inline-block bg-slate-100 text-slate-800 border border-slate-300 font-extrabold text-[9px] px-2.5 py-0.5 rounded uppercase tracking-wider mb-1">
+                      Official Client File
+                    </span>
+                    <p className="font-bold text-slate-900 uppercase tracking-wider">Customer Master Record</p>
+                    <p className="font-mono">Account Ref: <strong className="text-blue-900">{selectedCustomer.code}</strong></p>
+                    <p className="font-mono text-[9px] text-slate-400">Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  </div>
                 </div>
               </div>
 
-              <img 
-                src={selectedCustomer.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'} 
-                alt={selectedCustomer.name} 
-                className="w-20 h-20 rounded-xl object-cover border-2 border-slate-300 shrink-0"
-              />
-            </div>
+              {/* 2. Customer Profile Overview Banner */}
+              <div className="border border-slate-300 rounded-lg p-3.5 bg-slate-50/40 flex items-start justify-between gap-5 print-avoid-break">
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-base font-black text-slate-900 tracking-tight">{selectedCustomer.name}</h2>
+                    <span className="font-mono font-bold text-xs text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                      {selectedCustomer.code}
+                    </span>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${
+                      selectedCustomer.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-300'
+                    }`}>
+                      {selectedCustomer.status}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-600 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded">
+                      {selectedCustomer.customerType}
+                    </span>
+                  </div>
 
-            <div className="space-y-2 text-xs">
-              <h3 className="font-bold text-slate-900 uppercase border-b pb-1 text-[11px] tracking-wider">Contact & Address Details</h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <p><span className="text-slate-500 font-bold">Email Address:</span> {selectedCustomer.email}</p>
-                <p><span className="text-slate-500 font-bold">Mobile Phone:</span> {selectedCustomer.mobile}</p>
-                <p><span className="text-slate-500 font-bold">City / State:</span> {selectedCustomer.city}, {selectedCustomer.state}</p>
-                <p><span className="text-slate-500 font-bold">Pincode:</span> {selectedCustomer.pincode}</p>
-                <p className="col-span-2"><span className="text-slate-500 font-bold">Address:</span> {selectedCustomer.address}</p>
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Primary Contact:</span> <strong className="text-slate-900">{selectedCustomer.contactPersonName || selectedCustomer.name}</strong></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Registered Mobile:</span> <strong className="font-mono text-slate-900">+91 {selectedCustomer.mobile}</strong></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Email Address:</span> <span className="font-mono text-slate-800">{selectedCustomer.email}</span></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">WhatsApp:</span> <span className="font-mono text-slate-800">{selectedCustomer.whatsappMobile ? `+91 ${selectedCustomer.whatsappMobile}` : '+91 ' + selectedCustomer.mobile}</span></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">City / State:</span> <span className="text-slate-800">{selectedCustomer.city || 'N/A'}, {selectedCustomer.state || 'N/A'}</span></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">PIN Code:</span> <span className="font-mono text-slate-800">{selectedCustomer.pinCode || selectedCustomer.pincode || 'N/A'}</span></p>
+                  </div>
+                </div>
 
-            {selectedCustomer.gstin && (
-              <div className="space-y-2 text-xs">
-                <h3 className="font-bold text-slate-900 uppercase border-b pb-1 text-[11px] tracking-wider">Tax & Registration Records</h3>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono">
-                  <p><span className="text-slate-500 font-bold font-sans">GSTIN Number:</span> {selectedCustomer.gstin}</p>
-                  <p><span className="text-slate-500 font-bold font-sans">PAN Number:</span> {selectedCustomer.panNumber || 'N/A'}</p>
+                <div className="shrink-0 flex flex-col items-center">
+                  {selectedCustomer.photoUrl ? (
+                    <img 
+                      src={selectedCustomer.photoUrl} 
+                      alt={selectedCustomer.name} 
+                      className="w-20 h-24 rounded-lg object-cover border-2 border-slate-300 shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-20 h-24 rounded-lg bg-slate-200 border-2 border-slate-300 flex flex-col items-center justify-center text-slate-400 text-xs font-bold">
+                      <span className="text-lg font-black text-slate-600">{selectedCustomer.name?.slice(0, 2).toUpperCase()}</span>
+                      <span className="text-[9px] mt-1 text-slate-500">Client Seal</span>
+                    </div>
+                  )}
+                  <span className="text-[8px] text-slate-400 font-mono mt-1">Authorized Profile</span>
                 </div>
               </div>
-            )}
 
-            <div className="pt-8 border-t border-slate-300 text-xs text-center text-slate-500">
-              <p>EasyDesk Customer Operations • Authorized Record Copy</p>
+              {/* 3. Four-Box Metadata Bar */}
+              <div className="grid grid-cols-4 gap-3 print-avoid-break">
+                <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/50">
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Customer ID</span>
+                  <span className="font-mono font-black text-xs text-blue-900 block mt-0.5">{selectedCustomer.code}</span>
+                </div>
+                <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/50">
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Account Type</span>
+                  <span className="font-medium text-xs text-slate-800 block mt-0.5 truncate">{selectedCustomer.customerType}</span>
+                </div>
+                <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/50">
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Account Status</span>
+                  <span className="font-bold text-xs text-emerald-700 block mt-0.5 uppercase">{selectedCustomer.status}</span>
+                </div>
+                <div className="border border-slate-300 rounded-lg p-2 bg-slate-50/50">
+                  <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">Logged Orders</span>
+                  <span className="font-bold text-xs text-slate-900 block mt-0.5">{customerOrders.length} Services</span>
+                </div>
+              </div>
+
+              {/* 4. Section 1: Registered Address & Location Coordinates */}
+              <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                  1. Registered Address & Location Coordinates
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <p className="col-span-2">
+                    <span className="text-slate-500 font-semibold inline-block w-28">Full Address:</span>
+                    <span className="text-slate-900 font-medium">
+                      {selectedCustomer.address || [selectedCustomer.addressLine1, selectedCustomer.addressLine2, selectedCustomer.locality, selectedCustomer.city, selectedCustomer.state].filter(Boolean).join(', ') || 'N/A'}
+                    </span>
+                  </p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">City / District:</span> <span className="text-slate-800">{selectedCustomer.city || 'N/A'}{selectedCustomer.district && selectedCustomer.district !== selectedCustomer.city ? `, ${selectedCustomer.district}` : ''}</span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">State & PIN:</span> <span className="text-slate-800">{selectedCustomer.state || 'N/A'} - <strong className="font-mono">{selectedCustomer.pinCode || selectedCustomer.pincode || 'N/A'}</strong></span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Country:</span> <span className="text-slate-800">{selectedCustomer.country || 'India'}</span></p>
+                  {selectedCustomer.landmark && (
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Landmark:</span> <span className="text-slate-800">{selectedCustomer.landmark}</span></p>
+                  )}
+                </div>
+              </div>
+
+              {/* 5. Section 2: Statutory Tax & Business Identifiers */}
+              <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                  2. Statutory Tax & Business Identifiers
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <p>
+                    <span className="text-slate-500 font-semibold inline-block w-28">GSTIN:</span> 
+                    <span className="font-mono font-bold text-slate-900">{selectedCustomer.gstin || 'Not Registered / Individual'}</span>
+                  </p>
+                  <p>
+                    <span className="text-slate-500 font-semibold inline-block w-28">PAN Number:</span> 
+                    <span className="font-mono font-bold text-slate-900">{selectedCustomer.panNumber || 'Not Provided'}</span>
+                  </p>
+                  <p>
+                    <span className="text-slate-500 font-semibold inline-block w-28">MSME / Udyam:</span> 
+                    <span className="font-mono text-slate-800">{selectedCustomer.msmeLicense || 'N/A'}</span>
+                  </p>
+                  <p>
+                    <span className="text-slate-500 font-semibold inline-block w-28">DOB / Incorp Date:</span> 
+                    <span className="text-slate-800">{selectedCustomer.dobOrIncorporationDate || 'N/A'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* 6. Section 3: Engagement History & Recent Services */}
+              <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                <div className="flex justify-between items-center border-b border-slate-200 pb-1">
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
+                    3. Engagement History & Service Portfolio ({customerOrders.length} Orders)
+                  </h3>
+                  <span className="text-[9px] text-slate-400 font-mono">Recent Orders Summary</span>
+                </div>
+                {customerOrders.length === 0 ? (
+                  <p className="text-xs text-slate-500 italic py-1">
+                    No active or historical service orders currently on record for this customer account.
+                  </p>
+                ) : (
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase border-b border-slate-200">
+                        <th className="py-1.5 px-2 text-left">Order ID</th>
+                        <th className="py-1.5 px-2 text-left">Service Applied</th>
+                        <th className="py-1.5 px-2 text-left">Date</th>
+                        <th className="py-1.5 px-2 text-left">Status</th>
+                        <th className="py-1.5 px-2 text-right">Amount (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {customerOrders.slice(0, 5).map((order) => (
+                        <tr key={order.id}>
+                          <td className="py-1.5 px-2 font-mono font-bold text-blue-900">{order.id}</td>
+                          <td className="py-1.5 px-2 font-medium text-slate-900">{order.serviceTitle}</td>
+                          <td className="py-1.5 px-2 text-slate-600 font-mono text-[10px]">
+                            {new Date(order.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+                          <td className="py-1.5 px-2">
+                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                              order.orderStatus === OrderStatus.COMPLETED ? 'bg-emerald-50 text-emerald-800' : 'bg-blue-50 text-blue-800'
+                            }`}>
+                              {order.orderStatus}
+                            </span>
+                          </td>
+                          <td className="py-1.5 px-2 text-right font-mono font-semibold text-slate-900">
+                            ₹{(order.totalAmount || 0).toLocaleString('en-IN')}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              {/* 7. Section 4: Operational Remarks & Notes (if available) */}
+              {selectedCustomer.notes && (
+                <div className="border border-slate-300 rounded-lg p-3.5 space-y-1 print-avoid-break">
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                    4. Operational Account Remarks
+                  </h3>
+                  <p className="text-xs text-slate-700 italic pt-1 leading-relaxed">
+                    {selectedCustomer.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* 8. Attestation & Signatures */}
+              <div className="pt-6 grid grid-cols-2 gap-12 text-xs print-avoid-break">
+                <div className="border-t border-slate-400 pt-2 text-center">
+                  <p className="font-bold text-slate-800">Client / Authorized Signatory</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">Acknowledged and confirmed master record profile.</p>
+                </div>
+                <div className="border-t border-slate-400 pt-2 text-center">
+                  <p className="font-bold text-slate-800">Desk Officer / Corporate Operations</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">For EasyDesk Solutions Private Limited • Client Relations Registry</p>
+                </div>
+              </div>
+
+              {/* 9. Official Document Footer */}
+              <div className="pt-4 border-t border-slate-300 text-[9px] text-slate-500 flex items-center justify-between font-mono">
+                <span>EasyDesk CRM • Customer Account: {selectedCustomer.code}</span>
+                <span>Official Business Record • Indian IT Act 2000 Compliant</span>
+                <span>Generated: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              </div>
+
             </div>
 
           </div>
@@ -1893,7 +2106,7 @@ export default function CustomerManagementModule({
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrintDossier}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition flex items-center gap-2 cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Print Dossier
@@ -1907,6 +2120,9 @@ export default function CustomerManagementModule({
                 </button>
               </div>
             </div>
+
+            {/* Target Printable Dossier Area */}
+            <div id={`customer-dossier-sheet-${(dossierCustomer || historyCustomer)?.id}`} className="space-y-5 text-slate-900 bg-white">
 
             {/* Official Header / Letterhead */}
             <div className="text-center border-b border-slate-300 pb-5 space-y-1">
@@ -2053,7 +2269,7 @@ export default function CustomerManagementModule({
             )}
 
             {/* Official Sign-off Footer */}
-            <div className="pt-6 border-t border-slate-300 grid grid-cols-2 gap-6 text-xs text-slate-500">
+            <div className="pt-6 border-t border-slate-300 grid grid-cols-2 gap-6 text-xs text-slate-500 print-avoid-break">
               <div>
                 <p className="font-bold text-slate-800">EasyDesk Client Operations</p>
                 <p className="text-[10px] mt-0.5">This official transcript summarizes all recorded services and transaction logs.</p>
@@ -2062,6 +2278,8 @@ export default function CustomerManagementModule({
                 <div className="border-b border-slate-400 w-48 ml-auto"></div>
                 <p className="font-bold text-slate-800 text-[10px] uppercase tracking-wider">Authorized Administrative Seal</p>
               </div>
+            </div>
+
             </div>
 
           </div>

@@ -8,6 +8,7 @@ import { EmployeeProfile, EmployeeKYC, EmployeePayroll, EmployeeDocument, Master
 const EmployeeIDCardModal = lazy(() => import('./EmployeeIDCardModal.js'));
 import { EmployeePhotoUpload } from './EmployeePhotoUpload.js';
 import IndianAddressFields from '../common/IndianAddressFields.js';
+import { printElement } from '../../lib/printUtils.js';
 
 interface EmployeeManagementModuleProps {
   adminFetch: (input: RequestInfo, init?: RequestInit) => Promise<Response>;
@@ -148,6 +149,10 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
   }, []);
 
   const loadSubRecords = async (empId: string) => {
+    // Immediately clear stale sub-records to guarantee zero leakage between records
+    setActiveKYC(null);
+    setActivePayroll(null);
+    setActiveDocs([]);
     try {
       const [kycRes, payrollRes, docsRes] = await Promise.all([
         adminFetch(`/api/admin/employees/${empId}/kyc?unmask=true`),
@@ -155,11 +160,43 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
         adminFetch(`/api/admin/employees/${empId}/documents`)
       ]);
 
-      if (kycRes.ok) setActiveKYC(await kycRes.json());
-      if (payrollRes.ok) setActivePayroll(await payrollRes.json());
-      if (docsRes.ok) setActiveDocs(await docsRes.json());
+      if (kycRes.ok) {
+        const kData = await kycRes.json();
+        if (kData && (!kData.employeeId || kData.employeeId === empId)) {
+          setActiveKYC(kData);
+        } else {
+          setActiveKYC(null);
+        }
+      } else {
+        setActiveKYC(null);
+      }
+
+      if (payrollRes.ok) {
+        const pData = await payrollRes.json();
+        if (pData && (!pData.employeeId || pData.employeeId === empId)) {
+          setActivePayroll(pData);
+        } else {
+          setActivePayroll(null);
+        }
+      } else {
+        setActivePayroll(null);
+      }
+
+      if (docsRes.ok) {
+        const dData = await docsRes.json();
+        if (Array.isArray(dData)) {
+          setActiveDocs(dData.filter((doc: any) => !doc.employeeId || doc.employeeId === empId));
+        } else {
+          setActiveDocs([]);
+        }
+      } else {
+        setActiveDocs([]);
+      }
     } catch (e) {
       console.error('Error loading sub-records:', e);
+      setActiveKYC(null);
+      setActivePayroll(null);
+      setActiveDocs([]);
     }
   };
 
@@ -279,15 +316,31 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
 
   const handleOpenView = async (emp: EmployeeProfile) => {
     setSelectedEmployee(emp);
+    setActiveKYC(null);
+    setActivePayroll(null);
+    setActiveDocs([]);
     setModalTab('profile');
     setViewModalOpen(true);
-    loadSubRecords(emp.id);
+    await loadSubRecords(emp.id);
   };
 
   const handleOpenPrint = async (emp: EmployeeProfile) => {
     setSelectedEmployee(emp);
+    setActiveKYC(null);
+    setActivePayroll(null);
+    setActiveDocs([]);
     setPrintModalOpen(true);
-    loadSubRecords(emp.id);
+    await loadSubRecords(emp.id);
+  };
+
+  const handlePrintRecord = () => {
+    if (!selectedEmployee) return;
+    const printEl = document.getElementById(`employee-printable-sheet-${selectedEmployee.id}`);
+    if (printEl) {
+      printElement(printEl, `EasyDesk-Employee-Record-${selectedEmployee.employeeCode}`);
+    } else {
+      window.print();
+    }
   };
 
   const handleOpenIDCard = (emp: EmployeeProfile) => {
@@ -509,7 +562,9 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
 
   return (
     <div className="space-y-6">
-      {/* Header bar */}
+      {/* Interactive Controls & Directory Table (hidden during printing) */}
+      <div className="space-y-6 print:hidden">
+        {/* Header bar */}
       <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
@@ -831,6 +886,7 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
             </tbody>
           </table>
         </div>
+      </div>
       </div>
 
       {/* CREATE / EDIT EMPLOYEE MODAL */}
@@ -1687,98 +1743,316 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
       {/* PRINTABLE RECORD SHEET MODAL */}
       {printModalOpen && selectedEmployee && (
         <div className="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 overflow-y-auto printable-modal-overlay">
-          <div className="bg-white rounded-2xl max-w-3xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
+          <div className="bg-white rounded-2xl max-w-4xl w-full p-8 shadow-2xl border border-slate-300 space-y-6 font-sans text-slate-900 printable-modal-card">
             
-            {/* Top Toolbar */}
-            <div className="flex items-center justify-between border-b pb-4 print:hidden">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Official Employee Record Sheet</span>
+            {/* Top Toolbar - Hidden in Print */}
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4 print:hidden">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black text-blue-700 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full uppercase tracking-wider">
+                  Internal Corporate HR Document
+                </span>
+                <span className="text-xs text-slate-500 font-mono font-bold">Ref: {selectedEmployee.employeeCode}</span>
+              </div>
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => window.print()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow transition flex items-center gap-2 cursor-pointer"
+                  type="button"
+                  onClick={handlePrintRecord}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-md transition flex items-center gap-2 cursor-pointer"
                 >
                   <Printer className="w-4 h-4" /> Print Document Now
                 </button>
                 <button
+                  type="button"
                   onClick={() => setPrintModalOpen(false)}
-                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-2 rounded-xl transition"
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-3 py-2 rounded-xl transition cursor-pointer"
                 >
                   Close
                 </button>
               </div>
             </div>
 
-            {/* Printable Header */}
-            <div className="text-center border-b border-slate-200 pb-6 space-y-1">
-              <h1 className="text-2xl font-black text-slate-900 tracking-tight">EASYDESK SOLUTIONS PVT LTD</h1>
-              <p className="text-xs text-slate-500">Internal HR & Company Record Sheet • Confidential Document</p>
-              <p className="text-[10px] text-slate-400 font-mono">Generated on: {new Date().toLocaleDateString()}</p>
-            </div>
-
-            {/* Profile Section */}
-            <div className="flex items-start justify-between gap-6 border-b border-slate-200 pb-6">
-              <div className="space-y-2 text-xs flex-1">
-                <h2 className="text-lg font-black text-slate-900">{selectedEmployee.fullName}</h2>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
-                  <p><span className="text-slate-500 font-bold">Employee Code:</span> <strong className="font-mono">{selectedEmployee.employeeCode}</strong></p>
-                  <p><span className="text-slate-500 font-bold">Designation:</span> {selectedEmployee.designation}</p>
-                  <p><span className="text-slate-500 font-bold">Department:</span> {selectedEmployee.department}</p>
-                  <p><span className="text-slate-500 font-bold">Employment Type:</span> {selectedEmployee.employmentType}</p>
-                  <p><span className="text-slate-500 font-bold">Joining Date:</span> {selectedEmployee.joiningDate}</p>
-                  <p><span className="text-slate-500 font-bold">Status:</span> {selectedEmployee.employmentStatus}</p>
+            {/* Target Printable Record Sheet */}
+            <div id={`employee-printable-sheet-${selectedEmployee.id}`} className="space-y-4 text-slate-900 bg-white">
+              
+              {/* 1. Official Corporate Header / Letterhead */}
+              <div className="border-b-2 border-slate-900 pb-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 bg-[#0F4C81] text-white rounded-xl flex items-center justify-center font-black text-xl tracking-tighter shrink-0">
+                      ED
+                    </div>
+                    <div>
+                      <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase leading-none">
+                        EasyDesk Solutions Private Limited
+                      </h1>
+                      <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider mt-1">
+                        Corporate Human Resources & Personnel Records Repository
+                      </p>
+                      <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                        A51, Vijay Nagar, Indore, Madhya Pradesh - 452010 • HR Desk: +91 9575538590 • hr@easydesk.com
+                      </p>
+                      <p className="text-[8px] text-slate-400 font-mono">
+                        CIN: U72900MH2024PTC123456 • ISO 9001:2015 Certified HRMS System
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right text-[10px] text-slate-600 shrink-0">
+                    <span className="inline-block bg-slate-100 text-slate-800 border border-slate-300 font-extrabold text-[9px] px-2.5 py-0.5 rounded uppercase tracking-wider mb-1">
+                      Confidential Record
+                    </span>
+                    <p className="font-bold text-slate-900 uppercase tracking-wider">Internal Employee Master</p>
+                    <p className="font-mono">Doc Ref: <strong className="text-blue-900">HR/EMP/{selectedEmployee.employeeCode}</strong></p>
+                    <p className="font-mono text-[9px] text-slate-400">Date: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                  </div>
                 </div>
               </div>
 
-              <img 
-                src={selectedEmployee.profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'} 
-                alt={selectedEmployee.fullName} 
-                className="w-24 h-28 rounded-xl object-cover border-2 border-slate-300"
-              />
-            </div>
+              {/* 2. Employee Profile Overview Banner */}
+              <div className="border border-slate-300 rounded-lg p-3.5 bg-slate-50/40 flex items-start justify-between gap-5 print-avoid-break">
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center gap-2.5">
+                    <h2 className="text-base font-black text-slate-900 tracking-tight">{selectedEmployee.fullName}</h2>
+                    <span className="font-mono font-bold text-xs text-blue-900 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+                      {selectedEmployee.employeeCode}
+                    </span>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded border ${
+                      selectedEmployee.employmentStatus === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-300' : 'bg-amber-50 text-amber-700 border-amber-300'
+                    }`}>
+                      {selectedEmployee.employmentStatus}
+                    </span>
+                  </div>
 
-            {/* Personal Details */}
-            <div className="space-y-2 text-xs">
-              <h3 className="font-bold text-slate-900 uppercase border-b pb-1 text-[11px] tracking-wider">Personal & Contact Record</h3>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-1">
-                <p><span className="text-slate-500 font-bold">Email Address:</span> {selectedEmployee.personalEmail || 'N/A'}</p>
-                <p><span className="text-slate-500 font-bold">Mobile Phone:</span> {selectedEmployee.personalMobile || 'N/A'}</p>
-                <p><span className="text-slate-500 font-bold">Gender / DOB:</span> {selectedEmployee.gender} / {selectedEmployee.dateOfBirth}</p>
-                <p><span className="text-slate-500 font-bold">Father / Spouse:</span> {selectedEmployee.fatherName || selectedEmployee.spouseName || 'N/A'}</p>
-                <p className="col-span-2"><span className="text-slate-500 font-bold">Present Address:</span> {selectedEmployee.currentAddress || 'N/A'}</p>
-              </div>
-            </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Designation:</span> <strong className="text-slate-900">{selectedEmployee.designation}</strong></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Department:</span> <strong className="text-slate-900">{selectedEmployee.department}</strong></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Employment Type:</span> <span className="text-slate-800">{selectedEmployee.employmentType}</span></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Joining Date:</span> <span className="text-slate-800">{selectedEmployee.joiningDate}</span></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Work Location:</span> <span className="text-slate-800">{selectedEmployee.workLocation || 'Central Corporate Office'}</span></p>
+                    <p><span className="text-slate-500 font-semibold inline-block w-28">Reporting To:</span> <span className="text-slate-800">{selectedEmployee.reportingManager || 'Department Head'}</span></p>
+                  </div>
+                </div>
 
-            {/* Identification Record */}
-            {activeKYC && (
-              <div className="space-y-2 text-xs">
-                <h3 className="font-bold text-slate-900 uppercase border-b pb-1 text-[11px] tracking-wider">Identification Vault Summary</h3>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-1 font-mono">
-                  <p><span className="text-slate-500 font-bold font-sans">Aadhaar Number:</span> {activeKYC.aadhaarNumber || 'Verified'}</p>
-                  <p><span className="text-slate-500 font-bold font-sans">PAN Number:</span> {activeKYC.panNumber || 'Verified'}</p>
+                <div className="shrink-0 flex flex-col items-center">
+                  {selectedEmployee.profilePhoto ? (
+                    <img 
+                      src={selectedEmployee.profilePhoto} 
+                      alt={selectedEmployee.fullName} 
+                      className="w-24 h-28 rounded-lg object-cover border-2 border-slate-300 shadow-xs"
+                    />
+                  ) : (
+                    <div className="w-24 h-28 rounded-lg bg-slate-200 border-2 border-slate-300 flex flex-col items-center justify-center text-slate-400 text-xs font-bold">
+                      <span className="text-lg font-black text-slate-600">{selectedEmployee.fullName?.slice(0, 2).toUpperCase()}</span>
+                      <span className="text-[9px] mt-1 text-slate-500">Photo ID</span>
+                    </div>
+                  )}
+                  <span className="text-[8px] text-slate-400 font-mono mt-1">Verified Portrait</span>
                 </div>
               </div>
-            )}
 
-            {/* Banking & Payroll */}
-            {activePayroll && (
-              <div className="space-y-2 text-xs">
-                <h3 className="font-bold text-slate-900 uppercase border-b pb-1 text-[11px] tracking-wider">Payroll & Bank Details</h3>
-                <div className="grid grid-cols-3 gap-x-6 gap-y-1">
-                  <p><span className="text-slate-500 font-bold block">Bank Name:</span> {activePayroll.bankName || 'N/A'}</p>
-                  <p><span className="text-slate-500 font-bold block">A/C Number:</span> <span className="font-mono">{activePayroll.accountNumber || 'N/A'}</span></p>
-                  <p><span className="text-slate-500 font-bold block">Net Salary:</span> <strong className="text-blue-700">₹{activePayroll.netSalary || 0}</strong></p>
+              {/* 3. Section 1: Personal & Emergency Demographics */}
+              <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                  1. Personal & Emergency Contact Demographics
+                </h3>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Gender / DOB:</span> <span className="text-slate-900 font-medium">{selectedEmployee.gender || 'N/A'} / {selectedEmployee.dateOfBirth || 'N/A'}</span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Blood Group:</span> <span className="text-slate-900 font-medium">{selectedEmployee.bloodGroup || 'N/A'}</span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Father / Spouse:</span> <span className="text-slate-900 font-medium">{selectedEmployee.fatherName || selectedEmployee.spouseName || 'N/A'}</span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Nationality:</span> <span className="text-slate-900 font-medium">{selectedEmployee.nationality || 'Indian'}</span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Personal Email:</span> <span className="font-mono text-slate-900">{selectedEmployee.personalEmail || 'N/A'}</span></p>
+                  <p><span className="text-slate-500 font-semibold inline-block w-28">Personal Mobile:</span> <span className="font-mono text-slate-900">{selectedEmployee.personalMobile ? `+91 ${selectedEmployee.personalMobile}` : 'N/A'}</span></p>
+                  <p className="col-span-2">
+                    <span className="text-slate-500 font-semibold inline-block w-28">Emergency Contact:</span> 
+                    <span className="text-slate-900 font-medium">
+                      {selectedEmployee.emergencyContactName ? `${selectedEmployee.emergencyContactName} (${selectedEmployee.emergencyContactRelation || 'Contact'}) - ${selectedEmployee.emergencyContactMobile || 'N/A'}` : 'N/A'}
+                    </span>
+                  </p>
+                  <div className="col-span-2 pt-1 border-t border-slate-100">
+                    <span className="text-slate-500 font-semibold block text-[10px] uppercase">Current Residential Address:</span>
+                    <p className="text-slate-800 leading-snug mt-0.5 font-medium">
+                      {selectedEmployee.currentAddress || [selectedEmployee.addressLine1, selectedEmployee.addressLine2, selectedEmployee.locality, selectedEmployee.city, selectedEmployee.state].filter(Boolean).join(', ') || 'N/A'}
+                      {(selectedEmployee.pinCode || selectedEmployee.pincode) ? ` - ${selectedEmployee.pinCode || selectedEmployee.pincode}` : ''}
+                    </p>
+                  </div>
+                  {selectedEmployee.permanentAddress && (
+                    <div className="col-span-2 pt-1 border-t border-slate-100">
+                      <span className="text-slate-500 font-semibold block text-[10px] uppercase">Permanent Residential Address:</span>
+                      <p className="text-slate-800 leading-snug mt-0.5 font-medium">{selectedEmployee.permanentAddress}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
 
-            {/* Signatures */}
-            <div className="pt-12 grid grid-cols-2 gap-12 text-xs text-center">
-              <div className="border-t border-slate-300 pt-2">
-                <p className="font-bold text-slate-700">Employee Signature</p>
+              {/* 4. Section 2: Statutory Verification & Government Identity Vault */}
+              <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                  2. Statutory Verification & Government Identity Vault
+                </h3>
+                {activeKYC ? (
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1.5 text-xs">
+                    <p>
+                      <span className="text-slate-500 font-semibold inline-block w-32">Aadhaar Number:</span>
+                      <span className="font-mono font-bold text-slate-900">{activeKYC.aadhaarNumber || 'Verified On File'}</span>
+                      <span className="ml-2 text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-bold uppercase">
+                        {activeKYC.aadhaarVerificationStatus || 'Verified'}
+                      </span>
+                    </p>
+                    <p>
+                      <span className="text-slate-500 font-semibold inline-block w-32">PAN Number:</span>
+                      <span className="font-mono font-bold text-slate-900">{activeKYC.panNumber || 'Verified On File'}</span>
+                      <span className="ml-2 text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded font-bold uppercase">
+                        {activeKYC.panVerificationStatus || 'Verified'}
+                      </span>
+                    </p>
+                    {activeKYC.otherGovernmentIdNumber && (
+                      <p className="col-span-2">
+                        <span className="text-slate-500 font-semibold inline-block w-32">{activeKYC.otherGovernmentIdType || 'Government ID'}:</span>
+                        <span className="font-mono font-bold text-slate-900">{activeKYC.otherGovernmentIdNumber}</span>
+                      </p>
+                    )}
+                    {activeKYC.verifiedBy && (
+                      <p className="col-span-2 text-[10px] text-slate-500 pt-1">
+                        Verified by: <span className="font-medium text-slate-700">{activeKYC.verifiedBy}</span>
+                        {activeKYC.verifiedAt ? ` on ${new Date(activeKYC.verifiedAt).toLocaleDateString('en-IN')}` : ''}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 italic py-1">
+                    Statutory identity documents and government vault records are pending physical/electronic verification for this employee.
+                  </p>
+                )}
               </div>
-              <div className="border-t border-slate-300 pt-2">
-                <p className="font-bold text-slate-700">Authorized HR Signatory</p>
+
+              {/* 5. Section 3: Compensation Structure & Banking Credentials */}
+              <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                  3. Compensation Structure & Banking Credentials
+                </h3>
+                {activePayroll ? (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-3 text-xs bg-slate-50/60 p-2.5 rounded border border-slate-200">
+                      <div>
+                        <span className="text-slate-500 font-semibold block text-[10px] uppercase">Bank Name:</span>
+                        <strong className="text-slate-900">{activePayroll.bankName || 'N/A'}</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 font-semibold block text-[10px] uppercase">A/C Number:</span>
+                        <span className="font-mono font-bold text-slate-900">{activePayroll.accountNumber || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500 font-semibold block text-[10px] uppercase">IFSC Code & Branch:</span>
+                        <span className="font-mono text-slate-800">{activePayroll.ifscCode || 'N/A'} {activePayroll.branchName ? `(${activePayroll.branchName})` : ''}</span>
+                      </div>
+                    </div>
+
+                    <table className="w-full text-xs border border-slate-200 rounded overflow-hidden">
+                      <thead>
+                        <tr className="bg-slate-100 text-[10px] text-slate-600 font-bold uppercase border-b border-slate-200">
+                          <th className="py-1 px-2.5 text-left">Basic Pay</th>
+                          <th className="py-1 px-2.5 text-left">HRA</th>
+                          <th className="py-1 px-2.5 text-left">Allowances</th>
+                          <th className="py-1 px-2.5 text-left">Gross Salary</th>
+                          <th className="py-1 px-2.5 text-left">Deductions (PF+Tax)</th>
+                          <th className="py-1 px-2.5 text-right font-black text-blue-950">Net Monthly Salary</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="divide-x divide-slate-200">
+                          <td className="py-1.5 px-2.5 font-medium">₹{(activePayroll.basicPay || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-1.5 px-2.5 font-medium">₹{(activePayroll.hra || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-1.5 px-2.5 font-medium">₹{(activePayroll.specialAllowance || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-1.5 px-2.5 font-semibold text-slate-900">₹{(activePayroll.grossSalary || 0).toLocaleString('en-IN')}</td>
+                          <td className="py-1.5 px-2.5 text-red-600 font-medium">₹{((activePayroll.pfDeduction || 0) + (activePayroll.taxDeduction || 0)).toLocaleString('en-IN')}</td>
+                          <td className="py-1.5 px-2.5 text-right font-black text-blue-800 text-sm">₹{(activePayroll.netSalary || 0).toLocaleString('en-IN')}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-500 italic py-1">
+                    Payroll structure and banking credentials have not been configured for this employee record.
+                  </p>
+                )}
               </div>
+
+              {/* 6. Section 4: Skills, Qualifications & Languages (If Available) */}
+              {(selectedEmployee.highestQualification || (selectedEmployee.skills && selectedEmployee.skills.length > 0) || (selectedEmployee.languages && selectedEmployee.languages.length > 0)) && (
+                <div className="border border-slate-300 rounded-lg p-3.5 space-y-1.5 print-avoid-break">
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                    4. Professional Qualifications & Competencies
+                  </h3>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
+                    {selectedEmployee.highestQualification && (
+                      <p><span className="text-slate-500 font-semibold inline-block w-28">Qualification:</span> <strong className="text-slate-900">{selectedEmployee.highestQualification}</strong> {selectedEmployee.university ? `(${selectedEmployee.university})` : ''}</p>
+                    )}
+                    {selectedEmployee.languages && selectedEmployee.languages.length > 0 && (
+                      <p><span className="text-slate-500 font-semibold inline-block w-28">Languages:</span> <span className="text-slate-800">{Array.isArray(selectedEmployee.languages) ? selectedEmployee.languages.join(', ') : selectedEmployee.languages}</span></p>
+                    )}
+                    {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
+                      <p className="col-span-2 pt-0.5">
+                        <span className="text-slate-500 font-semibold inline-block w-28">Key Skills:</span> 
+                        <span className="text-slate-800 font-medium">
+                          {Array.isArray(selectedEmployee.skills) ? selectedEmployee.skills.join(' • ') : selectedEmployee.skills}
+                        </span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* 7. Section 5: Document Verification Manifest (If Attached) */}
+              {activeDocs && activeDocs.length > 0 && (
+                <div className="border border-slate-300 rounded-lg p-3.5 space-y-2 print-avoid-break">
+                  <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900 border-b border-slate-200 pb-1">
+                    5. Document Archive Manifest ({activeDocs.length})
+                  </h3>
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase border-b border-slate-200">
+                        <th className="py-1 px-2 text-left">Document Type</th>
+                        <th className="py-1 px-2 text-left">File Name</th>
+                        <th className="py-1 px-2 text-left">Uploaded On</th>
+                        <th className="py-1 px-2 text-right">Verification</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {activeDocs.map((doc, idx) => (
+                        <tr key={doc.id || idx}>
+                          <td className="py-1 px-2 font-semibold text-slate-900">{doc.documentType}</td>
+                          <td className="py-1 px-2 font-mono text-slate-600 text-[11px] truncate max-w-[200px]">{doc.documentName || doc.originalFileName}</td>
+                          <td className="py-1 px-2 text-slate-500 font-mono text-[10px]">{doc.uploadedAt?.split('T')[0] || 'N/A'}</td>
+                          <td className="py-1 px-2 text-right">
+                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded uppercase">
+                              {doc.verificationStatus || 'Verified'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* 8. Attestation & Signatures */}
+              <div className="pt-6 grid grid-cols-2 gap-12 text-xs print-avoid-break">
+                <div className="border-t border-slate-400 pt-2 text-center">
+                  <p className="font-bold text-slate-800">Employee Signature & Attestation</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">I confirm that all personal and statutory information stated above is accurate and valid.</p>
+                </div>
+                <div className="border-t border-slate-400 pt-2 text-center">
+                  <p className="font-bold text-slate-800">Authorized HR Signatory & Seal</p>
+                  <p className="text-[9px] text-slate-500 mt-0.5">For EasyDesk Solutions Private Limited • Corporate HR Operations</p>
+                </div>
+              </div>
+
+              {/* 9. Official Document Footer */}
+              <div className="pt-4 border-t border-slate-300 text-[9px] text-slate-500 flex items-center justify-between font-mono">
+                <span>EasyDesk HRMS • Master Record: {selectedEmployee.employeeCode}</span>
+                <span>Confidential Record • Protected under Indian IT Act 2000</span>
+                <span>Generated: {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+              </div>
+
             </div>
 
           </div>

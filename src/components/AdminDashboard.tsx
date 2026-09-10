@@ -1448,7 +1448,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
       )}
 
       {/* Title block with current profile role metadata */}
-      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
         <div>
           <div className="flex items-center gap-2">
             <span className={`px-3 py-0.5 border rounded-full text-[10px] font-black uppercase tracking-widest ${getRoleBadgeStyle(adminUser.role)}`}>
@@ -1478,7 +1478,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
       </div>
 
       {/* Mobile Sticky Module Selector & Quick Navigation Bar */}
-      <div className="md:hidden mb-6 space-y-3">
+      <div className="md:hidden mb-6 space-y-3 print:hidden">
         {/* Module Header Bar with Switch Button */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-3 shadow-xs flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -1527,7 +1527,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
         </div>
 
         {/* Quick Horizontal Scroll Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-thin">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-thin print:hidden">
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
