@@ -338,8 +338,8 @@ export default function PaymentView({
 
                       <div className="flex items-center justify-between bg-white border border-slate-200/80 p-4 rounded-xl shadow-2xs">
                         <div>
-                          <p className="font-mono text-sm sm:text-base font-black text-[#0F4C81] m-0">{paymentConfig?.upiId || 'Pending Verification'}</p>
-                          <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5">{paymentConfig?.upiName || 'EasyDesk Digital Services'}</p>
+                          <p className="font-mono text-sm sm:text-base font-black text-[#0F4C81] m-0 notranslate" translate="no">{paymentConfig?.upiId || 'Pending Verification'}</p>
+                          <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5 notranslate" translate="no">{paymentConfig?.upiName || 'EasyDesk Digital Services'}</p>
                         </div>
                         <button
                           onClick={() => copyToClipboard(paymentConfig?.upiId || '', 'upi')}
@@ -370,7 +370,7 @@ export default function PaymentView({
                             referrerPolicy="no-referrer"
                             className="w-48 h-48 object-contain mx-auto"
                           />
-                          <p className="text-[10px] text-slate-600 font-bold mt-2.5 mb-0">{paymentConfig.upiName}</p>
+                          <p className="text-[10px] text-slate-600 font-bold mt-2.5 mb-0 notranslate" translate="no">{paymentConfig.upiName}</p>
                         </div>
                       ) : (
                         <div className="p-8 bg-white rounded-2xl border border-slate-200 text-slate-400">
@@ -392,7 +392,7 @@ export default function PaymentView({
                         {copiedText === 'bank' && <span className="text-emerald-600 font-bold text-[10px]">✓ Account Details Copied</span>}
                       </div>
 
-                      <div className="space-y-2.5 text-slate-700 bg-white p-4 rounded-xl border border-slate-200/80">
+                      <div className="space-y-2.5 text-slate-700 bg-white p-4 rounded-xl border border-slate-200/80 notranslate" translate="no">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Bank Name:</span>
                           <span className="font-bold text-slate-900">{paymentConfig?.bankName || 'Verified Corporate Account'}</span>
@@ -486,7 +486,8 @@ export default function PaymentView({
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value.toUpperCase())}
                     placeholder="e.g. ORD-10026"
-                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 font-mono font-bold text-slate-900 uppercase focus:outline-none input-focus-glow placeholder:text-slate-400"
+                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 font-mono font-bold text-slate-900 uppercase focus:outline-none input-focus-glow placeholder:text-slate-400 notranslate"
+                    translate="no"
                   />
                   <span className="text-[10px] text-slate-400 mt-1 block font-normal">Enter the Order ID provided during your booking.</span>
                 </div>
@@ -501,7 +502,8 @@ export default function PaymentView({
                     value={utr}
                     onChange={(e) => setUtr(e.target.value)}
                     placeholder="e.g. 12-digit UTR 981273981273 or Bank Ref No"
-                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 font-mono font-bold text-[#0F4C81] focus:outline-none input-focus-glow placeholder:text-slate-400"
+                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 font-mono font-bold text-[#0F4C81] focus:outline-none input-focus-glow placeholder:text-slate-400 notranslate"
+                    translate="no"
                   />
                 </div>
 
@@ -515,7 +517,8 @@ export default function PaymentView({
                       required
                       value={paymentDate}
                       onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none input-focus-glow font-medium"
+                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none input-focus-glow font-medium notranslate"
+                      translate="no"
                     />
                   </div>
 
@@ -528,7 +531,8 @@ export default function PaymentView({
                       value={screenshotUrl}
                       onChange={(e) => setScreenshotUrl(e.target.value)}
                       placeholder="https://..."
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium"
+                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      translate="no"
                     />
                   </div>
                 </div>

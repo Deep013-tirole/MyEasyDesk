@@ -1,11 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   ShieldCheck, Lock, Zap, Search, ArrowRight, MessageSquare,
   Layers, CheckCircle2, Clock, Bot, FileText, CheckCircle,
   HelpCircle, Sparkles, ChevronRight, Shield
 } from 'lucide-react';
 import { Service, Blog, Review, BlogCategory } from '../types.js';
-import { openWhatsAppForService, openGeneralWhatsApp } from '../lib/whatsapp.js';
+import { openWhatsAppForService, openGeneralWhatsApp, updateCachedContactSettings } from '../lib/whatsapp.js';
+import { formatFullAddress, getClientContactSettings } from '../lib/apiDataService.js';
 import BlogCard from './blog/BlogCard.js';
 import TrustBadge from './ui/TrustBadge.js';
 
@@ -27,6 +28,18 @@ export default function HomeView({
   setSelectedServiceId
 }: HomeViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [contactInfo, setContactInfo] = useState<{ phone: string; address: string }>({ phone: '', address: '' });
+
+  // Sync contact settings into cache on mount
+  useEffect(() => {
+    getClientContactSettings().then((data) => {
+      if (data && typeof data === 'object') {
+        formatFullAddress(data);
+        updateCachedContactSettings(data);
+        setContactInfo({ phone: data.phone || '', address: data.address || '' });
+      }
+    }).catch(() => {});
+  }, []);
 
   // Filter public published blogs
   const publicBlogs = useMemo(() => {
@@ -441,6 +454,13 @@ export default function HomeView({
           </div>
         </div>
       </section>
+
+      {/* Contact hydration skeleton placeholder if hydrating */}
+      {(!contactInfo.phone || !contactInfo.address) && (
+        <div className="hidden" aria-hidden="true">
+          <div className="animate-pulse" />
+        </div>
+      )}
 
     </div>
   );

@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { 
   ArrowLeft, Calendar, Clock, Tag, MessageSquare, Send, 
   CheckCircle2, AlertTriangle, ShieldCheck, User as UserIcon, 
   FileText, Share2, Check, Bookmark, ChevronRight, Sparkles,
   HelpCircle, Info
 } from 'lucide-react';
-import { Blog, BlogCategory, BlogComment } from '../../types.js';
+import { Blog, BlogCategory, BlogComment, Service } from '../../types.js';
 import { openGeneralWhatsApp } from '../../lib/whatsapp.js';
+import { getCanonicalOrigin, getBlogPostingJsonLd, getBreadcrumbsJsonLd } from '../../lib/seoConfig.js';
 import BlogCard from './BlogCard.js';
 import ContentUnavailable from '../ContentUnavailable.js';
 import { renderRichText } from '../../utils/richTextRenderer';
@@ -19,6 +21,8 @@ interface BlogDetailViewProps {
   onSelectCategory: (categoryId: string) => void;
   onSelectBlog: (blog: Blog) => void;
   updateBlogs?: (blogs: Blog[]) => void;
+  services?: Service[];
+  onSelectService?: (serviceId: string) => void;
 }
 
 export default function BlogDetailView({
@@ -28,7 +32,9 @@ export default function BlogDetailView({
   onBack,
   onSelectCategory,
   onSelectBlog,
-  updateBlogs
+  updateBlogs,
+  services = [],
+  onSelectService
 }: BlogDetailViewProps) {
   if (!blog) {
     return (
@@ -61,6 +67,71 @@ export default function BlogDetailView({
   // Reading time
   const wordCount = (blog.content || '').trim().split(/\s+/).length;
   const readingTime = Math.max(2, Math.ceil(wordCount / 180));
+
+  // Canonical Origin & URL
+  const origin = getCanonicalOrigin();
+  const canonicalUrl = `${origin}/blogs/${blog.slug || blog.id}`;
+
+  // Find matching genuine service only if one truly exists (Strict White-Hat SEO)
+  const matchedService = useMemo(() => {
+    if (!services || services.length === 0) return null;
+    const activeServices = services.filter(s => {
+      const st = (s.status || 'Active').toLowerCase();
+      return st !== 'inactive' && st !== 'deleted';
+    });
+    if (activeServices.length === 0) return null;
+
+    const titleLower = (blog.title || '').toLowerCase();
+    const tagsLower = (blog.tags || []).map(t => t.toLowerCase());
+    const catLower = (categoryName || '').toLowerCase();
+
+    const matches = (keywords: string[]) => {
+      return keywords.some(kw => 
+        titleLower.includes(kw) || 
+        tagsLower.some(t => t.includes(kw)) ||
+        catLower.includes(kw)
+      );
+    };
+
+    if (matches(['pan card', 'pan correction', 'nsdl', 'utiitsl', 'instant pan'])) {
+      const panService = activeServices.find(s => s.title.toLowerCase().includes('pan'));
+      if (panService) return panService;
+    }
+
+    if (matches(['aadhaar', 'uidai', 'eaadhaar', 'aadhaar address', 'demographic update'])) {
+      const aadhaarService = activeServices.find(s => s.title.toLowerCase().includes('aadhaar'));
+      if (aadhaarService) return aadhaarService;
+    }
+
+    if (matches(['passport', 'tatkaal passport', 'passport seva', 're-issue passport'])) {
+      const passportService = activeServices.find(s => s.title.toLowerCase().includes('passport'));
+      if (passportService) return passportService;
+    }
+
+    if (matches(['msme', 'udyam', 'enterprise registration', 'udyam certificate'])) {
+      const msmeService = activeServices.find(s => s.title.toLowerCase().includes('msme') || s.title.toLowerCase().includes('udyam'));
+      if (msmeService) return msmeService;
+    }
+
+    if (matches(['gst', 'gstin', 'goods and services tax', 'gst return'])) {
+      const gstService = activeServices.find(s => s.title.toLowerCase().includes('gst'));
+      if (gstService) return gstService;
+    }
+
+    if (matches(['scholarship', 'nsp', 'post matric', 'pre matric', 'scholarship portal'])) {
+      const scholarshipService = activeServices.find(s => s.title.toLowerCase().includes('scholarship'));
+      if (scholarshipService) return scholarshipService;
+    }
+
+    for (const s of activeServices) {
+      const sTitleLower = s.title.toLowerCase();
+      if (titleLower.includes(sTitleLower) || tagsLower.some(t => t.includes(sTitleLower))) {
+        return s;
+      }
+    }
+
+    return null;
+  }, [blog, services, categoryName]);
 
   // Date
   const formattedDate = blog.date 
@@ -120,8 +191,46 @@ export default function BlogDetailView({
     return renderRichText(content);
   };
 
+  const rawBlogTitle = blog.seoTitle || blog.title;
+  const seoTitle = rawBlogTitle.includes('EasyDesk') ? rawBlogTitle : `${rawBlogTitle} | EasyDesk`;
+  const seoDesc = blog.seoDescription || blog.shortDescription || blog.excerpt || blog.title;
+
   return (
     <div id="blog-detail-view" className="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900 animate-in fade-in duration-150 w-full max-w-full overflow-x-hidden">
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={canonicalUrl} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDesc} />
+        <meta property="og:site_name" content="EasyDesk" />
+        {blog.image && <meta property="og:image" content={blog.image} />}
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={canonicalUrl} />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDesc} />
+        {blog.image && <meta name="twitter:image" content={blog.image} />}
+
+        {/* JSON-LD Schemas */}
+        <script type="application/ld+json">
+          {JSON.stringify(getBlogPostingJsonLd(blog))}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbsJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Knowledge Hub', path: '/blogs' },
+            { name: categoryName, path: '/blogs' },
+            { name: blog.title, path: `/blogs/${blog.slug || blog.id}` }
+          ]))}
+        </script>
+      </Helmet>
       
       {/* 1. Header Navigation & Breadcrumbs Bar */}
       <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-2xs">
@@ -189,7 +298,7 @@ export default function BlogDetailView({
 
             <span className="text-slate-300">•</span>
 
-            <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
+            <span className="flex items-center gap-1 text-xs text-slate-500 font-medium notranslate" translate="no">
               <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formattedDate}
             </span>
 
@@ -211,7 +320,7 @@ export default function BlogDetailView({
               {(blog.author || 'ED')[0]}
             </div>
             <div>
-              <span className="font-bold text-xs sm:text-sm text-slate-900 block leading-none">
+              <span className="font-bold text-xs sm:text-sm text-slate-900 block leading-none notranslate" translate="no">
                 {blog.author || 'Desk Verification Officer'}
               </span>
               <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
@@ -296,6 +405,59 @@ export default function BlogDetailView({
 
         </div>
 
+        {/* Contextual Related EasyDesk Service Recommendation (Organic Conversion) */}
+        {matchedService && (
+          <div id="blog-related-service-card" className="bg-gradient-to-br from-blue-50/90 via-white to-slate-50 rounded-3xl border border-blue-200/90 p-6 sm:p-8 shadow-xs space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-[#0F4C81] text-white shadow-2xs">
+                  <Sparkles className="w-3 h-3" /> Related EasyDesk Service
+                </span>
+                <span className="text-xs text-slate-500 font-medium">
+                  Verified Commercial Assistance Desk
+                </span>
+              </div>
+              {((matchedService.govFees || 0) + (matchedService.serviceCharge || 0) > 0) && (
+                <div className="text-right">
+                  <span className="text-[11px] text-slate-500 block">Total Service Fee</span>
+                  <span className="text-lg font-black text-slate-900">
+                    ₹{(matchedService.govFees || 0) + (matchedService.serviceCharge || 0)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg sm:text-xl font-black text-slate-900">
+                {matchedService.title}
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                {matchedService.shortDescription || matchedService.description || `Get end-to-end filing support, document audits, and error checks for ${matchedService.title} through EasyDesk.`}
+              </p>
+            </div>
+
+            <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100">
+              <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
+                <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                <span>Pre-submission verification & zero rejection guarantee</span>
+              </div>
+              <button
+                onClick={() => {
+                  if (onSelectService) {
+                    onSelectService(matchedService.slug || matchedService.id);
+                  } else {
+                    window.location.href = `/services/${matchedService.slug || matchedService.id}`;
+                  }
+                }}
+                className="px-5 py-2.5 rounded-xl bg-[#0F4C81] hover:bg-[#0b3b64] text-white text-xs font-bold transition shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
+              >
+                <span>Apply with EasyDesk Assistance</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 4. Related Guides Section */}
         {relatedBlogs.length > 0 && (
           <div className="space-y-4 pt-6">
@@ -356,9 +518,9 @@ export default function BlogDetailView({
                       <div className="w-7 h-7 rounded-full bg-blue-50 text-[#0F4C81] flex items-center justify-center font-bold text-xs border border-blue-100">
                         <UserIcon className="w-3.5 h-3.5" />
                       </div>
-                      <span className="font-bold text-xs text-slate-900">{comment.userName}</span>
+                      <span className="font-bold text-xs text-slate-900 notranslate" translate="no">{comment.userName}</span>
                     </div>
-                    <span className="text-[11px] text-slate-400 font-medium">{comment.date}</span>
+                    <span className="text-[11px] text-slate-400 font-medium notranslate" translate="no">{comment.date}</span>
                   </div>
                   <p className="text-xs text-slate-700 leading-relaxed pl-9">
                     {comment.comment}
@@ -391,7 +553,8 @@ export default function BlogDetailView({
                   value={newCommentName}
                   onChange={(e) => setNewCommentName(e.target.value)}
                   placeholder="e.g. Ramesh Kumar"
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-[#0F4C81] focus:ring-1 focus:ring-[#0F4C81] outline-none bg-slate-50/50"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-[#0F4C81] focus:ring-1 focus:ring-[#0F4C81] outline-none bg-slate-50/50 notranslate"
+                  translate="no"
                 />
               </div>
 
@@ -403,7 +566,8 @@ export default function BlogDetailView({
                   value={newCommentText}
                   onChange={(e) => setNewCommentText(e.target.value)}
                   placeholder="Type your question regarding required documents or processes..."
-                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-[#0F4C81] focus:ring-1 focus:ring-[#0F4C81] outline-none bg-slate-50/50"
+                  className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-[#0F4C81] focus:ring-1 focus:ring-[#0F4C81] outline-none bg-slate-50/50 notranslate"
+                  translate="no"
                 />
               </div>
 

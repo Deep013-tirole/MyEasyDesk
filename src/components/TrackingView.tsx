@@ -10,13 +10,19 @@ import { printElement } from '../lib/printUtils.js';
 import ContentUnavailable from './ContentUnavailable.js';
 import Breadcrumbs from './ui/Breadcrumbs.js';
 import TrustBadge from './ui/TrustBadge.js';
+import { useLanguage } from '../context/LanguageContext.js';
+import { getClientContactSettings, formatFullAddress } from '../lib/apiDataService.js';
+import { onContactSettingsUpdated } from '../lib/whatsapp.js';
+import { normalizeIndicDigits } from '../lib/nameLocalization.js';
 
 export default function TrackingView() {
+  const { language, localizeStatus, localizeStep } = useLanguage();
   const [orderId, setOrderId] = useState('');
   const [mobile, setMobile] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
+  const [contactSettings, setContactSettings] = useState<any>(null);
 
   // File upload state for correction request
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -32,8 +38,39 @@ export default function TrackingView() {
   const [reviewSuccessMsg, setReviewSuccessMsg] = useState<string>('');
   const [reviewErrorMsg, setReviewErrorMsg] = useState<string>('');
 
+  // Authoritative Contact Settings Subscription (Single Source of Truth)
+  useEffect(() => {
+    let isMounted = true;
+
+    getClientContactSettings().then((data) => {
+      if (data && isMounted) {
+        setContactSettings(data);
+      }
+    }).catch(() => {});
+
+    const unsubscribe = onContactSettingsUpdated((freshData) => {
+      if (freshData && isMounted) {
+        setContactSettings(freshData);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
+  }, []);
+
   const executeTrack = async (targetId: string, targetMobile: string = '') => {
-    if (!targetId.trim()) return;
+    // Convert Indic numerals (Devanagari/Gujarati) to ASCII, trim, remove zero-width chars and leading '#'
+    const cleanTargetId = normalizeIndicDigits(targetId)
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .trim()
+      .replace(/^#+/, '');
+    const cleanTargetMobile = normalizeIndicDigits(targetMobile)
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .trim();
+
+    if (!cleanTargetId) return;
 
     setLoading(true);
     setError('');
@@ -43,13 +80,26 @@ export default function TrackingView() {
     setReviewErrorMsg('');
 
     try {
-      const url = `/api/orders/track?orderId=${encodeURIComponent(targetId.trim())}${targetMobile ? `&mobile=${encodeURIComponent(targetMobile.trim())}` : ''}`;
+      const url = `/api/orders/track?orderId=${encodeURIComponent(cleanTargetId)}${cleanTargetMobile ? `&mobile=${encodeURIComponent(cleanTargetMobile)}` : ''}`;
       const response = await fetch(url);
       
       if (response.ok) {
         const data = await safeParseJsonResponse<Order>(response);
         if (data) {
           setOrder(data);
+          // Persist tracking state across language switching and page reloads
+          try {
+            if (typeof sessionStorage !== 'undefined') {
+              sessionStorage.setItem('easydesk_active_tracking_id', data.id);
+              if (cleanTargetMobile) sessionStorage.setItem('easydesk_active_tracking_mobile', cleanTargetMobile);
+            }
+            if (typeof window !== 'undefined' && window.history?.replaceState) {
+              const currentUrl = new URL(window.location.href);
+              currentUrl.searchParams.set('orderId', data.id);
+              if (cleanTargetMobile) currentUrl.searchParams.set('mobile', cleanTargetMobile);
+              window.history.replaceState({}, '', currentUrl.toString());
+            }
+          } catch {}
         } else {
           setError('Invalid tracking record received. Please check with customer support.');
         }
@@ -71,14 +121,19 @@ export default function TrackingView() {
     await executeTrack(orderId, mobile);
   };
 
+  // URL & sessionStorage state restoration on mount / navigation / refresh
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const queryOrderId = params.get('orderId') || params.get('id');
+    const queryOrderId = params.get('orderId') || params.get('id') || params.get('trackingId') || params.get('trackId') || params.get('query');
     const queryMobile = params.get('mobile') || '';
-    if (queryOrderId) {
-      setOrderId(queryOrderId);
-      if (queryMobile) setMobile(queryMobile);
-      executeTrack(queryOrderId, queryMobile);
+
+    const savedOrderId = queryOrderId || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('easydesk_active_tracking_id') : null);
+    const savedMobile = queryMobile || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('easydesk_active_tracking_mobile') : null) || '';
+
+    if (savedOrderId) {
+      setOrderId(savedOrderId);
+      if (savedMobile) setMobile(savedMobile);
+      executeTrack(savedOrderId, savedMobile);
     }
   }, []);
 
@@ -297,7 +352,8 @@ export default function TrackingView() {
               placeholder="e.g. ORD-10021"
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
-              className="mt-1.5 w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 font-mono"
+              className="mt-1.5 w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 font-mono notranslate"
+              translate="no"
             />
           </div>
 
@@ -310,7 +366,8 @@ export default function TrackingView() {
               placeholder="10-digit mobile number"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              className="mt-1.5 w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
+              className="mt-1.5 w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 notranslate"
+              translate="no"
             />
           </div>
 
@@ -369,12 +426,12 @@ export default function TrackingView() {
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-bold text-slate-900">{order.serviceTitle}</h2>
-                  <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-lg border font-semibold">
+                  <span className="font-mono text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded-lg border font-semibold notranslate" translate="no">
                     #{order.id}
                   </span>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  Applicant: <strong className="text-slate-700">{order.name}</strong> • Lodged on {new Date(order.createdAt).toLocaleDateString()}
+                  Applicant: <strong className="text-slate-700 notranslate" translate="no">{order.name}</strong> • Lodged on <span className="notranslate" translate="no">{new Date(order.createdAt).toLocaleDateString()}</span>
                 </p>
               </div>
 
@@ -388,9 +445,9 @@ export default function TrackingView() {
                   <Printer className="w-3.5 h-3.5" />
                   <span>Print Receipt</span>
                 </button>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase border tracking-wider ${getStatusColor(order.orderStatus)}`}>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase border tracking-wider notranslate ${getStatusColor(order.orderStatus)}`} translate="no" data-canonical-status={order.orderStatus}>
                   {order.orderStatus === OrderStatus.COMPLETED ? <CheckCircle2 className="w-4 h-4" /> : <Clock className="w-4 h-4" />}
-                  {order.orderStatus}
+                  {localizeStatus(order.orderStatus)}
                 </span>
               </div>
             </div>
@@ -419,7 +476,7 @@ export default function TrackingView() {
                   const isActive = idx === currentIdx;
 
                   return (
-                    <div key={idx} className="flex items-center space-x-3">
+                    <div key={idx} className="flex items-center space-x-3 notranslate" translate="no">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border transition-all ${
                         isCompleted 
                           ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/15' 
@@ -429,13 +486,13 @@ export default function TrackingView() {
                       </div>
                       <div>
                         <span className={`block text-[11px] font-bold ${isCompleted ? 'text-blue-700' : 'text-slate-400'}`}>
-                          {step}
+                          {localizeStatus(step)}
                         </span>
                         <span className="block text-[9px] text-slate-400">
-                          {idx === 0 && 'File Checked'}
-                          {idx === 1 && 'Audit Completed'}
-                          {idx === 2 && 'Submitted to Govt'}
-                          {idx === 3 && 'Dispatched Certificate'}
+                          {idx === 0 && localizeStep('File Checked')}
+                          {idx === 1 && localizeStep('Audit Completed')}
+                          {idx === 2 && localizeStep('Submitted to Govt')}
+                          {idx === 3 && localizeStep('Dispatched Certificate')}
                         </span>
                       </div>
                     </div>
@@ -758,9 +815,9 @@ export default function TrackingView() {
             <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
               <div>
                 <span className="block text-[10px] text-slate-400 font-semibold leading-none">Total consultancy bill paid</span>
-                <span className="text-base font-black text-slate-900 mt-1 block">₹{order.totalAmount}</span>
+                <span className="text-base font-black text-slate-900 mt-1 block notranslate" translate="no">₹{order.totalAmount}</span>
               </div>
-              <span className="text-[10px] font-semibold text-slate-400 text-right">EasyDesk Digital Services India</span>
+              <span className="text-[10px] font-semibold text-slate-400 text-right notranslate" translate="no">EasyDesk Digital Services India</span>
             </div>
           </div>
 
@@ -769,7 +826,7 @@ export default function TrackingView() {
         {/* ========================================================================= */}
         {/* DEDICATED OFFICIAL PRINTABLE ACKNOWLEDGEMENT & TRACKING RECEIPT (PRINT-ONLY) */}
         {/* ========================================================================= */}
-        <div className="print-only printable-tracking-document w-full bg-white text-slate-900 font-sans p-0 m-0 text-xs">
+        <div className="print-only printable-tracking-document w-full bg-white text-slate-900 font-sans p-0 m-0 text-xs notranslate" translate="no">
 
           {/* 1. Official Letterhead / Header */}
           <div className="border-b-2 border-slate-900 pb-4 mb-4">
@@ -780,12 +837,15 @@ export default function TrackingView() {
                 </div>
                 <div>
                   <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                    EasyDesk Solutions Private Limited
+                    {contactSettings?.companyName || 'EasyDesk Solutions Private Limited'}
                   </h1>
                   <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                     Government Services Citizen Advisory & Digital Documentation Facilitation Portal
                   </p>
                   <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                    {formatFullAddress(contactSettings) || 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010'} • Helpline: {contactSettings?.phone || '+91 9575538590'}
+                  </p>
+                  <p className="text-[8px] text-slate-400 font-mono">
                     CIN: U72900MH2024PTC123456 • ISO 9001:2015 Certified Citizen Desk
                   </p>
                 </div>
@@ -808,8 +868,8 @@ export default function TrackingView() {
             </div>
             <div className="text-right">
               <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-500 block">Current Status</span>
-              <span className="font-black text-xs uppercase px-3 py-1 rounded border border-slate-400 bg-white inline-block">
-                {order.orderStatus}
+              <span className="font-black text-xs uppercase px-3 py-1 rounded border border-slate-400 bg-white inline-block notranslate" translate="no" data-canonical-status={order.orderStatus}>
+                {order.orderStatus} {language !== 'en' ? `(${localizeStatus(order.orderStatus)})` : ''}
               </span>
             </div>
           </div>
@@ -975,6 +1035,7 @@ export default function TrackingView() {
               <li>SMS alerts and WhatsApp status notifications will be transmitted to registered mobile <strong>+91 {order.mobile}</strong>.</li>
               <li>In the event of "Documents Required" notification, promptly upload the requested credentials via the Live Tracking portal.</li>
               <li>Final government-attested certificates/clearance records will be made available for secure digital download upon department sign-off.</li>
+              <li>Official Assistance Desk: <strong>{contactSettings?.phone || '+91 9575538590'}</strong> • Email: <strong>{contactSettings?.email || 'help.myeasydesks@gmail.com'}</strong>.</li>
             </ol>
           </div>
 
@@ -992,9 +1053,11 @@ export default function TrackingView() {
               </p>
             </div>
             <div className="text-right space-y-0.5">
-              <p className="font-bold text-slate-800">EasyDesk Citizen Helpdesk</p>
-              <p>Email: support@easydesk.in • Web: www.easydesk.in</p>
-              <p className="font-mono text-slate-400">National Helpline: 1800-889-DESK (Mon–Sat 9AM–7PM)</p>
+              <p className="font-bold text-slate-800">{contactSettings?.companyName || 'EasyDesk Solutions Private Limited'}</p>
+              {/* Contact single-source-of-truth: Replaced hardcoded support@easydesk.in with dynamic contactSettings.email */}
+              <p>Email: {contactSettings?.email || 'help.myeasydesks@gmail.com'} • Web: {contactSettings?.website || 'myeasydesk.tideepak8.workers.dev'}</p>
+              <p className="font-mono text-slate-500">Citizen Helpline: {contactSettings?.phone || '+91 9575538590'} ({contactSettings?.workingHours || 'Mon–Sat 9AM–7PM'})</p>
+              <p className="text-[8px] text-slate-400">Head Office: {formatFullAddress(contactSettings) || 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010'}</p>
             </div>
           </div>
 

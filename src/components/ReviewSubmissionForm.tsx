@@ -332,7 +332,8 @@ export default function ReviewSubmissionForm({
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
                 placeholder="e.g. CUST-1001 or cust-1"
-                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-xl text-xs text-slate-900 font-medium transition"
+                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-xl text-xs text-slate-900 font-medium transition notranslate"
+                translate="no"
               />
             </div>
             <p className="text-[10px] text-slate-500 mt-1">Your unique customer registration identifier.</p>
@@ -349,7 +350,8 @@ export default function ReviewSubmissionForm({
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               placeholder="e.g. Jane Doe"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-xl text-xs text-slate-900 font-medium transition"
+              className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-xl text-xs text-slate-900 font-medium transition notranslate"
+              translate="no"
             />
             <p className="text-[10px] text-slate-500 mt-1">Name to display on the review card.</p>
           </div>
@@ -371,7 +373,8 @@ export default function ReviewSubmissionForm({
                 value={orderId}
                 onChange={(e) => setOrderId(e.target.value)}
                 placeholder="e.g. ORD-10023 or ORD-10024"
-                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-xl text-xs text-slate-900 font-mono font-medium transition"
+                className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-xl text-xs text-slate-900 font-mono font-medium transition notranslate"
+                translate="no"
               />
             </div>
             <p className="text-[10px] text-slate-500 mt-1">Tracking ID of your service request.</p>
@@ -456,7 +459,8 @@ export default function ReviewSubmissionForm({
             value={reviewText}
             onChange={(e) => setReviewText(e.target.value)}
             placeholder="Share details about turnaround time, document verification accuracy, officer communication, or overall experience..."
-            className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-2xl text-xs text-slate-900 leading-relaxed transition"
+            className="w-full p-3.5 bg-slate-50 border border-slate-200 focus:bg-white focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 rounded-2xl text-xs text-slate-900 leading-relaxed transition notranslate"
+            translate="no"
           />
           <div className="flex justify-between items-center text-[10px] text-slate-500 mt-1">
             <span>Minimum 5 characters.</span>

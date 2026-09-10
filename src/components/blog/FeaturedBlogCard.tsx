@@ -93,7 +93,7 @@ function FeaturedBlogCard({ blog, blogCategories = [], onSelect }: FeaturedBlogC
             <div className="flex items-center gap-2.5 text-xs text-slate-500 font-medium">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                <span>{formattedDate}</span>
+                <span className="notranslate" translate="no">{formattedDate}</span>
               </span>
               <span className="text-slate-300">•</span>
               <span className="flex items-center gap-1.5">

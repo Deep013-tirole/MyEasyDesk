@@ -243,8 +243,13 @@ export default {
       }
     }
 
-    // Route API requests and missing uploads directly to the Express backend
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) {
+    // Route API requests, uploads, robots.txt, and sitemap.xml directly to the Express backend
+    if (
+      url.pathname.startsWith('/api/') ||
+      url.pathname.startsWith('/uploads/') ||
+      url.pathname === '/robots.txt' ||
+      url.pathname === '/sitemap.xml'
+    ) {
       if (typeof ensureDatabaseReady === 'function') {
         try {
           await ensureDatabaseReady();

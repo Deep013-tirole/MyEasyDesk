@@ -482,6 +482,7 @@ export interface UploadedDocument {
 
 export interface Order {
   id: string;
+  orderCode?: string;
   userId: string;
   customerId?: string;
   orderSource?: 'WhatsApp' | 'Website' | 'Phone' | 'In-Person' | 'Other';

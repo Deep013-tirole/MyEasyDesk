@@ -346,6 +346,29 @@ async function runAllTests() {
   const mod4Pass = updateAboutRes.status === 200 && updateContactRes.status === 200 && updatePaymentSettingsRes.status === 200 && aboutPersisted && contactPersisted && paymentPersisted;
   console.log('>>> MODULE 4 VERDICT:', mod4Pass ? 'PASS' : 'FAIL');
 
+  // Restore authoritative Indore contact settings
+  await req({
+    hostname: 'localhost',
+    port: 3000,
+    path: '/api/admin/contact-settings',
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
+  }, {
+    contactSettings: {
+      companyName: 'EasyDesk Digital Services Pvt Ltd',
+      phone: '+91 9575538590',
+      whatsapp: '919575538590',
+      email: 'help.myeasydesks@gmail.com',
+      alternateEmail: 'info@easydesk.com',
+      address: 'A51, Vijay Nagar',
+      city: 'Indore',
+      state: 'Madhya Pradesh',
+      pinCode: '452010',
+      workingHours: 'Monday - Saturday: 9:00 AM - 7:00 PM IST',
+      googleMapsUrl: 'https://maps.google.com/?q=Indore+Madhya+Pradesh'
+    }
+  });
+
   // TEST 5: Media Upload -> Refresh / Re-request File
   console.log('\n--- MODULE 5: Media File Upload & Retrieval ---');
   const testFileName = 'test-upload-' + Date.now() + '.txt';

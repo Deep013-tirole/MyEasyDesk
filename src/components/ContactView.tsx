@@ -255,7 +255,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
             <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-7 space-y-5 hover-lift hover-glow-blue transition-all duration-300">
               <div className="border-b border-slate-100 pb-3">
                 <span className="text-[10px] font-extrabold uppercase text-[#0F4C81] tracking-wider block">Official Headquarters</span>
-                <h3 className="font-black text-base text-slate-900 mt-1 m-0">
+                <h3 className="font-black text-base text-slate-900 mt-1 m-0 notranslate" translate="no">
                   {contactInfo?.companyName || 'EasyDesk Digital Services Pvt Ltd'}
                 </h3>
               </div>
@@ -268,7 +268,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Phone Support</span>
                   {contactInfo?.phone ? (
-                    <a href={`tel:${contactInfo.phone}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors">
+                    <a href={`tel:${contactInfo.phone}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors notranslate" translate="no">
                       {contactInfo.phone}
                     </a>
                   ) : loading ? (
@@ -290,7 +290,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                     onClick={() => openGeneralWhatsApp()}
                     className="font-black text-sm text-emerald-600 hover:underline text-left cursor-pointer p-0 bg-transparent border-0 flex items-center gap-1.5"
                   >
-                    <span>{contactInfo?.whatsapp ? `+${contactInfo.whatsapp}` : (loading ? 'Loading...' : 'Chat on WhatsApp')}</span>
+                    <span className="notranslate" translate="no">{contactInfo?.whatsapp ? `+${contactInfo.whatsapp}` : (loading ? 'Loading...' : 'Chat on WhatsApp')}</span>
                     <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Chat Live</span>
                   </button>
                 </div>
@@ -304,7 +304,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Official Email</span>
                   {contactInfo?.email ? (
-                    <a href={`mailto:${contactInfo.email}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] block transition-colors">
+                    <a href={`mailto:${contactInfo.email}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] block transition-colors notranslate" translate="no">
                       {contactInfo.email}
                     </a>
                   ) : loading ? (
@@ -323,7 +323,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                 <div>
                   <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Office Location</span>
                   {formatFullAddress(contactInfo) ? (
-                    <p className="font-medium text-xs text-slate-600 leading-relaxed m-0 mt-0.5">
+                    <p className="font-medium text-xs text-slate-600 leading-relaxed m-0 mt-0.5 notranslate" translate="no">
                       {formatFullAddress(contactInfo)}
                     </p>
                   ) : loading ? (
@@ -409,7 +409,8 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Ramesh Verma"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium"
+                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      translate="no"
                     />
                   </div>
 
@@ -423,7 +424,8 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@domain.com"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium"
+                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      translate="no"
                     />
                   </div>
                 </div>
@@ -439,7 +441,8 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="10-digit mobile number"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium"
+                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      translate="no"
                     />
                   </div>
 
@@ -453,7 +456,8 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="e.g. Passport application inquiry"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium"
+                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      translate="no"
                     />
                   </div>
                 </div>
@@ -468,7 +472,8 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Describe your inquiry, specific document questions, or filing needs..."
-                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium"
+                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                    translate="no"
                   />
                 </div>
 

@@ -74,7 +74,7 @@ function BlogCard({ blog, blogCategories = [], onSelect, compact = false }: Blog
           <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
             <span className="flex items-center gap-1">
               <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>{formattedDate}</span>
+              <span className="notranslate" translate="no">{formattedDate}</span>
             </span>
             <span className="text-slate-300">•</span>
             <span className="flex items-center gap-1">
@@ -101,7 +101,7 @@ function BlogCard({ blog, blogCategories = [], onSelect, compact = false }: Blog
       <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between mt-auto">
         <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium truncate max-w-[140px]">
           <User className="w-3 h-3 text-slate-400 shrink-0" />
-          <span className="truncate">{blog.author || 'Desk Officer'}</span>
+          <span className="truncate notranslate" translate="no">{blog.author || 'Desk Officer'}</span>
         </div>
 
         <span className="inline-flex items-center gap-1 text-xs font-black text-[#0F4C81] group-hover:text-blue-700 transition-all">

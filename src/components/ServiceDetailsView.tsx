@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { Service, ServiceCategory, Review } from '../types.js';
 import { openWhatsAppForService, openGeneralWhatsApp } from '../lib/whatsapp.js';
+import { Helmet } from 'react-helmet-async';
+import { getCanonicalOrigin, getServiceJsonLd, getFaqJsonLd, getBreadcrumbsJsonLd } from '../lib/seoConfig.js';
 import ReviewSubmissionModal from './ReviewSubmissionModal.js';
 import ContentUnavailable from './ContentUnavailable.js';
 import ApplyOnlineModal from './ApplyOnlineModal.js';
@@ -236,8 +238,56 @@ export default function ServiceDetailsView({
     ...(service.faqs && service.faqs.length > 0 ? [{ id: 'faqs', label: 'FAQs' }] : [])
   ];
 
+  const origin = getCanonicalOrigin();
+  const canonicalUrl = `${origin}/services/${service.slug || service.id}`;
+  const rawTitle = service.seoTitle || `${service.title} Online Assistance`;
+  const seoTitle = rawTitle.includes('EasyDesk') ? rawTitle : `${rawTitle} | EasyDesk`;
+  const seoDesc = service.seoDescription || service.shortDescription || service.description || `Apply online for ${service.title} with verified desk assistance, full document verification, transparent fees, and real-time tracking on WhatsApp.`;
+
   return (
     <div id="easydesk-service-details-page" className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50/60 font-sans text-slate-900 pb-20">
+      <Helmet>
+        <title>{seoTitle}</title>
+        <meta name="description" content={seoDesc} />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={canonicalUrl} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:title" content={seoTitle} />
+        <meta property="og:description" content={seoDesc} />
+        <meta property="og:site_name" content="EasyDesk" />
+        {(service.imageUrl || service.image) && (
+          <meta property="og:image" content={service.imageUrl || service.image} />
+        )}
+
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:url" content={canonicalUrl} />
+        <meta name="twitter:title" content={seoTitle} />
+        <meta name="twitter:description" content={seoDesc} />
+        {(service.imageUrl || service.image) && (
+          <meta name="twitter:image" content={service.imageUrl || service.image} />
+        )}
+
+        {/* Structured Data (Schema.org) */}
+        <script type="application/ld+json">
+          {JSON.stringify(getBreadcrumbsJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Services', path: '/services' },
+            { name: service.title, path: `/services/${service.slug || service.id}` }
+          ]))}
+        </script>
+        <script type="application/ld+json">
+          {JSON.stringify(getServiceJsonLd(service, category))}
+        </script>
+        {service.faqs && service.faqs.length > 0 && (
+          <script type="application/ld+json">
+            {JSON.stringify(getFaqJsonLd(service.faqs))}
+          </script>
+        )}
+      </Helmet>
 
       {/* 1. BREADCRUMBS BAR */}
       <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-xs w-full max-w-full">
@@ -316,7 +366,7 @@ export default function ServiceDetailsView({
                   <Clock className="w-3 h-3 text-slate-500" />
                   <span>Processing: {service.processingTime || '3–5 Working Days'}</span>
                 </span>
-                <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full">
+                <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full notranslate" translate="no">
                   ID: {service.id}
                 </span>
                 {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
@@ -706,15 +756,15 @@ export default function ServiceDetailsView({
                   <tbody>
                     <tr className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="p-3.5 text-slate-600">Official Government Department Fee</td>
-                      <td className="p-3.5 text-right font-bold text-slate-900">₹{service.govFees || 0}</td>
+                      <td className="p-3.5 text-right font-bold text-slate-900 notranslate" translate="no">₹{service.govFees || 0}</td>
                     </tr>
                     <tr className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="p-3.5 text-slate-600">EasyDesk Documentation & Advisory Charge</td>
-                      <td className="p-3.5 text-right font-bold text-slate-900">₹{service.serviceCharge || 0}</td>
+                      <td className="p-3.5 text-right font-bold text-slate-900 notranslate" translate="no">₹{service.serviceCharge || 0}</td>
                     </tr>
                     <tr className="bg-blue-50/50 font-bold">
                       <td className="p-3.5 text-slate-900 font-extrabold">Total All-Inclusive Service Fee</td>
-                      <td className="p-3.5 text-right text-sm font-black text-[#0F4C81]">₹{totalFee}</td>
+                      <td className="p-3.5 text-right text-sm font-black text-[#0F4C81] notranslate" translate="no">₹{totalFee}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -813,7 +863,7 @@ export default function ServiceDetailsView({
                   All-Inclusive Service Fee
                 </span>
                 <div className="flex items-baseline gap-2 mt-1">
-                  <span className="text-2xl sm:text-3xl font-black text-slate-900">₹{totalFee}</span>
+                  <span className="text-2xl sm:text-3xl font-black text-slate-900 notranslate" translate="no">₹{totalFee}</span>
                   <span className="text-xs text-slate-400">Total payable</span>
                 </div>
                 <p className="text-[11px] text-slate-500 mt-1">
@@ -1112,6 +1162,34 @@ export default function ServiceDetailsView({
               <span>Order on WhatsApp</span>
             </button>
           </div>
+        </div>
+
+        {/* Organic Service Cross-Links & Navigation */}
+        <div className="mt-4 pt-4 border-t border-slate-200/80 flex flex-wrap items-center justify-center gap-4 sm:gap-6 text-xs text-slate-500 font-medium">
+          <span className="text-slate-400">Quick Assistance:</span>
+          <button
+            onClick={() => setView('track')}
+            className="hover:text-[#0F4C81] hover:underline transition cursor-pointer"
+          >
+            Track Existing Application →
+          </button>
+          <span className="text-slate-300">•</span>
+          <button
+            onClick={() => setView('contact')}
+            className="hover:text-[#0F4C81] hover:underline transition cursor-pointer"
+          >
+            Contact Help Desk Officers →
+          </button>
+          <span className="text-slate-300">•</span>
+          <button
+            onClick={() => {
+              setSelectedServiceId(null);
+              setView('services');
+            }}
+            className="hover:text-[#0F4C81] hover:underline transition cursor-pointer"
+          >
+            Browse All Services Directory →
+          </button>
         </div>
       </section>
 

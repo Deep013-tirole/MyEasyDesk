@@ -329,7 +329,7 @@ export default function ServicesView({
                         Starting Fee
                       </span>
                       <div className="flex items-baseline gap-1">
-                        <span className="text-base font-black text-slate-900 tabular-nums">
+                        <span className="text-base font-black text-slate-900 tabular-nums notranslate" translate="no">
                           ₹{totalFee}
                         </span>
                         <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>

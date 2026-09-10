@@ -84,7 +84,8 @@ export const SETTING_KEYS = [
   'maintenanceMode',
   'masterData',
   'chatConfig',
-  'socialMediaLinks'
+  'socialMediaLinks',
+  'entity_sequences'
 ] as const;
 
 /**
@@ -210,6 +211,13 @@ export async function initD1Schema(dbInstance?: any): Promise<void> {
       key TEXT PRIMARY KEY,
       data TEXT NOT NULL,
       updated_at INTEGER NOT NULL
+    );`,
+
+    // 1.1 Dedicated Atomic Entity Sequences Table (Authoritative distributed sequences)
+    `CREATE TABLE IF NOT EXISTS entity_sequences (
+      entity_type TEXT PRIMARY KEY,
+      next_value INTEGER NOT NULL,
+      updated_at TEXT NOT NULL
     );`,
 
     // 2. Universal Durable Entity Store (Preserved for legacy parity/rollback)
@@ -605,6 +613,20 @@ export async function loadStateFromD1(dbInstance?: any): Promise<{
         totalDocsLoaded++;
       } catch {}
     }
+
+    // 1.1 Load Authoritative Entity Sequences
+    try {
+      const seqRes = await db.prepare('SELECT entity_type, next_value FROM entity_sequences').all();
+      const seqRows = (seqRes && seqRes.results) ? seqRes.results : (Array.isArray(seqRes) ? seqRes : []);
+      if (!state.entity_sequences || typeof state.entity_sequences !== 'object') {
+        state.entity_sequences = {};
+      }
+      for (const row of seqRows) {
+        if (row && row.entity_type) {
+          state.entity_sequences[row.entity_type] = Number(row.next_value) || 0;
+        }
+      }
+    } catch {}
 
     // 2. Load Entities
     const entitiesRes = await db.prepare('SELECT collection, id, data FROM entities').all();
@@ -3076,6 +3098,111 @@ export async function getSettingFromD1(
 }
 
 /**
+ * Atomically allocates the next sequential number for an entity type directly in Cloudflare D1 SQLite.
+ * Uses an atomic statement with RETURNING next_value.
+ * This guarantees database-level atomicity across all Cloudflare Worker isolates without needing in-memory locks.
+ */
+export async function allocateNextSequenceInD1(
+  type: string,
+  dbInstance?: any
+): Promise<number | null> {
+  const db = dbInstance || getD1Database();
+  if (!db || !type) return null;
+
+  try {
+    await initD1Schema(db);
+    const now = new Date().toISOString();
+
+    // Single atomic statement in SQLite / Cloudflare D1:
+    // If the entity_type does not exist, it inserts with 1 and returns 1.
+    // If it exists, it increments next_value by 1 and returns the new value.
+    const stmt = db.prepare(`
+      INSERT INTO entity_sequences (entity_type, next_value, updated_at)
+      VALUES (?, 1, ?)
+      ON CONFLICT(entity_type) DO UPDATE SET
+        next_value = entity_sequences.next_value + 1,
+        updated_at = excluded.updated_at
+      RETURNING next_value;
+    `);
+
+    const res = await stmt.bind(type, now).first();
+    if (res && res.next_value !== undefined && res.next_value !== null) {
+      return Number(res.next_value);
+    }
+    if (res && typeof res === 'object' && 'results' in res && Array.isArray((res as any).results) && (res as any).results[0]?.next_value !== undefined) {
+      return Number((res as any).results[0].next_value);
+    }
+  } catch (err: any) {
+    console.error(`[D1 SEQUENCE ERROR] Failed to allocate sequence for ${type}:`, err);
+  }
+  return null;
+}
+
+/**
+ * Initializes and synchronizes entity sequence high-water marks in D1.
+ * Strictly monotonic: sets next_value to MAX(persisted sequence, highest existing record).
+ * Never initializes downward, never overwrites a higher existing value.
+ */
+export async function initEntitySequencesInD1(
+  highWaterMarks: { customer: number; employee: number; order: number; [key: string]: number },
+  dbInstance?: any
+): Promise<void> {
+  const db = dbInstance || getD1Database();
+  if (!db || !highWaterMarks) return;
+
+  try {
+    await initD1Schema(db);
+    const now = new Date().toISOString();
+    const types = ['customer', 'employee', 'order'];
+
+    for (const t of types) {
+      const baseVal = Math.max(0, Number(highWaterMarks[t]) || 0);
+      if (baseVal > 0) {
+        const stmt = db.prepare(`
+          INSERT INTO entity_sequences (entity_type, next_value, updated_at)
+          VALUES (?, ?, ?)
+          ON CONFLICT(entity_type) DO UPDATE SET
+            next_value = MAX(entity_sequences.next_value, excluded.next_value),
+            updated_at = CASE 
+              WHEN excluded.next_value > entity_sequences.next_value THEN excluded.updated_at 
+              ELSE entity_sequences.updated_at 
+            END;
+        `);
+        await stmt.bind(t, baseVal, now).run();
+      }
+    }
+  } catch (err: any) {
+    console.error('[D1 SEQUENCE] Failed to initialize sequence high-water marks in D1:', err);
+  }
+}
+
+/**
+ * Retrieves all current entity sequence high-water marks directly from D1.
+ */
+export async function getEntitySequencesFromD1(
+  dbInstance?: any
+): Promise<{ customer: number; employee: number; order: number } | null> {
+  const db = dbInstance || getD1Database();
+  if (!db) return null;
+
+  try {
+    await initD1Schema(db);
+    const res = await db.prepare('SELECT entity_type, next_value FROM entity_sequences').all();
+    const rows = (res && res.results) ? res.results : (Array.isArray(res) ? res : []);
+    const sequences = { customer: 0, employee: 0, order: 0 };
+    for (const row of rows) {
+      if (row && row.entity_type && sequences[row.entity_type as keyof typeof sequences] !== undefined) {
+        sequences[row.entity_type as keyof typeof sequences] = Number(row.next_value) || 0;
+      }
+    }
+    return sequences;
+  } catch (err: any) {
+    console.error('[D1 SEQUENCE] Failed to read sequences from D1:', err);
+    return null;
+  }
+}
+
+/**
  * Synchronizes an entire collection to D1, upserting active items and deleting purged items.
  */
 export async function syncCollectionToD1(
@@ -3206,9 +3333,9 @@ export async function seedD1FromState(initialState: Record<string, any>, dbInsta
 
     // 1. Settings
     for (const [key, val] of Object.entries(initialState)) {
-      if (Array.isArray(val)) continue;
+      if (Array.isArray(val) && !SETTING_KEYS.includes(key as any)) continue;
       if (OBJECT_COLLECTIONS.has(key)) continue;
-      if (val && typeof val === 'object') {
+      if (val !== undefined && (typeof val === 'object' || Array.isArray(val))) {
         const stmt = db.prepare(`
           INSERT INTO system_settings (key, data, updated_at) VALUES (?, ?, ?)
           ON CONFLICT(key) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at
@@ -3226,6 +3353,7 @@ export async function seedD1FromState(initialState: Record<string, any>, dbInsta
 
     // 2. Collections (Arrays and Dictionary Objects)
     for (const [collName, items] of Object.entries(initialState)) {
+      if (SETTING_KEYS.includes(collName as any)) continue;
       if (Array.isArray(items)) {
         for (const item of items) {
           if (!item || (!item.id && !item.code)) continue;

@@ -88,9 +88,22 @@ export default function Footer({ setView }: FooterProps) {
     };
   });
 
+  const [socialLoading, setSocialLoading] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem('easydesk_cache_social_links') || localStorage.getItem('easydesk_cache_social');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.some(item => item && item.enabled && typeof item.url === 'string' && item.url.trim().length > 0)) {
+          return false;
+        }
+      }
+    } catch {}
+    return true;
+  });
+
   const [socialLinks, setSocialLinks] = useState<SocialMediaLink[]>(() => {
     try {
-      const cached = localStorage.getItem('easydesk_cache_social_links');
+      const cached = localStorage.getItem('easydesk_cache_social_links') || localStorage.getItem('easydesk_cache_social');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed)) {
@@ -102,6 +115,7 @@ export default function Footer({ setView }: FooterProps) {
   });
 
   useEffect(() => {
+    let isMounted = true;
     const applyContact = (data: any) => {
       if (data && typeof data === 'object') {
         const normalizedWa = data.whatsapp ? normalizeWhatsAppNumber(data.whatsapp) : '';
@@ -127,25 +141,48 @@ export default function Footer({ setView }: FooterProps) {
     fetch(`/api/social-media-links?_t=${Date.now()}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
+        if (!isMounted) return;
         if (data && Array.isArray(data.socialMediaLinks)) {
           setSocialLinks(data.socialMediaLinks);
           try {
             localStorage.setItem('easydesk_cache_social_links', JSON.stringify(data.socialMediaLinks));
           } catch {}
         }
+        setSocialLoading(false);
       })
-      .catch(() => {});
+      .catch((err) => {
+        if (!isMounted) return;
+        console.warn('[Footer] Social media hydration notice:', err);
+        setSocialLoading(false);
+      });
 
     const onSocialUpdated = (e: any) => {
       if (e.detail && Array.isArray(e.detail)) {
         setSocialLinks(e.detail);
+        setSocialLoading(false);
       }
     };
     window.addEventListener('easydesk_social_links_updated', onSocialUpdated);
 
+    // Cross-tab synchronization via storage event
+    const onStorageChange = (e: StorageEvent) => {
+      if ((e.key === 'easydesk_cache_social_links' || e.key === 'easydesk_cache_social') && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            setSocialLinks(parsed);
+            setSocialLoading(false);
+          }
+        } catch {}
+      }
+    };
+    window.addEventListener('storage', onStorageChange);
+
     return () => {
+      isMounted = false;
       unsubscribe();
       window.removeEventListener('easydesk_social_links_updated', onSocialUpdated);
+      window.removeEventListener('storage', onStorageChange);
     };
   }, []);
 
@@ -177,7 +214,7 @@ export default function Footer({ setView }: FooterProps) {
                 <Shield className="w-4 h-4 text-[#0F4C81]" />
               </div>
               <div>
-                <span className="text-xl font-black text-white tracking-tight leading-none block">EasyDesk</span>
+                <span className="text-xl font-black text-white tracking-tight leading-none block notranslate" translate="no">EasyDesk</span>
                 <span className="block text-[9px] text-cyan-300 font-extrabold tracking-wider uppercase mt-0.5">Digital Service Portal</span>
               </div>
             </div>
@@ -268,7 +305,7 @@ export default function Footer({ setView }: FooterProps) {
 
             {/* Quick Contact snippet if configured */}
             {(contact.phone || contact.email) && (
-              <div className="pt-2 border-t border-slate-800 space-y-1.5 text-[11px] text-slate-400">
+              <div className="pt-2 border-t border-slate-800 space-y-1.5 text-[11px] text-slate-400 notranslate" translate="no">
                 {contact.phone && (
                   <div className="flex items-center gap-1.5">
                     <Phone className="w-3 h-3 text-slate-400" />
@@ -287,8 +324,20 @@ export default function Footer({ setView }: FooterProps) {
 
         </div>
 
-        {/* Social Media Strip if configured */}
-        {activeSocialLinks.length > 0 && (
+        {/* Social Media Strip: Skeleton while loading server data */}
+        {socialLoading && (
+          <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4" aria-busy="true" data-testid="social-skeleton">
+            <div className="h-4 w-28 bg-white/10 rounded animate-pulse" />
+            <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2">
+              <div className="h-7 w-20 bg-white/5 rounded-xl animate-pulse" />
+              <div className="h-7 w-24 bg-white/5 rounded-xl animate-pulse" />
+              <div className="h-7 w-20 bg-white/5 rounded-xl animate-pulse" />
+            </div>
+          </div>
+        )}
+
+        {/* Social Media Strip: Render when loaded and configured */}
+        {!socialLoading && activeSocialLinks.length > 0 && (
           <div className="mt-10 pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="text-xs font-bold text-slate-300">
               <span className="text-cyan-300 uppercase tracking-wider text-[11px]">Official Channels:</span>
@@ -301,7 +350,8 @@ export default function Footer({ setView }: FooterProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`EasyDesk on ${getPlatformTitle(item.platform)}`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 hover:text-white transition cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 hover:text-white transition cursor-pointer notranslate"
+                  translate="no"
                 >
                   <span className="shrink-0">{renderSocialIcon(item.platform)}</span>
                   <span>{getPlatformTitle(item.platform)}</span>
@@ -313,7 +363,7 @@ export default function Footer({ setView }: FooterProps) {
 
         {/* Bottom Legal Copyright */}
         <div className="mt-10 pt-6 border-t border-slate-800 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-slate-400">
-          <p className="m-0">© 2026 EasyDesk Solutions Private Limited. All rights reserved.</p>
+          <p className="m-0">© 2026 <span className="notranslate" translate="no">EasyDesk Solutions Private Limited</span>. All rights reserved.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <button onClick={() => setView('privacy-security')} className="hover:text-white transition cursor-pointer">Privacy Policy</button>
             <button onClick={() => setView('about')} className="hover:text-white transition cursor-pointer">Terms & Conditions</button>

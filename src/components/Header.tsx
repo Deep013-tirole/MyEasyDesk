@@ -55,36 +55,37 @@ export default function Header({
   const navLinks = [
     { id: 'home', label: t('nav.home', 'Home'), action: () => setView('home') },
     { id: 'services', label: t('nav.services', 'Services'), action: () => setView('services') },
-    { id: 'track', label: t('nav.track', 'Track Application'), action: () => setView('track') },
-    { id: 'blogs', label: t('nav.blogs', 'Knowledge Hub'), action: () => setView('blogs') },
-    { id: 'about', label: t('nav.about', 'About Us'), action: () => setView('about') },
-    { id: 'contact', label: t('nav.contact', 'Contact'), action: () => setView('contact') },
+    { id: 'blogs', label: t('nav.blogs', 'Blogs'), action: () => setView('blogs') },
+    { id: 'track', label: t('nav.track', 'Track'), action: () => setView('track') },
     { id: 'payment', label: t('nav.payment', 'Payment'), action: () => setView('payment') },
+    { id: 'about', label: t('nav.about', 'About'), action: () => setView('about') },
+    { id: 'contact', label: t('nav.contact', 'Contact'), action: () => setView('contact') },
     { id: 'privacy-security', label: t('nav.privacy', 'Privacy & Security'), action: () => setView('privacy-security') },
   ];
 
   return (
     <header id="easydesk-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 font-sans text-slate-900 w-full max-w-full">
       <div className="portal-container w-full max-w-full">
-        <div className="flex justify-between items-center h-16 w-full min-w-0 gap-3">
+        <div className="flex justify-between items-center h-16 w-full min-w-0 gap-2 sm:gap-3">
 
           {/* Brand Logo */}
           <div
-            className="flex items-center gap-2.5 cursor-pointer shrink-0 focus-civic rounded-xl p-1"
+            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer shrink-0 focus-civic rounded-xl p-1 notranslate"
+            translate="no"
             onClick={() => setView('home')}
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && setView('home')}
             aria-label="EasyDesk Home"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-[#0F4C81] to-[#0A2540] rounded-xl flex items-center justify-center shadow-xs text-white">
+            <div className="w-8 h-8 bg-gradient-to-br from-[#0F4C81] to-[#0A2540] rounded-xl flex items-center justify-center shadow-xs text-white shrink-0">
               <Shield className="w-4 h-4 text-cyan-300" />
             </div>
             <div>
-              <span className="text-xl font-black tracking-tight text-[#0F4C81] leading-none block">
+              <span className="text-lg sm:text-xl font-black tracking-tight text-[#0F4C81] leading-none block notranslate" translate="no">
                 EasyDesk
               </span>
-              <span className="block text-[9px] text-slate-500 font-extrabold tracking-wider uppercase mt-0.5">
+              <span className="hidden sm:block text-[9px] text-slate-500 font-extrabold tracking-wider uppercase mt-0.5">
                 {t('nav.portalSubtitle', 'Digital Service Portal')}
               </span>
             </div>
@@ -134,14 +135,15 @@ export default function Header({
           </nav>
 
           {/* Right Action Bar */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Spotlight Search Trigger */}
             <button
               type="button"
+              id="btn-header-search"
               onClick={handleTriggerSearch}
-              className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs transition cursor-pointer focus-civic"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs transition cursor-pointer focus-civic"
               title="Search services and guides (Ctrl + K)"
-              aria-label="Search services and guides"
+              aria-label="Search"
             >
               <Search className="w-3.5 h-3.5 text-slate-400" />
               <span className="hidden lg:inline text-[11px] font-medium text-slate-600">Search</span>
@@ -151,10 +153,10 @@ export default function Header({
             {/* Language Switcher Dropdown */}
             <LanguageSwitcher />
 
-            {/* WhatsApp Quick Desk CTA */}
+            {/* WhatsApp Quick Desk CTA - visible on desktop xl+ */}
             <button
               onClick={() => openGeneralWhatsApp('Hello EasyDesk, I would like to inquire about digital document services.')}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-xs active:scale-95 btn-glow-emerald"
+              className="hidden xl:inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-xs active:scale-95 btn-glow-emerald"
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>{t('nav.orderWhatsApp', 'WhatsApp Desk')}</span>
@@ -172,8 +174,10 @@ export default function Header({
               </button>
             )}
 
-            {/* Mobile Hamburger Toggle (for extra links: about, contact, payment, privacy) */}
+            {/* Mobile Hamburger Toggle */}
             <button
+              type="button"
+              id="btn-mobile-hamburger"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="xl:hidden p-2 text-slate-700 hover:text-slate-950 rounded-xl hover:bg-slate-100 transition cursor-pointer focus-civic"
               aria-label="Toggle navigation menu"

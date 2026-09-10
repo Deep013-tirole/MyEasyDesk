@@ -6,7 +6,7 @@ import {
   ArrowUpDown, SlidersHorizontal, FileText, Bot
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { Blog, BlogCategory } from '../types.js';
+import { Blog, BlogCategory, Service } from '../types.js';
 import { useScrollToTopOnChange } from '../lib/scrollUtils.js';
 import { openGeneralWhatsApp } from '../lib/whatsapp.js';
 import BlogCard from './blog/BlogCard.js';
@@ -24,6 +24,8 @@ interface BlogsViewProps {
   selectedBlogId?: string | null;
   onSelectBlogId?: (id: string | null) => void;
   onCloseBlog?: () => void;
+  services?: Service[];
+  onSelectService?: (serviceId: string) => void;
 }
 
 export default function BlogsView({
@@ -32,7 +34,9 @@ export default function BlogsView({
   updateBlogs,
   selectedBlogId,
   onSelectBlogId,
-  onCloseBlog
+  onCloseBlog,
+  services = [],
+  onSelectService
 }: BlogsViewProps) {
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(() => {
     if (!selectedBlogId) return null;
@@ -203,6 +207,8 @@ export default function BlogsView({
         }}
         onSelectBlog={handleSelectBlog}
         updateBlogs={updateBlogs}
+        services={services}
+        onSelectService={onSelectService}
       />
     );
   }

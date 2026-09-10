@@ -1,4 +1,26 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  SupportedLanguage,
+  APPROVED_LOCALIZED_NAMES,
+  APPROVED_GEOGRAPHIC_NAMES,
+  APPROVED_GOVERNMENT_TERMS,
+  localizePersonName,
+  localizeBrandName,
+  localizePlaceName,
+  localizeGovTerm,
+  APPROVED_ORDER_STATUSES,
+  APPROVED_TIMELINE_STEPS,
+  localizeOrderStatus,
+  localizeTimelineStep,
+  normalizeIndicDigits,
+  PROTECTED_BRAND_NAME,
+  PROTECTED_CORPORATE_NAME,
+  PROTECTED_COMMERCIAL_NAME,
+  PROTECTED_PORTAL_NAME,
+  isProtectedIdentifier,
+  sanitizeProtectedNamesInText,
+  FORBIDDEN_TRANSLITERATION_PATTERNS
+} from '../lib/nameLocalization.js';
 
 export type LanguageCode = 'en' | 'hi' | 'mr' | 'gu';
 
@@ -32,7 +54,9 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'nav.orderWhatsApp': 'Order on WhatsApp',
     'nav.selectLanguage': 'Select Language',
     'nav.language': 'Language',
-    'nav.trackOrder': 'Track Order',
+    'nav.track': 'Track',
+    'nav.trackOrder': 'Track',
+    'nav.desk': 'Desk',
     
     'common.allServices': 'All Services',
     'common.searchPlaceholder': 'Search services, certificates, licenses...',
@@ -49,7 +73,22 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'common.needHelp': 'Need Help with Documents?',
     'common.chatWithUs': 'Chat with Us',
     'common.secureVerified': '100% Secure & Verified',
-    'common.isoCertified': 'ISO 27001 Certified Security'
+    'common.isoCertified': 'ISO 27001 Certified Security',
+    'common.phone': 'Phone',
+    'common.email': 'Email',
+    'common.address': 'Address',
+    'common.back': 'Back',
+    'common.submit': 'Submit',
+    'common.close': 'Close',
+    'common.loading': 'Loading...',
+    'common.search': 'Search',
+    'common.founder': 'Founder & CEO',
+    'common.verifiedClient': 'Verified Client',
+
+    'category.government': 'Government Services',
+    'category.certificates': 'Certificates & Domicile',
+    'category.financial': 'Tax & Financial Services',
+    'category.business': 'Business & MSME Services'
   },
   hi: {
     'nav.portalSubtitle': 'डिजिटल सेवा पोर्टल',
@@ -57,7 +96,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'nav.services': 'सेवाएं',
     'nav.blogs': 'ब्लॉग',
     'nav.about': 'हमारे बारे में',
-    'nav.contact': 'संपर्क करें',
+    'nav.contact': 'संपर्क',
     'nav.payment': 'भुगतान',
     'nav.privacy': 'गोपनीयता और सुरक्षा',
     'nav.admin': 'एडमिन पैनल',
@@ -66,7 +105,9 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'nav.orderWhatsApp': 'व्हाट्सएप पर ऑर्डर करें',
     'nav.selectLanguage': 'भाषा चुनें',
     'nav.language': 'भाषा',
-    'nav.trackOrder': 'ऑर्डर ट्रैक करें',
+    'nav.track': 'ट्रैक',
+    'nav.trackOrder': 'ट्रैक',
+    'nav.desk': 'डेस्क',
 
     'common.allServices': 'सभी सेवाएं',
     'common.searchPlaceholder': 'सेवाएं, प्रमाण पत्र, लाइसेंस खोजें...',
@@ -83,7 +124,22 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'common.needHelp': 'दस्तावेजों में सहायता चाहिए?',
     'common.chatWithUs': 'हमसे बात करें',
     'common.secureVerified': '100% सुरक्षित एवं प्रमाणित',
-    'common.isoCertified': 'ISO 27001 प्रमाणित सुरक्षा'
+    'common.isoCertified': 'ISO 27001 प्रमाणित सुरक्षा',
+    'common.phone': 'फ़ोन',
+    'common.email': 'ईमेल',
+    'common.address': 'पता',
+    'common.back': 'वापस',
+    'common.submit': 'जमा करें',
+    'common.close': 'बंद करें',
+    'common.loading': 'लोड हो रहा है...',
+    'common.search': 'खोजें',
+    'common.founder': 'संस्थापक एवं सीईओ',
+    'common.verifiedClient': 'सत्यापित ग्राहक',
+
+    'category.government': 'सरकारी सेवाएं',
+    'category.certificates': 'प्रमाण पत्र एवं अधिवास',
+    'category.financial': 'कर एवं वित्तीय सेवाएं',
+    'category.business': 'व्यापार एवं एमएसएमई सेवाएं'
   },
   mr: {
     'nav.portalSubtitle': 'डिजिटल सेवा पोर्टल',
@@ -100,7 +156,9 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'nav.orderWhatsApp': 'व्हॉट्सअॅपवर ऑर्डर करा',
     'nav.selectLanguage': 'भाषा निवडा',
     'nav.language': 'भाषा',
-    'nav.trackOrder': 'अर्ज तपासा',
+    'nav.track': 'तपासा',
+    'nav.trackOrder': 'तपासा',
+    'nav.desk': 'डेस्क',
 
     'common.allServices': 'सर्व सेवा',
     'common.searchPlaceholder': 'सेवा, प्रमाणपत्रे, परवाने शोधा...',
@@ -117,7 +175,22 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'common.needHelp': 'कागदपत्रांसाठी मदत हवी आहे?',
     'common.chatWithUs': 'आमच्याशी संपर्क साधा',
     'common.secureVerified': '१००% सुरक्षित आणि प्रमाणित',
-    'common.isoCertified': 'ISO 27001 प्रमाणित सुरक्षा'
+    'common.isoCertified': 'ISO 27001 प्रमाणित सुरक्षा',
+    'common.phone': 'फोन',
+    'common.email': 'ईमेल',
+    'common.address': 'पत्ता',
+    'common.back': 'मागे',
+    'common.submit': 'सबमिट करा',
+    'common.close': 'बंद करा',
+    'common.loading': 'लोड होत आहे...',
+    'common.search': 'शोधा',
+    'common.founder': 'संस्थापक आणि मुख्य कार्यकारी अधिकारी',
+    'common.verifiedClient': 'सत्यापित ग्राहक',
+
+    'category.government': 'सरकारी सेवा',
+    'category.certificates': 'प्रमाणपत्रे आणि अधिवास',
+    'category.financial': 'कर आणि आर्थिक सेवा',
+    'category.business': 'व्यवसाय आणि एमएसएमई सेवा'
   },
   gu: {
     'nav.portalSubtitle': 'ડિજિટલ સેવા પોર્ટલ',
@@ -125,7 +198,7 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'nav.services': 'સેવાઓ',
     'nav.blogs': 'બ્લોગ્સ',
     'nav.about': 'અમારા વિશે',
-    'nav.contact': 'સંપર્ક કરો',
+    'nav.contact': 'સંપર્ક',
     'nav.payment': 'ચુકવણી',
     'nav.privacy': 'ગોપનીયતા અને સુરક્ષા',
     'nav.admin': 'એડમિન પેનલ',
@@ -134,7 +207,9 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'nav.orderWhatsApp': 'વોટ્સએપ પર ઓર્ડર કરો',
     'nav.selectLanguage': 'ભાષા પસંદ કરો',
     'nav.language': 'ભાષા',
-    'nav.trackOrder': 'ઓર્ડર ટ્રેક કરો',
+    'nav.track': 'ટ્રેક',
+    'nav.trackOrder': 'ટ્રેક',
+    'nav.desk': 'ડેસ્ક',
 
     'common.allServices': 'બધી સેવાઓ',
     'common.searchPlaceholder': 'સેવાઓ, પ્રમાણપત્રો, લાઇસન્સ શોધો...',
@@ -151,7 +226,22 @@ export const TRANSLATIONS: Record<LanguageCode, Record<string, string>> = {
     'common.needHelp': 'દસ્તાવેજોમાં મદદ જોઈએ છે?',
     'common.chatWithUs': 'અમારી સાથે વાત કરો',
     'common.secureVerified': '100% સુરક્ષિત અને ચકાસાયેલ',
-    'common.isoCertified': 'ISO 27001 પ્રમાણિત સુરક્ષા'
+    'common.isoCertified': 'ISO 27001 પ્રમાણિત સુરક્ષા',
+    'common.phone': 'ફોન',
+    'common.email': 'ઇમેઇલ',
+    'common.address': 'સરનામું',
+    'common.back': 'પાછા',
+    'common.submit': 'સબમિટ કરો',
+    'common.close': 'બંધ કરો',
+    'common.loading': 'લોડ થઈ રહ્યું છે...',
+    'common.search': 'શોધો',
+    'common.founder': 'સ્થાપક અને સીઇઓ',
+    'common.verifiedClient': 'ચકાસાયેલ ગ્રાહક',
+
+    'category.government': 'સરકારી સેવાઓ',
+    'category.certificates': 'પ્રમાણપત્રો અને રહેઠાણ',
+    'category.financial': 'કર અને નાણાકીય સેવાઓ',
+    'category.business': 'વ્યવસાય અને એમએસએમઇ સેવાઓ'
   }
 };
 
@@ -166,6 +256,15 @@ interface LanguageContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
   t: (key: string, fallback?: string) => string;
+  localizeName: (
+    canonicalName: string | null | undefined,
+    customMap?: Partial<Record<LanguageCode, string>> | null
+  ) => string;
+  localizePlace: (canonicalPlace: string | null | undefined) => string;
+  localizeGov: (canonicalTerm: string | null | undefined) => string;
+  localizeBrand: (canonicalBrand?: string | null | undefined) => string;
+  localizeStatus: (canonicalStatus?: string | null | undefined) => string;
+  localizeStep: (canonicalStep?: string | null | undefined) => string;
   languages: LanguageOption[];
   currentLanguageOption: LanguageOption;
 }
@@ -181,15 +280,15 @@ function triggerGoogleTranslate(lang: LanguageCode) {
     
     if (lang === 'en') {
       // Clear translation cookie for English
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=${host}; path=/;`;
-      document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=.${host}; path=/;`;
-      document.cookie = `googtrans=/en/en; path=/;`;
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=' + host + '; path=/;';
+      document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=.' + host + '; path=/;';
+      document.cookie = 'googtrans=/en/en; path=/;';
     } else {
-      const cookieVal = `/en/${lang}`;
-      document.cookie = `googtrans=${cookieVal}; path=/;`;
-      document.cookie = `googtrans=${cookieVal}; domain=${host}; path=/;`;
-      document.cookie = `googtrans=${cookieVal}; domain=.${host}; path=/;`;
+      const cookieVal = '/en/' + lang;
+      document.cookie = 'googtrans=' + cookieVal + '; path=/;';
+      document.cookie = 'googtrans=' + cookieVal + '; domain=' + host + '; path=/;';
+      document.cookie = 'googtrans=' + cookieVal + '; domain=.' + host + '; path=/;';
     }
 
     // Try finding the Google Translate combo box if rendered
@@ -273,7 +372,127 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Safe DOM post-processor to prevent machine-translation corruption:
+  // 1. Inputs/forms must NEVER be translated (avoids form pollution into DB)
+  // 2. Protected brand 'EasyDesk' (never ईज़ीडेस्क or Easy Desk)
+  // 3. Founder name: strictly 'दीप तिरोले' in Hindi (never दीप तिरोल or डीप टिरोले)
+  // 4. Sensitive statutory codes and IDs (ORD-, TRK-, GSTIN, PAN, IFSC, etc.)
+  // 5. Corporate entity & street names
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof MutationObserver === 'undefined') return;
+
+    let timeoutId: any = null;
+
+    const sanitizeDOM = () => {
+      try {
+        // Step A: Protect all form controls to prevent client-side translation pollution into canonical data
+        const formInputs = document.querySelectorAll('input, textarea, select');
+        formInputs.forEach((el) => {
+          if (!el.classList.contains('notranslate')) {
+            el.classList.add('notranslate');
+            el.setAttribute('translate', 'no');
+          }
+        });
+
+        // Step B: Walk text nodes to sanitize proper names, brands, and statutory tokens
+        const walker = document.createTreeWalker(
+          document.body,
+          NodeFilter.SHOW_TEXT,
+          null
+        );
+
+        let node: Text | null = walker.nextNode() as Text;
+        while (node) {
+          const currentText = node.nodeValue;
+          if (currentText) {
+            let updatedText = currentText;
+
+            // Brand protection: EasyDesk must remain EasyDesk in every language
+            if (/ईज़ीडेस्क|ईज़ी\s*डेस्क|इजी\s*डेस्क|इजीडेस्क/i.test(updatedText)) {
+              updatedText = updatedText.replace(/ईज़ीडेस्क|ईज़ी\s*डेस्क|इजी\s*डेस्क|इजीडेस्क/gi, 'EasyDesk');
+            }
+
+            // Legal corporate identity
+            if (/ईज़ीडेस्क\s*सॉल्यूशंस\s*प्राइवेट\s*लिमिटेड|सरल\s*डेस्क\s*समाधान\s*निजी\s*सीमित/gi.test(updatedText)) {
+              updatedText = updatedText.replace(/ईज़ीडेस्क\s*सॉल्यूशंस\s*प्राइवेट\s*लिमिटेड|सरल\s*डेस्क\s*समाधान\s*निजी\s*सीमित/gi, 'EasyDesk Solutions Private Limited');
+            }
+
+            // Address preservation: Civil Lines / Court Road
+            if (/नागरिक\s*रेखाएं/gi.test(updatedText)) {
+              updatedText = updatedText.replace(/नागरिक\s*रेखाएं/gi, 'Civil Lines');
+            }
+            if (/न्यायालय\s*सड़क/gi.test(updatedText)) {
+              updatedText = updatedText.replace(/न्यायालय\s*सड़क/gi, 'Court Road');
+            }
+
+            // Founder protection: In Hindi it MUST be दीप तिरोले; never दीप तिरोल or डीप टिरोले
+            if (language === 'hi') {
+              if (/दीप\s*तिरोल(?!े)|डीप\s*टिरोले|दीप\s*तिरोले́|गहरा\s*तिरोल/.test(updatedText)) {
+                updatedText = updatedText
+                  .replace(/दीप\s*तिरोल(?!े)/g, 'दीप तिरोले')
+                  .replace(/डीप\s*टिरोले/g, 'दीप तिरोले')
+                  .replace(/दीप\s*तिरोले́/g, 'दीप तिरोले')
+                  .replace(/गहरा\s*तिरोल/g, 'दीप तिरोले');
+              }
+            } else {
+              // In English / Marathi / Gujarati: preserve Deep Tirole if corrupted
+              if (/दीप\s*तिरोल(?!े)|डीप\s*टिरोले|दीप\s*तिरोले́|गहरा\s*तिरोल/.test(updatedText)) {
+                updatedText = updatedText.replace(
+                  /दीप\s*तिरोल(?!े)|डीप\s*टिरोले|दीप\s*तिरोले́|गहरा\s*तिरोल/g,
+                  'Deep Tirole'
+                );
+              }
+            }
+
+            // Category D: Check if the text matches a statutory identifier or currency
+            if (isProtectedIdentifier(currentText)) {
+              const parent = node.parentElement;
+              if (parent && !parent.classList.contains('notranslate')) {
+                parent.classList.add('notranslate');
+                parent.setAttribute('translate', 'no');
+              }
+            }
+
+            if (updatedText !== currentText) {
+              node.nodeValue = updatedText;
+              const parent = node.parentElement;
+              if (parent && !parent.classList.contains('notranslate')) {
+                parent.classList.add('notranslate');
+                parent.setAttribute('translate', 'no');
+              }
+            }
+          }
+          node = walker.nextNode() as Text;
+        }
+      } catch (err) {
+        // Defensive: ignore DOM inspection errors
+      }
+    };
+
+    const observer = new MutationObserver(() => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(sanitizeDOM, 50);
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+
+    // Run initial sanitize pass
+    sanitizeDOM();
+
+    return () => {
+      clearTimeout(timeoutId);
+      observer.disconnect();
+    };
+  }, [language]);
+
   const setLanguage = (lang: LanguageCode) => {
+    // Presentation-layer state change ONLY.
+    // Switching language NEVER rewrites database values, db_store.json, or server state.
+    // Changing language NEVER changes the current route/URL.
     setLanguageState(lang);
     try {
       localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
@@ -306,6 +525,33 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     return fallback || key;
   };
 
+  const localizeName = (
+    canonicalName: string | null | undefined,
+    customMap?: Partial<Record<LanguageCode, string>> | null
+  ): string => {
+    return localizePersonName(canonicalName, language, customMap);
+  };
+
+  const localizePlace = (canonicalPlace: string | null | undefined): string => {
+    return localizePlaceName(canonicalPlace, language);
+  };
+
+  const localizeGov = (canonicalTerm: string | null | undefined): string => {
+    return localizeGovTerm(canonicalTerm, language);
+  };
+
+  const localizeBrand = (canonicalBrand?: string | null | undefined): string => {
+    return localizeBrandName(canonicalBrand || PROTECTED_BRAND_NAME, language);
+  };
+
+  const localizeStatus = (canonicalStatus?: string | null | undefined): string => {
+    return localizeOrderStatus(canonicalStatus, language);
+  };
+
+  const localizeStep = (canonicalStep?: string | null | undefined): string => {
+    return localizeTimelineStep(canonicalStep, language);
+  };
+
   const currentLanguageOption = 
     SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
 
@@ -315,6 +561,12 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
         language, 
         setLanguage, 
         t, 
+        localizeName,
+        localizePlace,
+        localizeGov,
+        localizeBrand,
+        localizeStatus,
+        localizeStep,
         languages: SUPPORTED_LANGUAGES,
         currentLanguageOption 
       }}
@@ -331,3 +583,25 @@ export function useLanguage(): LanguageContextType {
   }
   return context;
 }
+
+export {
+  APPROVED_LOCALIZED_NAMES,
+  APPROVED_GEOGRAPHIC_NAMES,
+  APPROVED_GOVERNMENT_TERMS,
+  APPROVED_ORDER_STATUSES,
+  APPROVED_TIMELINE_STEPS,
+  localizePersonName,
+  localizeBrandName,
+  localizePlaceName,
+  localizeGovTerm,
+  localizeOrderStatus,
+  localizeTimelineStep,
+  normalizeIndicDigits,
+  PROTECTED_BRAND_NAME,
+  PROTECTED_CORPORATE_NAME,
+  PROTECTED_COMMERCIAL_NAME,
+  PROTECTED_PORTAL_NAME,
+  isProtectedIdentifier,
+  sanitizeProtectedNamesInText,
+  FORBIDDEN_TRANSLITERATION_PATTERNS
+};

@@ -13,6 +13,8 @@ import { safeParseJsonResponse } from '../lib/apiClient.js';
 import { getClientAboutUs } from '../lib/apiDataService.js';
 import Breadcrumbs from './ui/Breadcrumbs.js';
 import TrustBadge from './ui/TrustBadge.js';
+import { useLanguage } from '../context/LanguageContext.js';
+import { localizePersonName, localizePlaceName } from '../lib/nameLocalization.js';
 
 interface AboutUsData {
   aboutText: string;
@@ -41,6 +43,7 @@ interface AboutUsData {
 
 interface FounderData {
   name: string;
+  localizedNames?: Record<string, string>;
   designation: string;
   photoUrl: string;
   shortBio: string;
@@ -101,12 +104,18 @@ const DEFAULT_SERVICE_AREAS = [
 
 const DEFAULT_FOUNDER: FounderData = {
   name: '',
+  localizedNames: {
+    en: '',
+    hi: '',
+    mr: '',
+    gu: ''
+  },
   designation: 'Founder & Managing Director',
   photoUrl: '',
-  shortBio: '',
-  detailedBio: '',
-  founderMessage: '',
-  email: '',
+  shortBio: 'Pioneer in digital governance and paperless document verification in India.',
+  detailedBio: 'Deep Tirole brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, EasyDesk has expanded into a nationwide technology-driven service portal servicing citizens across India with guaranteed transparency.',
+  founderMessage: 'Our mission with EasyDesk was born out of a simple observation: citizens should not have to sacrifice productive workdays waiting in physical government office lines when technology can verify and file documents with precision and speed.',
+  email: 'help.myeasydesks@gmail.com',
   signatureUrl: '',
   socialLinks: {}
 };
@@ -137,6 +146,7 @@ const DEFAULT_ABOUT_DATA: AboutUsData = {
 };
 
 export default function AboutUsView({ setView }: { setView: (v: string) => void }) {
+  const { language } = useLanguage();
   const [aboutData, setAboutData] = useState<AboutUsData>(() => {
     try {
       const cached = localStorage.getItem('easydesk_cache_about_us');
@@ -257,6 +267,8 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
   const whyChooseUs = (aboutData?.whyChooseUs && aboutData.whyChooseUs.length > 0) 
     ? aboutData.whyChooseUs 
     : DEFAULT_WHY_CHOOSE;
+
+  const localizedFounderName = localizePersonName(founder?.name || 'Deep Tirole', language, founder?.localizedNames);
 
   const howItWorks = (aboutData?.howItWorks && aboutData.howItWorks.length > 0) 
     ? aboutData.howItWorks 
@@ -486,7 +498,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                     <div className="w-48 h-48 sm:w-52 sm:h-52 mx-auto rounded-3xl overflow-hidden border-4 border-blue-50 shadow-md group-hover:border-[#0F4C81] transition-all duration-300">
                       <img 
                         src={founder.photoUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400'} 
-                        alt={founder.name} 
+                        alt={localizedFounderName}
                         loading="lazy"
                         decoding="async"
                         referrerPolicy="no-referrer"
@@ -503,7 +515,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-black text-slate-900">{founder.name}</h3>
+                    <h3 className="text-xl font-black text-slate-900 notranslate" translate="no">{localizedFounderName}</h3>
                     <p className="text-xs font-bold text-[#0F4C81]">{founder.designation}</p>
                     {founder.shortBio && (
                       <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto italic">
@@ -554,7 +566,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
 
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
                     {founder.detailedBio || 
-                      'Deepak brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, EasyDesk has expanded from a regional assistance counter into a nationwide technology-driven service portal servicing thousands of citizens every month with guaranteed transparency.'}
+                      `${localizedFounderName} brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, EasyDesk has expanded from a regional assistance counter into a nationwide technology-driven service portal servicing thousands of citizens every month with guaranteed transparency.`}
                   </p>
 
                   {/* Official Signature */}
@@ -562,11 +574,11 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                     <div className="pt-2 border-t border-slate-100 flex items-center justify-between">
                       <div className="space-y-0.5">
                         <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider block">Authorized Signatory</span>
-                        <span className="text-xs font-bold text-slate-700">{founder.name}</span>
+                        <span className="text-xs font-bold text-slate-700 notranslate" translate="no">{localizedFounderName}</span>
                       </div>
                       <img 
                         src={founder.signatureUrl} 
-                        alt={`${founder.name}'s Signature`} 
+                        alt={`${localizedFounderName}'s Signature`}
                         loading="lazy"
                         decoding="async"
                         referrerPolicy="no-referrer"
@@ -859,7 +871,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
                 className="hover-lift-sm bg-slate-50 hover:bg-blue-50/80 border border-slate-200/80 hover:border-blue-300 text-slate-700 hover:text-[#0F4C81] px-4 py-2 rounded-2xl text-xs font-bold flex items-center gap-2 cursor-default transition-all duration-200"
               >
                 <MapPin className="w-3.5 h-3.5 text-[#0F4C81]" />
-                <span>{area}</span>
+                <span>{localizePlaceName(area, language)}</span>
               </motion.div>
             ))}
             {filteredAreas.length === 0 && (

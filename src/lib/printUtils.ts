@@ -83,7 +83,7 @@ export function printElement(element: HTMLElement | null, documentTitle: string 
         doc.open();
         doc.write(`
           <!DOCTYPE html>
-          <html lang="en">
+          <html lang="en" translate="no" class="notranslate">
             <head>
               <meta charset="UTF-8">
               <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -102,7 +102,7 @@ export function printElement(element: HTMLElement | null, documentTitle: string 
                   margin: 0 !important;
                   padding: 16px !important;
                 }
-                .no-print, .print\\:hidden, nav, header, footer, button, input {
+                .no-print, .print\:hidden, nav, header, footer, button, input {
                   display: none !important;
                 }
                 .print-only {
@@ -110,8 +110,8 @@ export function printElement(element: HTMLElement | null, documentTitle: string 
                 }
               </style>
             </head>
-            <body>
-              <div class="easydesk-print-wrapper">
+            <body class="notranslate" translate="no">
+              <div class="easydesk-print-wrapper notranslate" translate="no">
                 ${element.innerHTML}
               </div>
             </body>

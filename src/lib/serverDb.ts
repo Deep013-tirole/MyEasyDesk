@@ -22,5 +22,8 @@ export {
   getR2File,
   deleteR2File,
   setCloudflareEnv,
-  getCloudflareEnv
+  getCloudflareEnv,
+  allocateNextSequenceInD1,
+  initEntitySequencesInD1,
+  getEntitySequencesFromD1
 } from './d1Storage.js';
