@@ -1239,7 +1239,14 @@ export async function saveRelationalMirror(
         whatsAppSentAt: d.whatsAppSentAt || null,
         whatsAppDeliveryNotes: d.whatsAppDeliveryNotes || null,
         feedback: d.feedback || null,
-        submittedReview: d.submittedReview || null
+        submittedReview: d.submittedReview || null,
+        govFees: typeof d.govFees === 'number' ? d.govFees : (typeof d.gov_fees === 'number' ? d.gov_fees : 0),
+        serviceCharge: typeof d.serviceCharge === 'number' ? d.serviceCharge : (typeof d.service_charge === 'number' ? d.service_charge : 0),
+        processingFee: typeof d.processingFee === 'number' ? d.processingFee : 0,
+        discount: typeof d.discount === 'number' ? d.discount : 0,
+        couponCode: d.couponCode || null,
+        amountPaid: typeof d.amountPaid === 'number' ? d.amountPaid : 0,
+        amountDue: typeof d.amountDue === 'number' ? d.amountDue : 0
       });
       const createdAt = typeof d.createdAt === 'number' ? d.createdAt : (d.createdAt ? Date.parse(d.createdAt) || now : now);
       const updatedAt = typeof d.updatedAt === 'number' ? d.updatedAt : (d.updatedAt ? Date.parse(d.updatedAt) || now : now);

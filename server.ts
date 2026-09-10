@@ -2756,7 +2756,81 @@ function normalizeDatabaseRelationships(options?: { allowReseed?: boolean }) {
   // 6. Initialize & normalize sequential ID counters
   initEntitySequences(dbState);
 
+  // 7. Permanently lock historical order charges
+  if (Array.isArray(dbState.orders)) {
+    for (const order of dbState.orders) {
+      if (order) ensureOrderPricingLocked(order, dbState.services);
+    }
+  }
+
   console.log('[DATA SYNC] Relationship normalization and repair complete.');
+}
+
+/**
+ * Permanently locks and preserves an order's historical fee structure.
+ * Once created or normalized, changes to Service Master catalog prices will NEVER mutate existing orders.
+ */
+export function ensureOrderPricingLocked(order: any, services?: any[]): any {
+  if (!order || typeof order !== 'object') return order;
+
+  // 1. If govFees and serviceCharge are already explicitly set as numbers, they are permanently locked.
+  if (typeof order.govFees === 'number' && typeof order.serviceCharge === 'number') {
+    if (order.processingFee === undefined || typeof order.processingFee !== 'number') order.processingFee = 0;
+    if (order.discount === undefined || typeof order.discount !== 'number') order.discount = 0;
+    
+    if (typeof order.totalAmount !== 'number' || isNaN(order.totalAmount)) {
+      order.totalAmount = Math.max(0, order.govFees + order.serviceCharge + order.processingFee - order.discount);
+    }
+
+    const isPaid = order.paymentStatus === 'Verified' || order.paymentStatus === 'Paid';
+    if (order.amountPaid === undefined || typeof order.amountPaid !== 'number') {
+      order.amountPaid = isPaid ? order.totalAmount : 0;
+    }
+    if (order.amountDue === undefined || typeof order.amountDue !== 'number') {
+      order.amountDue = Math.max(0, order.totalAmount - (order.amountPaid || 0));
+    }
+    return order;
+  }
+
+  // 2. Legacy fallback: lock charges from service catalog once, then preserve permanently
+  const svc = Array.isArray(services) ? services.find((s: any) => s && s.id === order.serviceId) : undefined;
+  const svcGov = typeof svc?.govFees === 'number' ? svc.govFees : 0;
+  const svcSvc = typeof svc?.serviceCharge === 'number' ? svc.serviceCharge : 0;
+  const processingFee = typeof order.processingFee === 'number' ? order.processingFee : 0;
+  const discount = typeof order.discount === 'number' ? order.discount : 0;
+
+  const total = typeof order.totalAmount === 'number'
+    ? order.totalAmount
+    : Math.max(0, svcGov + svcSvc + processingFee - discount);
+
+  if (typeof order.govFees !== 'number') {
+    if (svcGov + svcSvc === total) {
+      order.govFees = svcGov;
+      order.serviceCharge = svcSvc;
+    } else if (svcGov <= total) {
+      order.govFees = svcGov;
+      order.serviceCharge = Math.max(0, total - svcGov);
+    } else {
+      order.govFees = 0;
+      order.serviceCharge = total;
+    }
+  } else if (typeof order.serviceCharge !== 'number') {
+    order.serviceCharge = Math.max(0, total - (order.govFees || 0));
+  }
+
+  order.processingFee = processingFee;
+  order.discount = discount;
+  order.totalAmount = total;
+
+  const isPaid = order.paymentStatus === 'Verified' || order.paymentStatus === 'Paid';
+  if (order.amountPaid === undefined || typeof order.amountPaid !== 'number') {
+    order.amountPaid = isPaid ? order.totalAmount : 0;
+  }
+  if (order.amountDue === undefined || typeof order.amountDue !== 'number') {
+    order.amountDue = Math.max(0, order.totalAmount - (order.amountPaid || 0));
+  }
+
+  return order;
 }
 
 async function persistDatabase(collectionOrKey?: string, id?: string): Promise<void> {
@@ -4175,6 +4249,7 @@ app.get('/api/admin/orders', requirePermission(['orders.view', 'orders.view_assi
   const reqUser = (req as any).user;
   const perms = reqUser.permissions || [];
   const allOrders = await readCollectionWithFallback('orders', () => dbState.orders || []);
+  allOrders.forEach((o: any) => ensureOrderPricingLocked(o, dbState.services));
   
   if ((reqUser.role as string) === 'SUPER_ADMIN' || reqUser.role === UserRole.ADMIN || perms.includes('orders.view')) {
     return res.json(allOrders);
@@ -4193,6 +4268,7 @@ app.get('/api/admin/orders/assigned', requirePermission(['orders.view_assigned',
   const reqUser = (req as any).user;
   const perms = reqUser.permissions || [];
   const allOrders = await readCollectionWithFallback('orders', () => dbState.orders || []);
+  allOrders.forEach((o: any) => ensureOrderPricingLocked(o, dbState.services));
   
   if ((reqUser.role as string) === 'SUPER_ADMIN' || reqUser.role === UserRole.ADMIN || perms.includes('orders.view')) {
     return res.json(allOrders);
@@ -4299,6 +4375,8 @@ app.get('/api/orders', authenticateToken, (req, res) => {
   const userRole = reqUser?.role;
   const userId = reqUser?.id;
 
+  (dbState.orders || []).forEach(o => ensureOrderPricingLocked(o, dbState.services));
+
   if (userRole === UserRole.ADMIN || userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
     return res.json(dbState.orders);
   }
@@ -4395,7 +4473,11 @@ app.post('/api/orders', async (req, res) => {
     return res.status(404).json({ message: 'Service not found.' });
   }
 
-  let baseAmount = service.govFees + service.serviceCharge;
+  // Permanently lock historical fees from service master catalog
+  const lockedGovFees = Number(service.govFees || 0);
+  const lockedServiceCharge = Number(service.serviceCharge || 0);
+  const lockedProcessingFee = Number((service as any).processingFee || req.body.processingFee || 0);
+  let baseAmount = lockedGovFees + lockedServiceCharge + lockedProcessingFee;
   let discount = 0;
 
   if (couponCode) {
@@ -4460,7 +4542,14 @@ app.post('/api/orders', async (req, res) => {
     paymentDate: paymentDate || new Date().toISOString(),
     orderStatus: OrderStatus.PENDING,
     status: OrderStatus.PENDING,
+    govFees: lockedGovFees,
+    serviceCharge: lockedServiceCharge,
+    processingFee: lockedProcessingFee,
+    discount,
+    couponCode: couponCode ? String(couponCode) : undefined,
     totalAmount: finalAmount,
+    amountPaid: 0,
+    amountDue: finalAmount,
     createdAt: new Date().toISOString(),
     logs: [
       { 
@@ -4603,6 +4692,9 @@ app.get('/api/orders/track', async (req, res) => {
     return res.status(404).json({ message: 'No active order found matching your parameters.' });
   }
 
+  // Permanently lock and guarantee mathematical breakdown consistency
+  ensureOrderPricingLocked(order, dbState.services);
+
   // Find any submitted review for this order
   const existingReview = (dbState.reviews || []).find(r => 
     r.orderId && r.orderId.toUpperCase() === order.id.toUpperCase()
@@ -4676,6 +4768,16 @@ app.patch('/api/orders/:id/payment', authenticateToken, requireRole(['SUPER_ADMI
 
   const reqUser = (req as any).user;
   order.paymentStatus = paymentStatus as PaymentStatus;
+  if (paymentStatus === 'Verified' || paymentStatus === 'Paid') {
+    order.amountPaid = order.totalAmount;
+    order.amountDue = 0;
+  } else if (paymentStatus === 'Rejected') {
+    order.amountPaid = 0;
+    order.amountDue = order.totalAmount;
+  } else {
+    order.amountPaid = (typeof order.amountPaid === 'number') ? order.amountPaid : 0;
+    order.amountDue = Math.max(0, order.totalAmount - (order.amountPaid || 0));
+  }
   addAuditLog(reqUser?.id || 'admin-1', reqUser?.name || 'Staff', reqUser?.role || 'ADMIN', 'PAYMENT_STATUS_UPDATE', `Updated payment status of order ${order.id} to ${paymentStatus}`);
   
   await persistDatabase('orders', order.id);
@@ -5254,8 +5356,8 @@ app.post('/api/orders/:id/submit-payment', async (req, res) => {
 
 // Admin Verify or Reject Payment Proof
 const handleVerifyPaymentRoute = async (req: any, res: any) => {
-  const { action, status, rejectionReason } = req.body;
-  const rawAction = (action || status || '').toString().toLowerCase();
+  const { action, status, decision, rejectionReason } = req.body;
+  const rawAction = (action || status || decision || '').toString().toLowerCase();
   const isApprove = rawAction === 'approve' || rawAction === 'approved' || rawAction === 'verified' || rawAction === 'accept';
   const isReject = rawAction === 'reject' || rawAction === 'rejected' || rawAction === 'decline';
   const actionParam = isApprove ? 'approve' : isReject ? 'reject' : undefined;
@@ -5267,6 +5369,8 @@ const handleVerifyPaymentRoute = async (req: any, res: any) => {
 
   if (actionParam === 'approve') {
     order.paymentStatus = PaymentStatus.VERIFIED;
+    order.amountPaid = order.totalAmount;
+    order.amountDue = 0;
     order.rejectionReason = undefined;
     if (order.orderStatus === OrderStatus.PENDING) {
       order.orderStatus = OrderStatus.UNDER_VERIFICATION;
@@ -5289,6 +5393,8 @@ const handleVerifyPaymentRoute = async (req: any, res: any) => {
     }
   } else if (actionParam === 'reject') {
     order.paymentStatus = PaymentStatus.REJECTED;
+    order.amountPaid = 0;
+    order.amountDue = order.totalAmount;
     order.rejectionReason = rejectionReason || 'Transaction ID / UTR or screenshot invalid. Please verify and resubmit.';
     order.logs.push({
       status: order.orderStatus,
@@ -7545,14 +7651,30 @@ app.post('/api/admin/orders', authenticateToken, requireRole(['SUPER_ADMIN', 'AD
       utr,
       paymentDate,
       uploadedDocuments = [],
-      name: directName,
-      mobile: directMobile,
-      email: directEmail,
-      address: directAddress,
-      city: directCity,
-      state: directState,
-      pinCode: directPinCode
+      name: directNameRaw,
+      customerName: directCustomerNameRaw,
+      mobile: directMobileRaw,
+      customerMobile: directCustomerMobileRaw,
+      email: directEmailRaw,
+      customerEmail: directCustomerEmailRaw,
+      address: directAddressRaw,
+      customerAddress: directCustomerAddressRaw,
+      city: directCityRaw,
+      customerCity: directCustomerCityRaw,
+      state: directStateRaw,
+      customerState: directCustomerStateRaw,
+      pinCode: directPinCodeRaw,
+      customerPincode: directCustomerPincodeRaw,
+      pincode: directAltPincodeRaw
     } = req.body;
+
+    const directName = (directNameRaw || directCustomerNameRaw || '').trim();
+    const directMobile = (directMobileRaw || directCustomerMobileRaw || '').trim();
+    const directEmail = (directEmailRaw || directCustomerEmailRaw || '').trim();
+    const directAddress = (directAddressRaw || directCustomerAddressRaw || '').trim();
+    const directCity = (directCityRaw || directCustomerCityRaw || '').trim();
+    const directState = (directStateRaw || directCustomerStateRaw || '').trim();
+    const directPinCode = (directPinCodeRaw || directCustomerPincodeRaw || directAltPincodeRaw || '').trim();
 
     if (!serviceId) {
       return res.status(400).json({ message: 'Target service selection is required.' });
@@ -7635,10 +7757,21 @@ app.post('/api/admin/orders', authenticateToken, requireRole(['SUPER_ADMIN', 'AD
       return res.status(400).json({ message: 'Customer Name and Mobile Number are mandatory.' });
     }
 
-    // Fee calculation
-    const govFees = customGovFees !== undefined ? Number(customGovFees) : (service.govFees || 0);
-    const serviceCharge = customServiceCharge !== undefined ? Number(customServiceCharge) : (service.serviceCharge || 0);
-    const totalAmount = govFees + serviceCharge;
+    // Fee calculation with permanent locking
+    const govFees = customGovFees !== undefined 
+      ? Number(customGovFees) 
+      : (req.body.govFees !== undefined ? Number(req.body.govFees) : (service.govFees || 0));
+    const serviceCharge = customServiceCharge !== undefined 
+      ? Number(customServiceCharge) 
+      : (req.body.serviceCharge !== undefined ? Number(req.body.serviceCharge) : (service.serviceCharge || 0));
+    const processingFee = req.body.processingFee !== undefined ? Number(req.body.processingFee) : Number((service as any).processingFee || 0);
+    const discount = req.body.discount !== undefined ? Number(req.body.discount) : 0;
+    const totalAmount = Math.max(0, govFees + serviceCharge + processingFee - discount);
+    const validatedPaymentStatus = paymentStatus === 'Verified' ? PaymentStatus.VERIFIED :
+                                   paymentStatus === 'Rejected' ? PaymentStatus.REJECTED :
+                                   PaymentStatus.PENDING_VERIFICATION;
+    const amountPaid = validatedPaymentStatus === PaymentStatus.VERIFIED ? totalAmount : (req.body.amountPaid !== undefined ? Number(req.body.amountPaid) : 0);
+    const amountDue = validatedPaymentStatus === PaymentStatus.VERIFIED ? 0 : Math.max(0, totalAmount - amountPaid);
 
     // Atomically generate next sequential Order ID
     const { id: orderId } = await getNextSequence('order', dbState, persistDatabase);
@@ -7646,10 +7779,6 @@ app.post('/api/admin/orders', authenticateToken, requireRole(['SUPER_ADMIN', 'AD
     const selectedPaymentMethod = paymentMethod === 'QR Code' ? PaymentMethod.QR : 
                                   paymentMethod === 'Bank Transfer' ? PaymentMethod.BANK_TRANSFER : 
                                   paymentMethod === 'UPI' ? PaymentMethod.UPI : paymentMethod;
-
-    const validatedPaymentStatus = paymentStatus === 'Verified' ? PaymentStatus.VERIFIED :
-                                   paymentStatus === 'Rejected' ? PaymentStatus.REJECTED :
-                                   PaymentStatus.PENDING_VERIFICATION;
 
     // Process initial documents if provided
     const docsList = (uploadedDocuments || []).map((doc: any) => ({
@@ -7695,7 +7824,14 @@ app.post('/api/admin/orders', authenticateToken, requireRole(['SUPER_ADMIN', 'AD
       utr: utr?.trim() || undefined,
       paymentDate: paymentDate || new Date().toISOString(),
       orderStatus: (orderStatus as any) || OrderStatus.PENDING,
+      govFees,
+      serviceCharge,
+      processingFee,
+      discount,
+      couponCode: req.body.couponCode || undefined,
       totalAmount,
+      amountPaid,
+      amountDue,
       createdAt: orderDate ? new Date(orderDate).toISOString() : new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       priority: priority as any,
@@ -7783,7 +7919,14 @@ app.put('/api/admin/orders/:id', authenticateToken, requireRole(['SUPER_ADMIN', 
     if (priority) order.priority = priority;
     if (orderSource) order.orderSource = orderSource;
     if (additionalNotes !== undefined) order.additionalNotes = additionalNotes;
+    if (req.body.govFees !== undefined) order.govFees = Number(req.body.govFees);
+    if (req.body.serviceCharge !== undefined) order.serviceCharge = Number(req.body.serviceCharge);
+    if (req.body.processingFee !== undefined) order.processingFee = Number(req.body.processingFee);
+    if (req.body.discount !== undefined) order.discount = Number(req.body.discount);
+    if (req.body.couponCode !== undefined) order.couponCode = req.body.couponCode;
     if (totalAmount !== undefined) order.totalAmount = Number(totalAmount);
+    if (req.body.amountPaid !== undefined) order.amountPaid = Number(req.body.amountPaid);
+    if (req.body.amountDue !== undefined) order.amountDue = Number(req.body.amountDue);
     if (paymentMethod) order.paymentMethod = paymentMethod;
     if (paymentStatus) order.paymentStatus = paymentStatus;
     if (utr !== undefined) order.utr = utr.trim() || undefined;
@@ -7832,7 +7975,12 @@ app.post('/api/admin/customers/:id/orders', authenticateToken, requirePermission
 
   const govFees = customGovFees !== undefined ? Number(customGovFees) : (service.govFees || 0);
   const serviceCharge = customServiceCharge !== undefined ? Number(customServiceCharge) : (service.serviceCharge || 0);
-  const totalAmount = govFees + serviceCharge;
+  const processingFee = req.body.processingFee !== undefined ? Number(req.body.processingFee) : 0;
+  const discount = req.body.discount !== undefined ? Number(req.body.discount) : 0;
+  const totalAmount = Math.max(0, govFees + serviceCharge + processingFee - discount);
+  const isPaid = Boolean(utr);
+  const amountPaid = isPaid ? totalAmount : 0;
+  const amountDue = isPaid ? 0 : totalAmount;
 
   // Atomically generate next sequential Order ID
   const { id: orderId } = await getNextSequence('order', dbState, persistDatabase);
@@ -7859,11 +8007,17 @@ app.post('/api/admin/customers/:id/orders', authenticateToken, requirePermission
     uploadedDocuments: [],
     additionalNotes: additionalNotes || `Order created via Admin Portal for customer ${cust.name} (${cust.code})`,
     paymentMethod: selectedPaymentMethod,
-    paymentStatus: utr ? PaymentStatus.VERIFIED : PaymentStatus.PENDING_VERIFICATION,
+    paymentStatus: isPaid ? PaymentStatus.VERIFIED : PaymentStatus.PENDING_VERIFICATION,
     utr: utr || undefined,
     paymentDate: new Date().toISOString(),
     orderStatus: OrderStatus.PENDING,
+    govFees,
+    serviceCharge,
+    processingFee,
+    discount,
     totalAmount,
+    amountPaid,
+    amountDue,
     createdAt: new Date().toISOString(),
     priority: priority || 'Normal',
     logs: [

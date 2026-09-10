@@ -324,6 +324,31 @@ export default function TrackingView() {
     }
   };
 
+  // Historical Fee Breakdown and Payment Calculation
+  const totalAmount = order?.totalAmount ?? 0;
+  const effectiveGovFees = typeof order?.govFees === 'number' ? order.govFees : 0;
+  const effectiveServiceCharge = typeof order?.serviceCharge === 'number' 
+    ? order.serviceCharge 
+    : Math.max(0, totalAmount - effectiveGovFees);
+  const effectiveProcessingFee = typeof order?.processingFee === 'number' ? order.processingFee : 0;
+  const effectiveDiscount = typeof order?.discount === 'number' ? order.discount : 0;
+
+  // Determine effective amount paid and amount due with strict mathematical alignment
+  const isPaidOrVerified = order && (
+    order.paymentStatus === 'Verified' || 
+    order.paymentStatus === 'Paid' ||
+    String(order.paymentStatus).toLowerCase() === 'verified' ||
+    String(order.paymentStatus).toLowerCase() === 'paid'
+  );
+  
+  const effectiveAmountPaid = typeof order?.amountPaid === 'number'
+    ? order.amountPaid
+    : (isPaidOrVerified ? totalAmount : 0);
+
+  const effectiveAmountDue = typeof order?.amountDue === 'number'
+    ? order.amountDue
+    : Math.max(0, totalAmount - effectiveAmountPaid);
+
   return (
     <div id="easydesk-tracking" className="portal-container max-w-5xl py-10 font-sans text-slate-800 print:bg-white print:p-0 w-full max-w-full overflow-x-hidden">
       
@@ -812,12 +837,56 @@ export default function TrackingView() {
               </div>
             </div>
 
-            <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
-              <div>
-                <span className="block text-[10px] text-slate-400 font-semibold leading-none">Total consultancy bill paid</span>
-                <span className="text-base font-black text-slate-900 mt-1 block notranslate" translate="no">₹{order.totalAmount}</span>
+            {/* Payment & Fee Breakdown Details */}
+            <div className="border-t border-slate-100 pt-4 space-y-2.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-medium">Government/Portal Fee</span>
+                <span className="font-semibold text-slate-800 notranslate" translate="no">₹{effectiveGovFees}</span>
               </div>
-              <span className="text-[10px] font-semibold text-slate-400 text-right notranslate" translate="no">EasyDesk Digital Services India</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-medium">EasyDesk Service Charge</span>
+                <span className="font-semibold text-slate-800 notranslate" translate="no">₹{effectiveServiceCharge}</span>
+              </div>
+              {effectiveProcessingFee > 0 && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-slate-500 font-medium">Processing/Other Fee</span>
+                  <span className="font-semibold text-slate-800 notranslate" translate="no">₹{effectiveProcessingFee}</span>
+                </div>
+              )}
+              {effectiveDiscount > 0 && (
+                <div className="flex justify-between items-center text-xs">
+                  <span className="text-emerald-600 font-medium">Discount {order.couponCode ? `(${order.couponCode})` : ''}</span>
+                  <span className="font-semibold text-emerald-600 notranslate" translate="no">-₹{effectiveDiscount}</span>
+                </div>
+              )}
+              <div className="border-t border-dashed border-slate-200 pt-2 flex justify-between items-center">
+                <div>
+                  <span className="block text-[10px] text-slate-400 font-semibold uppercase leading-none">Total Amount</span>
+                  <span className="text-base font-black text-slate-900 mt-1 block notranslate" translate="no">₹{totalAmount}</span>
+                </div>
+                <div className="text-right">
+                  <span className="block text-[10px] text-slate-400 font-semibold uppercase leading-none">Payment Status</span>
+                  <span className={`text-xs font-bold mt-1 inline-block px-2 py-0.5 rounded ${
+                    order.paymentStatus === 'Verified' || order.paymentStatus === 'Paid'
+                      ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                      : order.paymentStatus === 'Rejected' || order.paymentStatus === 'Failed'
+                      ? 'text-red-700 bg-red-50 border border-red-200'
+                      : 'text-amber-700 bg-amber-50 border border-amber-200'
+                  }`}>
+                    {order.paymentStatus || 'Pending'}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Amount Paid</span>
+                  <span className="font-bold text-emerald-700 notranslate" translate="no">₹{effectiveAmountPaid}</span>
+                </div>
+                <div className="bg-slate-50 p-2 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Amount Due</span>
+                  <span className="font-bold text-slate-800 notranslate" translate="no">₹{effectiveAmountDue}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -953,41 +1022,87 @@ export default function TrackingView() {
 
           {/* 5. Payment & Transaction Summary Table */}
           <div className="border border-slate-300 rounded-lg overflow-hidden mb-4 print-avoid-break">
-            <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300">
+            <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-300 flex justify-between items-center">
               <h3 className="text-[10px] font-black uppercase tracking-wider text-slate-900">
                 Payment & Consultancy Billing Summary
               </h3>
+              <div className="text-[10px] text-slate-600 font-mono">
+                Ref: {order.utr || `TXN-ED-${order.id}`} | Mode: {order.paymentMethod || 'Online'}
+              </div>
             </div>
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-slate-50 text-[10px] text-slate-600 font-bold uppercase border-b border-slate-300">
-                  <th className="py-2 px-3 text-left">Description</th>
-                  <th className="py-2 px-3 text-left">Payment Mode</th>
-                  <th className="py-2 px-3 text-left">Transaction / UTR Ref</th>
-                  <th className="py-2 px-3 text-left">Payment Status</th>
-                  <th className="py-2 px-3 text-right">Amount</th>
+                  <th className="py-2 px-3 text-left">Fee Component / Particulars</th>
+                  <th className="py-2 px-3 text-left">Description / Reference</th>
+                  <th className="py-2 px-3 text-right">Amount (₹)</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr className="border-b border-slate-200">
-                  <td className="py-2 px-3 font-semibold text-slate-900">{order.serviceTitle} — Citizen Advisory & Filing Fee</td>
-                  <td className="py-2 px-3 uppercase font-medium">{order.paymentMethod || 'Online'}</td>
-                  <td className="py-2 px-3 font-mono text-[10px] text-slate-600">{order.utr || `TXN-ED-${order.id}`}</td>
-                  <td className="py-2 px-3">
-                    <span className="font-bold text-emerald-700 uppercase text-[10px] bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block">
-                      {order.paymentStatus || 'Verified'}
-                    </span>
-                  </td>
-                  <td className="py-2 px-3 text-right font-black text-slate-900">₹{order.totalAmount}</td>
+              <tbody className="divide-y divide-slate-200">
+                <tr>
+                  <td className="py-2 px-3 font-semibold text-slate-900">Government/Portal Fee</td>
+                  <td className="py-2 px-3 text-slate-600 text-[11px]">Direct Government Portal / Statutory Fees</td>
+                  <td className="py-2 px-3 text-right font-medium text-slate-900">₹{effectiveGovFees}</td>
                 </tr>
+                <tr>
+                  <td className="py-2 px-3 font-semibold text-slate-900">EasyDesk Service Charge</td>
+                  <td className="py-2 px-3 text-slate-600 text-[11px]">Professional Filing, Facilitation & Consultation</td>
+                  <td className="py-2 px-3 text-right font-medium text-slate-900">₹{effectiveServiceCharge}</td>
+                </tr>
+                {effectiveProcessingFee > 0 && (
+                  <tr>
+                    <td className="py-2 px-3 font-semibold text-slate-900">Processing/Other Fee</td>
+                    <td className="py-2 px-3 text-slate-600 text-[11px]">Document Handling & Operational Processing</td>
+                    <td className="py-2 px-3 text-right font-medium text-slate-900">₹{effectiveProcessingFee}</td>
+                  </tr>
+                )}
+                {effectiveDiscount > 0 && (
+                  <tr>
+                    <td className="py-2 px-3 font-semibold text-emerald-700">Discount</td>
+                    <td className="py-2 px-3 text-emerald-600 text-[11px] font-mono">Promotional Discount / Coupon {order.couponCode ? `(${order.couponCode})` : ''}</td>
+                    <td className="py-2 px-3 text-right font-semibold text-emerald-700">-₹{effectiveDiscount}</td>
+                  </tr>
+                )}
               </tbody>
-              <tfoot>
-                <tr className="bg-slate-50 font-bold">
-                  <td colSpan={4} className="py-2 px-3 text-right text-slate-700 text-xs uppercase tracking-wider">
-                    Total Amount Paid (Inclusive of Taxes & Platform Charges):
+              <tfoot className="border-t-2 border-slate-300 divide-y divide-slate-200 bg-slate-50/75">
+                <tr className="font-bold">
+                  <td colSpan={2} className="py-1.5 px-3 text-right text-slate-800 text-[11px] uppercase tracking-wide">
+                    Total Amount:
                   </td>
-                  <td className="py-2 px-3 text-right font-black text-sm text-slate-900">
+                  <td className="py-1.5 px-3 text-right font-black text-xs text-slate-900">
                     ₹{order.totalAmount}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={2} className="py-1.5 px-3 text-right text-slate-700 text-[11px] font-medium">
+                    Amount Paid:
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-bold text-xs text-emerald-700">
+                    ₹{effectiveAmountPaid}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={2} className="py-1.5 px-3 text-right text-slate-700 text-[11px] font-medium">
+                    Amount Due:
+                  </td>
+                  <td className="py-1.5 px-3 text-right font-bold text-xs text-slate-900">
+                    ₹{effectiveAmountDue}
+                  </td>
+                </tr>
+                <tr className="bg-slate-100">
+                  <td colSpan={2} className="py-2 px-3 text-right text-slate-800 text-[11px] font-bold uppercase tracking-wider">
+                    Payment Status:
+                  </td>
+                  <td className="py-2 px-3 text-right">
+                    <span className={`font-black uppercase text-[10px] px-2.5 py-0.5 rounded border inline-block ${
+                      order.paymentStatus === 'Verified' || order.paymentStatus === 'Paid'
+                        ? 'text-emerald-800 bg-emerald-100 border-emerald-300'
+                        : order.paymentStatus === 'Rejected' || order.paymentStatus === 'Failed'
+                        ? 'text-red-800 bg-red-100 border-red-300'
+                        : 'text-amber-800 bg-amber-100 border-amber-300'
+                    }`}>
+                      {order.paymentStatus || 'Pending'}
+                    </span>
                   </td>
                 </tr>
               </tfoot>

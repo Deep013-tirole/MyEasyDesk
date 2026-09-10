@@ -523,8 +523,14 @@ export interface Order {
   finalDocumentName?: string;
   finalDocumentUploadedAt?: string;
   whatsAppSentAt?: string;
-  whatsAppDeliveryNotes?: string;
+  govFees?: number;
+  serviceCharge?: number;
+  processingFee?: number;
+  discount?: number;
+  couponCode?: string;
   totalAmount: number;
+  amountPaid?: number;
+  amountDue?: number;
   createdAt: string;
   updatedAt?: string;
   priority?: 'Normal' | 'High' | 'Urgent';
