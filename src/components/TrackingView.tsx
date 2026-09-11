@@ -62,15 +62,31 @@ export default function TrackingView() {
 
   const executeTrack = async (targetId: string, targetMobile: string = '') => {
     // Convert Indic numerals (Devanagari/Gujarati) to ASCII, trim, remove zero-width chars and leading '#'
-    const cleanTargetId = normalizeIndicDigits(targetId)
+    const cleanTargetId = normalizeIndicDigits(targetId || '')
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
       .trim()
       .replace(/^#+/, '');
-    const cleanTargetMobile = normalizeIndicDigits(targetMobile)
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .trim();
+    
+    // Normalize mobile: convert Indic numerals, strip non-digits, slice last 10
+    const rawMobileDigits = normalizeIndicDigits(targetMobile || '').replace(/\D/g, '');
+    const cleanTargetMobile = rawMobileDigits.length >= 10 ? rawMobileDigits.slice(-10) : rawMobileDigits;
 
-    if (!cleanTargetId) return;
+    // Requirement: If either field is empty, show a clear validation message and do not call the tracking API.
+    if (!cleanTargetId || !cleanTargetMobile) {
+      if (!cleanTargetId && !cleanTargetMobile) {
+        setError('Both Order ID and registered mobile number are required.');
+      } else if (!cleanTargetId) {
+        setError('Order ID is required to track an order.');
+      } else {
+        setError('Registered mobile number is required to track an order.');
+      }
+      return;
+    }
+
+    if (cleanTargetMobile.length < 10) {
+      setError('Please provide a valid 10-digit registered mobile number.');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -80,7 +96,7 @@ export default function TrackingView() {
     setReviewErrorMsg('');
 
     try {
-      const url = `/api/orders/track?orderId=${encodeURIComponent(cleanTargetId)}${cleanTargetMobile ? `&mobile=${encodeURIComponent(cleanTargetMobile)}` : ''}`;
+      const url = `/api/orders/track?orderId=${encodeURIComponent(cleanTargetId)}&mobile=${encodeURIComponent(cleanTargetMobile)}`;
       const response = await fetch(url);
       
       if (response.ok) {
@@ -91,12 +107,12 @@ export default function TrackingView() {
           try {
             if (typeof sessionStorage !== 'undefined') {
               sessionStorage.setItem('easydesk_active_tracking_id', data.id);
-              if (cleanTargetMobile) sessionStorage.setItem('easydesk_active_tracking_mobile', cleanTargetMobile);
+              sessionStorage.setItem('easydesk_active_tracking_mobile', cleanTargetMobile);
             }
             if (typeof window !== 'undefined' && window.history?.replaceState) {
               const currentUrl = new URL(window.location.href);
               currentUrl.searchParams.set('orderId', data.id);
-              if (cleanTargetMobile) currentUrl.searchParams.set('mobile', cleanTargetMobile);
+              currentUrl.searchParams.set('mobile', cleanTargetMobile);
               window.history.replaceState({}, '', currentUrl.toString());
             }
           } catch {}
@@ -104,7 +120,7 @@ export default function TrackingView() {
           setError('Invalid tracking record received. Please check with customer support.');
         }
       } else if (response.status === 404) {
-        setError('404: No active order found with this identifier. Please verify your Order ID (e.g., ORD-10024) or contact our desk.');
+        setError('Order details not found. Please verify your Order ID and registered mobile number.');
       } else {
         const data = await safeParseJsonResponse<any>(response);
         setError(data?.message || 'Unable to retrieve order status at this time. Please try again.');
@@ -132,7 +148,13 @@ export default function TrackingView() {
 
     if (savedOrderId) {
       setOrderId(savedOrderId);
-      if (savedMobile) setMobile(savedMobile);
+    }
+    if (savedMobile) {
+      setMobile(savedMobile);
+    }
+
+    // Only call tracking API automatically if BOTH Order ID and Mobile are present!
+    if (savedOrderId && savedMobile) {
       executeTrack(savedOrderId, savedMobile);
     }
   }, []);
@@ -360,7 +382,7 @@ export default function TrackingView() {
         </div>
         <h1 className="text-2xl sm:text-3xl font-black mt-2 text-slate-900">Track Digital Certificate File Status</h1>
         <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-xl font-normal">
-          Enter your unique Order Reference ID (e.g. ORD-10021) and registered phone number to verify document verification logs, government clearance schedules, rate completed services, and download receipts.
+          Enter your unique Order Reference ID (e.g. ORD-10021) and registered mobile number to verify document verification logs, government clearance schedules, rate completed services, and download receipts.
         </p>
       </div>
 
@@ -383,11 +405,12 @@ export default function TrackingView() {
           </div>
 
           <div>
-            <label htmlFor="track-mobile-number" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mobile Number (Optional)</label>
+            <label htmlFor="track-mobile-number" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Mobile Number *</label>
             <input
               id="track-mobile-number"
               name="mobile"
               type="tel"
+              required
               placeholder="10-digit mobile number"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
@@ -416,18 +439,17 @@ export default function TrackingView() {
         </form>
 
         {error && (
-          error.includes('404') ? (
+          (error.toLowerCase().includes('not found') || error.includes('404')) ? (
             <div className="mt-5">
               <ContentUnavailable
                 compact
                 id="tracking-not-found-state"
                 statusCode={404}
-                title="Order Record Unavailable"
+                title="Order Details Not Found"
                 message={error.replace(/^404:\s*/, '')}
-                retryText="Try Another ID"
+                retryText="Try Again"
                 onRetry={() => {
                   setError('');
-                  setOrderId('');
                 }}
               />
             </div>

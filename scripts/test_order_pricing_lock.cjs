@@ -279,7 +279,7 @@ async function runSuite() {
       });
       assert.strictEqual(payRes.status, 200, `Payment verification should return 200, got ${payRes.status}`);
 
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${order1Id}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${order1Id}&mobile=${customerMobile}`);
       assert.strictEqual(trackRes.status, 200);
       const paidOrder = trackRes.body;
 
@@ -328,7 +328,7 @@ async function runSuite() {
       assert.strictEqual(customOrder.couponCode, 'FESTIVE100');
 
       // Verify track order output contains all 8 items
-      const trackCustom = await makeRequest(port, `/api/orders/track?orderId=${customOrder.id}`);
+      const trackCustom = await makeRequest(port, `/api/orders/track?orderId=${customOrder.id}&mobile=9876543219`);
       assert.strictEqual(trackCustom.status, 200);
       const o = trackCustom.body;
 

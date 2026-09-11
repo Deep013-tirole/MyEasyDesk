@@ -419,7 +419,7 @@ async function runSuite() {
     // -------------------------------------------------------------
     // Test 12: Apply Online creates customer when applicant is new
     // -------------------------------------------------------------
-    const applicantMobile = `9855${runId}5`;
+    const applicantMobile = `9855${runId}55`;
     const applicantEmail = `citizen.applicant.${runId}@example.com`;
     let applyOnlineOrder1 = null;
 
@@ -552,13 +552,13 @@ async function runSuite() {
     // -------------------------------------------------------------
     await it('19. Track Order continues to find the order', async () => {
       // Track by order ID
-      const res = await makeRequest(port, `/api/orders/track?orderId=${applyOnlineOrder1.id}`);
+      const res = await makeRequest(port, `/api/orders/track?orderId=${applyOnlineOrder1.id}&mobile=${applicantMobile}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, applyOnlineOrder1.id, 'Track order must return the matching order');
       assert.strictEqual(res.body.name, 'Rajesh Kumar Citizen');
 
       // Track by order ID with leading hash and lowercase
-      const resAlt = await makeRequest(port, `/api/orders/track?orderId=%23${applyOnlineOrder1.id.toLowerCase()}`);
+      const resAlt = await makeRequest(port, `/api/orders/track?orderId=%23${applyOnlineOrder1.id.toLowerCase()}&mobile=${applicantMobile}`);
       assert.strictEqual(resAlt.status, 200);
       assert.strictEqual(resAlt.body.id, applyOnlineOrder1.id);
     });
@@ -678,7 +678,7 @@ async function runSuite() {
     // -------------------------------------------------------------
     await it('25. Customer/order relationship survives browser restart simulation', async () => {
       // Independent unauthenticated request verifying public tracking still resolves order and customer details
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${applyOnlineOrder2.id}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${applyOnlineOrder2.id}&mobile=${applicantMobile}`);
       assert.strictEqual(trackRes.status, 200);
       assert.strictEqual(trackRes.body.id, applyOnlineOrder2.id);
       assert.strictEqual(trackRes.body.customerId, applyOnlineOrder1.customerId);

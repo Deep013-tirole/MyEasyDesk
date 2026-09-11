@@ -277,7 +277,7 @@ async function runTests() {
 
     // 20. GET /api/orders/track remains public and accessible
     const trackRes = await apiRequest({
-      path: `/api/orders/track?orderId=${encodeURIComponent(testOrder.id || 'ORD-TEST-001')}`,
+      path: `/api/orders/track?orderId=${encodeURIComponent(testOrder.id || 'ORD-TEST-001')}&mobile=${encodeURIComponent(testOrder.mobile || '9876543210')}`,
       method: 'GET'
     });
     check('Public tracking GET /api/orders/track is accessible (not 401/403)', trackRes.status === 200 || trackRes.status === 404);

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * EASYDESK — APPLY ONLINE SERVICE REQUEST & ORDER SUBMISSION TEST SUITE
  * 
  * Verifies:
@@ -141,7 +141,7 @@ async function runSuite() {
     });
 
     await it('1.2 Submitted order has orderSource="Website", orderStatus="Pending", paymentStatus="Pending Verification"', async () => {
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}&mobile=9822012345`);
       assert.strictEqual(trackRes.status, 200, 'Order tracking must succeed');
       const order = trackRes.body;
       assert.strictEqual(order.orderSource, 'Website', `Expected orderSource='Website', got ${order.orderSource}`);
@@ -154,7 +154,7 @@ async function runSuite() {
     });
 
     await it('1.3 Initial order log records website submission without claiming payment was made', async () => {
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}&mobile=9822012345`);
       const order = trackRes.body;
       assert.ok(order.logs && order.logs.length > 0, 'Order must contain initial log');
       const initialLog = order.logs[0];
@@ -182,7 +182,7 @@ async function runSuite() {
     });
 
     await it('2.2 Tracking with case-insensitive Order ID works seamlessly', async () => {
-      const res = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId.toLowerCase()}`);
+      const res = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId.toLowerCase()}&mobile=9822012345`);
       assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}`);
       assert.strictEqual(res.body.id, createdWebsiteOrderId);
     });
@@ -208,7 +208,7 @@ async function runSuite() {
         Authorization: `Bearer ${adminToken}`
       });
       assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}`);
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}&mobile=9822012345`);
       assert.strictEqual(trackRes.body.orderStatus, 'Processing');
       assert.ok(trackRes.body.logs.some(l => l.comment.includes('Citizen contacted via phone')));
     });
@@ -222,7 +222,7 @@ async function runSuite() {
         paymentDate: new Date().toISOString()
       });
       assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}`);
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}&mobile=9822012345`);
       assert.strictEqual(trackRes.body.utr, '409182736451');
       assert.strictEqual(trackRes.body.paymentStatus, 'Pending Verification');
     });
@@ -234,7 +234,7 @@ async function runSuite() {
         Authorization: `Bearer ${adminToken}`
       });
       assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}`);
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}&mobile=9822012345`);
       assert.strictEqual(trackRes.body.paymentStatus, 'Verified');
     });
 
@@ -246,7 +246,7 @@ async function runSuite() {
         fileUrl: 'https://storage.easydesk.in/orders/affidavit.pdf'
       });
       assert.strictEqual(res.status, 200, `Expected 200, got ${res.status}`);
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdWebsiteOrderId}&mobile=9822012345`);
       assert.ok(trackRes.body.uploadedDocuments.some(d => d.name === 'Affidavit_Signed.pdf'));
     });
 
@@ -270,7 +270,7 @@ async function runSuite() {
       assert.strictEqual(res.status, 201, `Expected 201, got ${res.status}`);
       const createdId = res.body.order?.id || res.body.id;
       assert.ok(createdId, 'Manual order must have an ID');
-      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdId}`);
+      const trackRes = await makeRequest(port, `/api/orders/track?orderId=${createdId}&mobile=9823198231`);
       assert.strictEqual(trackRes.body.orderSource, 'WhatsApp');
       assert.strictEqual(trackRes.body.name, 'Rohan Deshmukh (WhatsApp)');
     });

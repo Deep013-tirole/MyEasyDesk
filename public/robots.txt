@@ -6,5 +6,9 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /uploads/private/
 Disallow: /payment
+Disallow: /*?*orderId=
+Disallow: /*?*mobile=
+Disallow: /*?*trackingId=
+Disallow: /*?*trackId=
 
 Sitemap: https://myeasydesk.tideepak8.workers.dev/sitemap.xml

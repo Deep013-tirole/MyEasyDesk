@@ -4616,23 +4616,49 @@ app.post('/api/coupons/validate', (req, res) => {
 });
 
 // Normalizes Indic numerals (Devanagari U+0966-U+096F, Gujarati U+0AE6-U+0AEF) to standard ASCII 0-9
-function normalizeIndicDigitsServer(str: string | null | undefined): string {
+function normalizeIndicDigitsServer(str: any): string {
   if (!str || typeof str !== 'string') return '';
   return str
     .replace(/[\u0966-\u096F]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0966 + 48))
     .replace(/[\u0AE6-\u0AEF]/g, d => String.fromCharCode(d.charCodeAt(0) - 0x0AE6 + 48));
 }
 
-// Track Order By ID & Phone (Multilingual resilient, alias tolerant, Indic-numeral friendly)
+// Helper function: Normalize mobile numbers safely
+// Handles Indic digits (Devanagari/Gujarati), strips non-digits, strips country code (+91 / 91) or leading 0, returns standard 10-digit number.
+function normalizeMobileNumberServer(str: any): string {
+  if (!str || typeof str !== 'string') return '';
+  const ascii = normalizeIndicDigitsServer(str);
+  const digits = ascii.replace(/\D/g, '');
+  if (digits.length >= 10) {
+    return digits.slice(-10);
+  }
+  return digits;
+}
+
+// Track Order By ID & Phone (Secure two-factor order tracking: Order ID + Registered Mobile BOTH mandatory)
 app.get('/api/orders/track', async (req, res) => {
   await ensureDatabaseReady();
 
   // Accept canonical orderId or any common tracking aliases
   const rawQuery = (req.query.orderId || req.query.trackingId || req.query.trackId || req.query.id || req.query.query || '') as string;
-  const rawMobile = (req.query.mobile || '') as string;
+  const rawMobile = (req.query.mobile || req.query.phone || req.query.mobileNumber || '') as string;
 
-  if (!rawQuery || typeof rawQuery !== 'string' || !rawQuery.trim()) {
-    return res.status(400).json({ message: 'Order ID is required.' });
+  const hasOrderId = typeof rawQuery === 'string' && rawQuery.trim().length > 0;
+  const hasMobile = typeof rawMobile === 'string' && rawMobile.trim().length > 0;
+
+  // Requirement: Both Order ID and Mobile Number are strictly mandatory
+  if (!hasOrderId || !hasMobile) {
+    return res.status(400).json({ 
+      message: 'Both Order ID and registered mobile number are required to track an order.' 
+    });
+  }
+
+  // Normalize mobile query
+  const cleanMobile10 = normalizeMobileNumberServer(rawMobile);
+  if (cleanMobile10.length < 10) {
+    return res.status(400).json({ 
+      message: 'Please provide a valid 10-digit registered mobile number.' 
+    });
   }
 
   // 1. Sanitize and normalize query string:
@@ -4645,10 +4671,6 @@ app.get('/api/orders/track', async (req, res) => {
 
   const queryDigits = normalizedQuery.replace(/\D/g, '');
   const queryWithoutPrefix = normalizedQuery.replace(/^(ORD|ED|TRK)[-_]/i, '');
-
-  // 2. Normalize mobile query if supplied
-  const cleanMobile = normalizeIndicDigitsServer(rawMobile).replace(/\D/g, '');
-  const cleanMobile10 = cleanMobile.length >= 10 ? cleanMobile.slice(-10) : cleanMobile;
 
   const orders: Order[] = dbState.orders || [];
 
@@ -4672,24 +4694,20 @@ app.get('/api/orders/track', async (req, res) => {
 
     if (!matchesId) return false;
 
-    // Mobile match check if mobile was passed
-    if (cleanMobile.length > 0) {
-      const orderMobile = (o.mobile || '').replace(/\D/g, '');
-      const orderMobile10 = orderMobile.length >= 10 ? orderMobile.slice(-10) : orderMobile;
-
-      const mobileMatches =
-        (cleanMobile10 && orderMobile10.includes(cleanMobile10)) ||
-        (cleanMobile && orderMobile.includes(cleanMobile)) ||
-        (orderMobile10 && cleanMobile.includes(orderMobile10));
-
-      if (!mobileMatches) return false;
+    // Mobile match check: MUST match the SAME order's mobile
+    const orderMobile10 = normalizeMobileNumberServer(o.mobile || (o as any).whatsappMobile || '');
+    if (!orderMobile10 || orderMobile10 !== cleanMobile10) {
+      return false;
     }
 
     return true;
   });
 
+  // Generic 404 message: NEVER reveal whether the Order ID exists when the mobile is incorrect
   if (!order) {
-    return res.status(404).json({ message: 'No active order found matching your parameters.' });
+    return res.status(404).json({ 
+      message: 'Order details not found. Please verify your Order ID and registered mobile number.' 
+    });
   }
 
   // Permanently lock and guarantee mathematical breakdown consistency

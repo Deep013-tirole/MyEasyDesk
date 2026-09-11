@@ -191,36 +191,13 @@ async function runSuite() {
   // ------------------------------------------------------------------------
   console.log('\n--- PART B: Live Backend API Verifications ---');
 
-  const testPort = 59284;
-  process.env.PORT = String(testPort);
+  process.env.IS_WORKER = 'true';
   process.env.NODE_ENV = 'test';
 
-  const { spawn } = require('child_process');
-  const serverProc = spawn(process.execPath, [path.resolve(__dirname, '../dist/server.cjs')], {
-    env: { ...process.env, PORT: String(testPort) },
-    stdio: 'pipe'
-  });
-
-  await new Promise((resolve, reject) => {
-    let started = false;
-    const timeout = setTimeout(() => {
-      if (!started) {
-        serverProc.kill();
-        reject(new Error('Test server startup timeout'));
-      }
-    }, 12000);
-
-    serverProc.stdout.on('data', (d) => {
-      const msg = d.toString();
-      if (msg.includes('Server running on port') || msg.includes('EasyDesk')) {
-        started = true;
-        clearTimeout(timeout);
-        setTimeout(resolve, 600);
-      }
-    });
-    serverProc.stderr.on('data', () => {});
-    serverProc.on('error', reject);
-  });
+  const { app } = require('../dist/server.cjs');
+  const server = http.createServer(app);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  const testPort = server.address().port;
 
   try {
     const sampleOrder = dbStore.orders[0];
@@ -237,68 +214,68 @@ async function runSuite() {
     const devanagariMobile = targetMobile.replace(/\d/g, d => String.fromCharCode(d.charCodeAt(0) - 48 + 0x0966));
 
     await itAsync('11. GET /api/orders/track?orderId={canonicalId} finds order in English', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
       assert.strictEqual(res.body.orderStatus, sampleOrder.orderStatus);
     });
 
     await itAsync('12. GET /api/orders/track?orderId=#{canonicalId} strips leading hash', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent('#' + targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent('#' + targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('13. GET /api/orders/track with Devanagari numerals (Hindi/Marathi) finds order', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(devanagariOrderId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(devanagariOrderId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('14. GET /api/orders/track with Gujarati numerals finds order', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(gujaratiOrderId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(gujaratiOrderId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('15. GET /api/orders/track with bare numeric digits finds order', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(numDigits)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(numDigits)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('16. GET /api/orders/track with prefix alias ED- finds order', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent('ED-' + numDigits)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent('ED-' + numDigits)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('17. GET /api/orders/track with prefix alias TRK- finds order', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent('TRK-' + numDigits)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent('TRK-' + numDigits)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('18. GET /api/orders/track?trackingId={id} parameter alias works', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?trackingId=${encodeURIComponent(targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?trackingId=${encodeURIComponent(targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('19. GET /api/orders/track?trackId={id} parameter alias works', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?trackId=${encodeURIComponent(targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?trackId=${encodeURIComponent(targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('20. GET /api/orders/track?id={id} parameter alias works', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?id=${encodeURIComponent(targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?id=${encodeURIComponent(targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
 
     await itAsync('21. GET /api/orders/track?query={id} parameter alias works', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?query=${encodeURIComponent(targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?query=${encodeURIComponent(targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.status, 200);
       assert.strictEqual(res.body.id, targetId);
     });
@@ -329,11 +306,11 @@ async function runSuite() {
     await itAsync('26. GET /api/orders/track with missing orderId returns 400 Bad Request', async () => {
       const res = await makeRequest(testPort, '/api/orders/track');
       assert.strictEqual(res.status, 400);
-      assert(res.body.message.includes('Order ID is required'));
+      assert(res.body.message.includes('required'));
     });
 
     await itAsync('27. GET /api/orders/track preserves canonical fields (amount, status, dates)', async () => {
-      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(targetId)}`);
+      const res = await makeRequest(testPort, `/api/orders/track?orderId=${encodeURIComponent(targetId)}&mobile=${encodeURIComponent(targetMobile)}`);
       assert.strictEqual(res.body.id, sampleOrder.id);
       assert.strictEqual(res.body.orderStatus, sampleOrder.orderStatus);
       assert.strictEqual(res.body.totalAmount, sampleOrder.totalAmount);
@@ -374,7 +351,7 @@ async function runSuite() {
     });
 
   } finally {
-    serverProc.kill('SIGTERM');
+    server.close();
   }
 
   // ------------------------------------------------------------------------

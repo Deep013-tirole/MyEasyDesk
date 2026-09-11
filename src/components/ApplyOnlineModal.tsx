@@ -618,6 +618,14 @@ export default function ApplyOnlineModal({
               <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2 max-w-md mx-auto">
                 <button
                   onClick={() => {
+                    try {
+                      if (typeof sessionStorage !== 'undefined' && createdOrder) {
+                        sessionStorage.setItem('easydesk_active_tracking_id', createdOrder.id);
+                        if (createdOrder.mobile) {
+                          sessionStorage.setItem('easydesk_active_tracking_mobile', createdOrder.mobile);
+                        }
+                      }
+                    } catch {}
                     onClose();
                     if (setView) setView('track');
                   }}
