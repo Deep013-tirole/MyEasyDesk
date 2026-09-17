@@ -76,9 +76,29 @@ export default function AnalyticsDashboardModule({
     let pendingRevenue = 0;
     let totalValue = 0;
 
+    let portalCharges = 0;
+    let serviceCharges = 0;
+    let tax = 0;
+    let otherCharges = 0;
+
     filteredOrders.forEach(o => {
       const amt = typeof o.totalAmount === 'number' ? o.totalAmount : (parseFloat(o.totalAmount as any) || 0);
       totalValue += amt;
+
+      const pCharge = Number((o as any).portalCharges ?? (o as any).govFee ?? 0) || 0;
+      let sCharge = Number((o as any).serviceCharges ?? (o as any).serviceFee ?? 0) || 0;
+      const tCharge = Number((o as any).gstAmount ?? (o as any).tax ?? 0) || 0;
+      const oCharge = Number((o as any).otherCharges ?? 0) || 0;
+
+      // For legacy orders without separate breakdown, default amt as service charge
+      if (pCharge === 0 && sCharge === 0 && amt > 0) {
+        sCharge = amt;
+      }
+
+      portalCharges += pCharge;
+      serviceCharges += sCharge;
+      tax += tCharge;
+      otherCharges += oCharge;
 
       const st = (o.orderStatus || '').toLowerCase();
       if (st === 'completed') {
@@ -99,6 +119,8 @@ export default function AnalyticsDashboardModule({
       }
     });
 
+    const totalIncome = portalCharges + serviceCharges;
+
     // Customer insights
     const uniqueCustomerIds = new Set(filteredOrders.map(o => o.customerId || o.userId).filter(Boolean));
 
@@ -111,6 +133,11 @@ export default function AnalyticsDashboardModule({
       verifiedRevenue,
       pendingRevenue,
       totalValue,
+      portalCharges,
+      serviceCharges,
+      totalIncome,
+      tax,
+      otherCharges,
       uniqueOrderingCustomers: uniqueCustomerIds.size
     };
   }, [filteredOrders]);
@@ -412,6 +439,59 @@ export default function AnalyticsDashboardModule({
           </div>
           <p className="text-xl font-black text-purple-700 mt-1.5">{customersCount || metrics.uniqueOrderingCustomers}</p>
           <span className="text-[10px] text-purple-600/80 mt-0.5 block">Registered records</span>
+        </div>
+      </div>
+
+      {/* 2b. Authoritative Revenue Formula & Breakdown Banner */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-slate-800 rounded-2xl p-5 shadow-sm text-white space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-wider">
+                Audited Formula
+              </span>
+              <h3 className="font-bold text-xs text-slate-200">Revenue & Income Breakdown</h3>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
+              Portal Charges + Service Charges = <span className="text-emerald-400 font-bold">Total Income</span>
+            </p>
+          </div>
+          <div className="text-right">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider block">Audited Total Income</span>
+            <span className="text-2xl font-black text-emerald-400 font-mono">₹{metrics.totalIncome.toLocaleString()}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Govt / Portal Charges</span>
+            <p className="text-base font-black text-white font-mono mt-1">₹{metrics.portalCharges.toLocaleString()}</p>
+            <span className="text-[10px] text-slate-400">Included in Income</span>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Service Charges</span>
+            <p className="text-base font-black text-blue-400 font-mono mt-1">₹{metrics.serviceCharges.toLocaleString()}</p>
+            <span className="text-[10px] text-slate-400">Included in Income</span>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider block">GST / Taxes</span>
+              <span className="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1.5 py-0.2 rounded">Separate</span>
+            </div>
+            <p className="text-base font-black text-amber-300 font-mono mt-1">₹{metrics.tax.toLocaleString()}</p>
+            <span className="text-[10px] text-slate-400">Statutory Tax</span>
+          </div>
+
+          <div className="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider block">Other Charges</span>
+              <span className="text-[9px] bg-purple-500/20 text-purple-300 border border-purple-500/30 px-1.5 py-0.2 rounded">Separate</span>
+            </div>
+            <p className="text-base font-black text-purple-300 font-mono mt-1">₹{metrics.otherCharges.toLocaleString()}</p>
+            <span className="text-[10px] text-slate-400">Discounts & Misc</span>
+          </div>
         </div>
       </div>
 

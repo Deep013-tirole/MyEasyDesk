@@ -88,9 +88,15 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
   const [timelineEndDate, setTimelineEndDate] = useState<string>(initialService?.timeline?.endDate || '');
   const [imageUrl, setImageUrl] = useState(initialService?.imageUrl || initialService?.bannerImage || initialService?.image || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400');
   
-  // Pricing & Timeline
+  // Flexible Pricing & Timeline (Requirement 2)
   const [govFees, setGovFees] = useState<number | string>(initialService?.govFees ?? 0);
   const [serviceCharge, setServiceCharge] = useState<number | string>(initialService?.serviceCharge ?? 0);
+  const [pricingType, setPricingType] = useState<'fixed' | 'per_page' | 'per_unit' | 'variable'>(initialService?.pricingType || 'fixed');
+  const [unitLabel, setUnitLabel] = useState<string>(initialService?.unitLabel || 'Page');
+  const [pricePerUnit, setPricePerUnit] = useState<number | string>(initialService?.pricePerUnit ?? 0);
+  const [gstRate, setGstRate] = useState<number | string>(initialService?.gstRate ?? 0);
+  const [otherCharges, setOtherCharges] = useState<number | string>(initialService?.otherCharges ?? 0);
+  const [discount, setDiscount] = useState<number | string>(initialService?.discount ?? 0);
   const [processingTime, setProcessingTime] = useState(initialService?.processingTime || initialService?.estimatedTime || '3-5 Working Days');
   const [eligibility, setEligibility] = useState(initialService?.eligibility || 'All eligible Indian citizens and businesses');
 
@@ -123,6 +129,7 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
   const [status, setStatus] = useState<string>(initialService?.status || 'active');
   const [featured, setFeatured] = useState<boolean>(!!initialService?.featured);
   const [popular, setPopular] = useState<boolean>(!!initialService?.popular);
+  const [trending, setTrending] = useState<boolean>(!!initialService?.trending);
 
   // UI States
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -142,11 +149,17 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       );
       setFullDescription(initialService.description || initialService.fullDescription || '');
       setTimelineEnabled(Boolean(initialService.timeline?.enabled));
-      setTimelineStartDate(initialService.timeline?.startDate || '');
-      setTimelineEndDate(initialService.timeline?.endDate || '');
+      setTimelineStartDate(timelineStartDate || initialService.timeline?.startDate || '');
+      setTimelineEndDate(timelineEndDate || initialService.timeline?.endDate || '');
       setImageUrl(initialService.imageUrl || initialService.bannerImage || initialService.image || 'https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400');
       setGovFees(initialService.govFees ?? 0);
       setServiceCharge(initialService.serviceCharge ?? 0);
+      setPricingType(initialService.pricingType || 'fixed');
+      setUnitLabel(initialService.unitLabel || 'Page');
+      setPricePerUnit(initialService.pricePerUnit ?? 0);
+      setGstRate(initialService.gstRate ?? 0);
+      setOtherCharges(initialService.otherCharges ?? 0);
+      setDiscount(initialService.discount ?? 0);
       setProcessingTime(initialService.processingTime || initialService.estimatedTime || '3-5 Working Days');
       setEligibility(initialService.eligibility || 'All eligible Indian citizens and businesses');
       setDocuments(
@@ -167,6 +180,7 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       setStatus(initialService.status || 'active');
       setFeatured(!!initialService.featured);
       setPopular(!!initialService.popular);
+      setTrending(!!initialService.trending);
     } else {
       // Clean slate for new service
       setTitle('');
@@ -180,6 +194,12 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       setImageUrl('https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400');
       setGovFees(0);
       setServiceCharge(0);
+      setPricingType('fixed');
+      setUnitLabel('Page');
+      setPricePerUnit(0);
+      setGstRate(0);
+      setOtherCharges(0);
+      setDiscount(0);
       setProcessingTime('3-5 Working Days');
       setEligibility('All eligible Indian citizens and businesses');
       setDocuments(['Aadhaar Card', 'Photograph']);
@@ -192,6 +212,7 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       setStatus('active');
       setFeatured(false);
       setPopular(false);
+      setTrending(false);
     }
     setIsDirty(false);
   }, [initialService, categories]);
@@ -217,12 +238,28 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
     if (!isDirty) setIsDirty(true);
   };
 
-  // Total fees calculation
-  const totalPayable = useMemo(() => {
+  // Total fees and revenue calculation (Formula: Portal Charges + Service Charges = Total Income)
+  const { totalPayable, totalIncome, calculatedTax } = useMemo(() => {
     const gov = parseFloat(String(govFees)) || 0;
-    const srv = parseFloat(String(serviceCharge)) || 0;
-    return gov + srv;
-  }, [govFees, serviceCharge]);
+    let srv = parseFloat(String(serviceCharge)) || 0;
+    if ((pricingType === 'per_page' || pricingType === 'per_unit') && srv === 0) {
+      srv = parseFloat(String(pricePerUnit)) || 0;
+    }
+    const other = parseFloat(String(otherCharges)) || 0;
+    const disc = parseFloat(String(discount)) || 0;
+    const rate = parseFloat(String(gstRate)) || 0;
+
+    const income = gov + srv;
+    const subtotal = Math.max(0, gov + srv + other - disc);
+    const tax = Math.round((subtotal * rate) / 100);
+    const payable = subtotal + tax;
+
+    return {
+      totalPayable: payable,
+      totalIncome: income,
+      calculatedTax: tax
+    };
+  }, [govFees, serviceCharge, pricingType, pricePerUnit, otherCharges, discount, gstRate]);
 
   // Selected Category Object
   const selectedCategory = useMemo(() => {
@@ -352,6 +389,12 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       image: imageUrl,
       govFees: Number(govFees) || 0,
       serviceCharge: Number(serviceCharge) || 0,
+      pricingType,
+      unitLabel: (pricingType === 'per_page' || pricingType === 'per_unit') ? (unitLabel.trim() || 'Unit') : undefined,
+      pricePerUnit: (pricingType === 'per_page' || pricingType === 'per_unit') ? (Number(pricePerUnit) || 0) : undefined,
+      gstRate: Number(gstRate) || 0,
+      otherCharges: Number(otherCharges) || 0,
+      discount: Number(discount) || 0,
       processingTime: processingTime.trim() || '3-5 Working Days',
       estimatedTime: processingTime.trim() || '3-5 Working Days',
       requiredDocuments: documents,
@@ -363,7 +406,8 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
       slug: cleanSlug || undefined,
       status: finalStatus,
       featured,
-      popular
+      popular,
+      trending
     };
 
     try {
@@ -626,26 +670,116 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
             </div>
 
             {/* Card 2: Pricing & Processing Details */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-4">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-6 shadow-2xs space-y-5">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold text-xs">
                     2
                   </div>
                   <div>
-                    <h2 className="font-extrabold text-sm text-slate-900">Pricing & Processing Details</h2>
-                    <p className="text-[11px] text-slate-400">Specify government challan fees and EasyDesk consultancy charges</p>
+                    <h2 className="font-extrabold text-sm text-slate-900">Service Pricing & Revenue Model</h2>
+                    <p className="text-[11px] text-slate-400">Configure portal fee, service charges (fixed/unit), taxes, and extra charges</p>
                   </div>
                 </div>
               </div>
 
+              {/* Pricing Type Selector */}
+              <div className="space-y-2">
+                <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+                  Pricing Structure
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { id: 'fixed', label: 'Fixed Price', desc: 'Single fixed service fee' },
+                    { id: 'per_page', label: 'Per Page', desc: 'Charged per page scanned/typed' },
+                    { id: 'per_unit', label: 'Per Unit / Item', desc: 'Per document, person, or certificate' },
+                    { id: 'variable', label: 'Variable / Custom', desc: 'Custom quote per case' },
+                  ].map((t) => (
+                    <button
+                      key={t.id}
+                      type="button"
+                      onClick={() => {
+                        setPricingType(t.id as any);
+                        markDirty();
+                      }}
+                      className={`p-2.5 rounded-xl border text-left transition cursor-pointer ${
+                        pricingType === t.id
+                          ? 'bg-blue-50 border-[#0F4C81] text-[#0F4C81] shadow-2xs'
+                          : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                      }`}
+                    >
+                      <div className="font-bold text-xs">{t.label}</div>
+                      <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{t.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Unit Label & Unit Price (If per_page or per_unit) */}
+              {(pricingType === 'per_page' || pricingType === 'per_unit') && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-blue-50/50 p-4 rounded-xl border border-blue-100 animate-in fade-in duration-150">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+                      Unit Name / Label
+                    </label>
+                    <input
+                      type="text"
+                      value={unitLabel}
+                      onChange={(e) => {
+                        setUnitLabel(e.target.value);
+                        markDirty();
+                      }}
+                      placeholder="e.g. Page, Applicant, Document"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                    />
+                    <div className="flex flex-wrap gap-1 pt-1">
+                      {['Page', 'Applicant', 'Certificate', 'Document', 'Application', 'Vehicle'].map((chip) => (
+                        <button
+                          key={chip}
+                          type="button"
+                          onClick={() => {
+                            setUnitLabel(chip);
+                            markDirty();
+                          }}
+                          className={`text-[9px] px-2 py-0.5 rounded border transition cursor-pointer ${
+                            unitLabel === chip ? 'bg-[#0F4C81] text-white border-[#0F4C81]' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                          }`}
+                        >
+                          {chip}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+                      Rate per {unitLabel || 'Unit'} (₹)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        value={pricePerUnit}
+                        onChange={(e) => {
+                          setPricePerUnit(e.target.value);
+                          markDirty();
+                        }}
+                        className="w-full pl-7 pr-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                        placeholder="50"
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-400">Rate multiplied by quantity selected during ordering</span>
+                  </div>
+                </div>
+              )}
+
               {/* Fee Breakdown Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {/* Gov Fees */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
-                    Govt Statutory Fee (₹)
+                    Govt Portal Fee (₹)
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
@@ -661,13 +795,13 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                       placeholder="0"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400">Official government portal fee</span>
+                  <span className="text-[10px] text-slate-400">Challan / portal fee</span>
                 </div>
 
                 {/* Service Charge */}
                 <div className="space-y-1">
                   <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
-                    Advisory / Service Charge (₹)
+                    {pricingType === 'per_page' || pricingType === 'per_unit' ? 'Base Service Fee (₹)' : 'Service Charge (₹)'}
                   </label>
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
@@ -683,19 +817,109 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                       placeholder="0"
                     />
                   </div>
-                  <span className="text-[10px] text-slate-400">EasyDesk verification charge</span>
+                  <span className="text-[10px] text-slate-400">EasyDesk advisory charge</span>
                 </div>
 
-                {/* Total Calculated Fee Card */}
-                <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex flex-col justify-between">
-                  <span className="text-[10px] font-extrabold text-slate-500 uppercase">Total User Payable</span>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-xl font-extrabold text-[#0F4C81]">₹{totalPayable}</span>
-                    <span className="text-[10px] text-slate-400 font-semibold">(inclusive of all fees)</span>
+                {/* GST / Tax Rate */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+                    GST / Tax Rate (%)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="28"
+                      value={gstRate}
+                      onChange={(e) => {
+                        setGstRate(e.target.value);
+                        markDirty();
+                      }}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                      placeholder="0"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">%</span>
                   </div>
-                  <span className="text-[9px] text-emerald-600 font-bold">✓ 100% transparent fee structure</span>
+                  <div className="flex gap-1 pt-1">
+                    {[0, 5, 12, 18].map((rate) => (
+                      <button
+                        key={rate}
+                        type="button"
+                        onClick={() => {
+                          setGstRate(rate);
+                          markDirty();
+                        }}
+                        className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold ${
+                          Number(gstRate) === rate ? 'bg-[#0F4C81] text-white border-[#0F4C81]' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                      >
+                        {rate}%
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
+                {/* Other Charges & Discount */}
+                <div className="space-y-1">
+                  <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider block">
+                    Other / Discount (₹)
+                  </label>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <input
+                      type="number"
+                      min="0"
+                      value={otherCharges}
+                      onChange={(e) => {
+                        setOtherCharges(e.target.value);
+                        markDirty();
+                      }}
+                      placeholder="Extra ₹"
+                      title="Other operational charges"
+                      className="w-full px-2 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:border-blue-500"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      value={discount}
+                      onChange={(e) => {
+                        setDiscount(e.target.value);
+                        markDirty();
+                      }}
+                      placeholder="Disc ₹"
+                      title="Promotional discount"
+                      className="w-full px-2 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-emerald-700 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                  <span className="text-[10px] text-slate-400">Extra charges & discount</span>
+                </div>
+              </div>
+
+              {/* Total Calculated Fee & Revenue Card */}
+              <div className="bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/80 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <span className="text-[10px] font-extrabold text-slate-500 uppercase tracking-wider block mb-1">
+                    Customer Total Payable
+                  </span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-[#0F4C81]">₹{totalPayable}</span>
+                    <span className="text-xs text-slate-500 font-medium">
+                      (Govt ₹{govFees} + Service ₹{serviceCharge || (pricePerUnit ? `${pricePerUnit}/unit` : 0)}
+                      {Number(calculatedTax) > 0 ? ` + GST ₹${calculatedTax}` : ''}
+                      {Number(otherCharges) > 0 ? ` + Other ₹${otherCharges}` : ''}
+                      {Number(discount) > 0 ? ` - Disc ₹${discount}` : ''})
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-white px-3 py-2 rounded-xl border border-blue-100 shadow-2xs text-right">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Overview Income Formula
+                  </span>
+                  <div className="text-xs font-extrabold text-emerald-700">
+                    Portal (₹{govFees}) + Service (₹{serviceCharge || 0}) = ₹{totalIncome}
+                  </div>
+                  <span className="text-[9px] text-slate-400">Taxes and extra charges shown separately</span>
+                </div>
               </div>
 
               {/* Processing Time & Eligibility */}
@@ -1056,8 +1280,8 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                 </select>
               </div>
 
-              {/* Visibility Badges */}
-              <div className="pt-2 border-t border-slate-100 space-y-2">
+              {/* Visibility Badges (Requirement 3) */}
+              <div className="pt-2 border-t border-slate-100 space-y-2.5">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1068,7 +1292,10 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                     }}
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-xs font-semibold text-slate-700">Mark as Featured Service</span>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 block">Featured Service</span>
+                    <span className="text-[10px] text-slate-400">Shown in homepage Featured carousel & badge</span>
+                  </div>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -1080,7 +1307,25 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                     }}
                     className="rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
-                  <span className="text-xs font-semibold text-slate-700">Highlight in Trending List</span>
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 block">Popular Service</span>
+                    <span className="text-[10px] text-slate-400">Listed in Most Popular section</span>
+                  </div>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={trending}
+                    onChange={(e) => {
+                      setTrending(e.target.checked);
+                      markDirty();
+                    }}
+                    className="rounded border-slate-300 text-amber-600 focus:ring-amber-500"
+                  />
+                  <div>
+                    <span className="text-xs font-semibold text-slate-800 block">Trending Service</span>
+                    <span className="text-[10px] text-slate-400">Prioritized in Trending / High Demand feed</span>
+                  </div>
                 </label>
               </div>
 

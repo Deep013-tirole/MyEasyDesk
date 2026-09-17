@@ -49,16 +49,36 @@ export default function HomeView({
     }).slice(0, 3);
   }, [blogs]);
 
-  // Featured / popular services (top 6 active services)
-  const popularServices = useMemo(() => {
-    const active = (services || []).filter(s => (s.status || 'Active') === 'Active');
+  const [catalogSection, setCatalogSection] = useState<'popular' | 'trending' | 'featured' | 'all'>('popular');
+
+  // Curated services based on Popular / Trending / Featured (Requirement 3)
+  const isServiceActive = (s: Service) => {
+    const st = (s.status || 'Active').toLowerCase();
+    return st === 'active' || st === 'published';
+  };
+
+  const displayedServices = useMemo(() => {
+    const active = (services || []).filter(isServiceActive);
+    let sectionFiltered = active;
+
+    if (catalogSection === 'popular') {
+      const pop = active.filter(s => s.popular || (s.popularity && s.popularity >= 80));
+      sectionFiltered = pop.length > 0 ? pop : active;
+    } else if (catalogSection === 'trending') {
+      const trn = active.filter(s => s.trending || (s.popularity && s.popularity >= 70));
+      sectionFiltered = trn.length > 0 ? trn : [...active].sort((a, b) => (b.popularity || 0) - (a.popularity || 0));
+    } else if (catalogSection === 'featured') {
+      const feat = active.filter(s => s.featured);
+      sectionFiltered = feat.length > 0 ? feat : active;
+    }
+
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return active.slice(0, 6);
-    return active.filter(s =>
+    if (!q) return sectionFiltered.slice(0, 6);
+    return sectionFiltered.filter(s =>
       (s.title || '').toLowerCase().includes(q) ||
       (s.shortDescription || '').toLowerCase().includes(q)
     ).slice(0, 6);
-  }, [services, searchQuery]);
+  }, [services, searchQuery, catalogSection]);
 
   const handleAskAI = () => {
     window.dispatchEvent(new CustomEvent('easydesk-ai-contextual-help', {
@@ -187,17 +207,19 @@ export default function HomeView({
 
       {/* 3. POPULAR SERVICES SECTION */}
       <section className="portal-container pt-12 sm:pt-16">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-end mb-8 gap-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-end mb-6 gap-4">
           <div>
             <div className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#0F4C81] uppercase tracking-wider mb-1">
               <Sparkles className="w-3.5 h-3.5 text-[#0F4C81]" />
-              <span>Catalog Highlights</span>
+              <span>Civic Services Directory</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight m-0">
-              Popular Digital Services
+              {catalogSection === 'popular' ? 'Most Popular Services' :
+               catalogSection === 'trending' ? 'Trending & High-Demand Services' :
+               catalogSection === 'featured' ? 'Featured Assistance Programs' : 'All Digital Services'}
             </h2>
             <p className="text-xs sm:text-sm text-slate-500 mt-1 font-normal m-0 max-w-xl">
-              Select an application below for step-by-step assistance, pre-submission checklist, and transparent fee schedules.
+              Official portal applications with verified desk assistance, checklist audit, and transparent fee schedules.
             </p>
           </div>
 
@@ -211,64 +233,162 @@ export default function HomeView({
           </button>
         </div>
 
-        {popularServices.length === 0 ? (
+        {/* Popular / Trending / Featured Filter Tabs (Requirement 3) */}
+        <div className="flex flex-wrap gap-2 mb-8">
+          <button
+            type="button"
+            onClick={() => setCatalogSection('popular')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              catalogSection === 'popular'
+                ? 'bg-[#0F4C81] text-white shadow-2xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Sparkles className={`w-3.5 h-3.5 ${catalogSection === 'popular' ? 'text-amber-300' : 'text-amber-500'}`} />
+            <span>Most Popular</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCatalogSection('trending')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              catalogSection === 'trending'
+                ? 'bg-[#0F4C81] text-white shadow-2xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <Zap className={`w-3.5 h-3.5 ${catalogSection === 'trending' ? 'text-amber-300' : 'text-amber-500'}`} />
+            <span>Trending</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCatalogSection('featured')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              catalogSection === 'featured'
+                ? 'bg-[#0F4C81] text-white shadow-2xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <CheckCircle2 className={`w-3.5 h-3.5 ${catalogSection === 'featured' ? 'text-emerald-300' : 'text-emerald-600'}`} />
+            <span>Featured</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setCatalogSection('all')}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+              catalogSection === 'all'
+                ? 'bg-[#0F4C81] text-white shadow-2xs'
+                : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            All Services
+          </button>
+        </div>
+
+        {displayedServices.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200/90 p-8 text-center space-y-2">
             <Layers className="w-8 h-8 text-slate-300 mx-auto" />
             <h3 className="text-sm font-bold text-slate-800">No matching services found</h3>
-            <p className="text-xs text-slate-500">Try searching for other terms or explore the full catalog.</p>
+            <p className="text-xs text-slate-500">Try switching tabs or exploring the full catalog.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {popularServices.map(service => {
+            {displayedServices.map(service => {
               const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
               const hasTimeline = Boolean(service?.timeline?.enabled && service.timeline?.startDate && service.timeline?.endDate);
+              const bannerImg = service.bannerImage || service.imageUrl || service.image;
 
               return (
                 <div
                   key={service.id}
-                  className="bg-white rounded-2xl border border-slate-200/80 p-6 flex flex-col justify-between shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 group"
+                  className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden flex flex-col justify-between shadow-2xs hover:shadow-md hover:-translate-y-1 transition-all duration-200 group"
                 >
-                  <div className="space-y-3">
-                    {/* Badge & Turnaround */}
-                    <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-                      <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold">
-                        {service.processingTime || '3–5 Days'}
-                      </span>
-                      {hasTimeline && (
-                        <span className="text-emerald-700 font-bold flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-emerald-600" /> Active Timeline
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Service Name */}
-                    <h3
-                      onClick={() => handleServiceSelect(service.id)}
-                      className="text-base font-black text-slate-900 leading-snug hover:text-[#0F4C81] cursor-pointer transition-colors m-0"
-                    >
-                      {service.title}
-                    </h3>
-
-                    {/* Short Description strictly with description fallback */}
-                    {(service.shortDescription || service.description) ? (
-                      <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 font-normal m-0">
-                        {service.shortDescription || service.description}
-                      </p>
-                    ) : null}
-
-                    {/* Timeline dates if configured */}
-                    {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
-                      <div className="p-2 bg-blue-50/60 rounded-xl border border-blue-100/80 text-[11px] text-slate-700 space-y-0.5">
-                        <span className="block text-[10px] uppercase font-extrabold text-[#0F4C81]">Application Window</span>
-                        <span className="font-medium text-slate-600">
-                          {service.timeline.startDate} to {service.timeline.endDate}
-                        </span>
+                  <div>
+                    {/* Banner Image with Clean Fallback (Requirement 3) */}
+                    {bannerImg ? (
+                      <div 
+                        onClick={() => handleServiceSelect(service.id)}
+                        className="relative w-full h-40 overflow-hidden bg-slate-100 cursor-pointer border-b border-slate-100"
+                      >
+                        <img
+                          src={bannerImg}
+                          alt={service.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                          {service.featured && (
+                            <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                              Featured
+                            </span>
+                          )}
+                          {service.popular && (
+                            <span className="bg-amber-500/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => handleServiceSelect(service.id)}
+                        className="w-full h-24 bg-gradient-to-r from-blue-900 via-[#0F4C81] to-slate-900 flex items-center justify-between px-4 text-white cursor-pointer border-b border-slate-100"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-5 h-5 text-cyan-300" />
+                          <span className="text-[11px] font-bold text-slate-100">Official Desk Service</span>
+                        </div>
+                        {service.featured && (
+                          <span className="bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded">
+                            Featured
+                          </span>
+                        )}
                       </div>
                     )}
+
+                    <div className="p-5 space-y-3">
+                      {/* Badge & Turnaround */}
+                      <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                        <span className="bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-full font-bold">
+                          {service.processingTime || '3–5 Days'}
+                        </span>
+                        {hasTimeline && (
+                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                            <Clock className="w-3 h-3 text-emerald-600" /> Active Timeline
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Service Name */}
+                      <h3
+                        onClick={() => handleServiceSelect(service.id)}
+                        className="text-base font-black text-slate-900 leading-snug hover:text-[#0F4C81] cursor-pointer transition-colors m-0"
+                      >
+                        {service.title}
+                      </h3>
+
+                      {/* Short Description */}
+                      {(service.shortDescription || service.description) ? (
+                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 font-normal m-0">
+                          {service.shortDescription || service.description}
+                        </p>
+                      ) : null}
+
+                      {/* Timeline dates if configured */}
+                      {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
+                        <div className="p-2 bg-blue-50/60 rounded-xl border border-blue-100/80 text-[11px] text-slate-700 space-y-0.5">
+                          <span className="block text-[10px] uppercase font-extrabold text-[#0F4C81]">Application Window</span>
+                          <span className="font-medium text-slate-600">
+                            {service.timeline.startDate} to {service.timeline.endDate}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   {/* Card Footer: Price & Apply */}
-                  <div className="pt-5 mt-4 border-t border-slate-100 flex items-center justify-between gap-3">
+                  <div className="p-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/50">
                     <div>
                       <span className="block text-[10px] text-slate-400 font-extrabold uppercase">Starting from</span>
                       <span className="text-base font-black text-slate-900 tabular-nums">

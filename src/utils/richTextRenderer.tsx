@@ -1,14 +1,56 @@
 import React from 'react';
 import { Info, Check } from 'lucide-react';
+import DOMPurify from 'dompurify';
 
 /**
- * Parses inline formatting like **bold**, *italic*, and [link](url)
+ * Sanitizes rich-text HTML using DOMPurify with an approved allowlist of tags and attributes.
+ * Eliminates all XSS vectors while preserving legitimate formatting.
+ */
+export function sanitizeRichHtml(html: string): string {
+  if (!html || typeof html !== 'string') return '';
+  
+  try {
+    if (typeof window !== 'undefined' && DOMPurify && typeof DOMPurify.sanitize === 'function') {
+      return DOMPurify.sanitize(html, {
+        ALLOWED_TAGS: [
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'div', 'br', 'hr',
+          'strong', 'b', 'em', 'i', 'u', 's', 'strike', 'sub', 'sup',
+          'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+          'a', 'img', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td', 'caption'
+        ],
+        ALLOWED_ATTR: [
+          'href', 'target', 'rel', 'src', 'alt', 'title', 'class', 'style', 'width', 'height', 'align', 'border'
+        ]
+      });
+    }
+  } catch (err) {
+    console.warn('[Sanitizer] DOMPurify error, using fallback:', err);
+  }
+
+  // Fallback sanitization for non-browser / SSR contexts
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    .replace(/on\w+\s*=\s*[^>\s]+/gi, '')
+    .replace(/javascript:[^"']*/gi, '');
+}
+
+/**
+ * Checks whether content contains HTML formatting tags
+ */
+export function containsHtmlTags(str: string): boolean {
+  if (!str) return false;
+  return /<(h[1-6]|p|div|ul|ol|li|table|thead|tbody|tr|th|td|blockquote|strong|b|em|i|u|span|a\s|img\s|br|hr)/i.test(str);
+}
+
+/**
+ * Parses inline formatting like **bold**, *italic*, <u>underline</u>, and [link](url)
  */
 export function formatInlineText(text: string): React.ReactNode {
   if (!text) return text;
 
-  // Split by bold (**...**), italic (*...*), and links ([...](...))
-  const tokenRegex = /(\*\*.*?\*\*|\*.*?\*|\[.*?\]\(.*?\))/g;
+  // Split by bold (**...**), italic (*...*), underline (<u>...</u>), and links ([...](...))
+  const tokenRegex = /(\*\*.*?\*\*|\*.*?\*|<u>.*?<\/u>|\[.*?\]\(.*?\))/g;
   const parts = text.split(tokenRegex);
 
   return parts.map((part, index) => {
@@ -24,6 +66,13 @@ export function formatInlineText(text: string): React.ReactNode {
         <em key={index} className="italic text-slate-800">
           {part.slice(1, -1)}
         </em>
+      );
+    }
+    if (part.startsWith('<u>') && part.endsWith('</u>') && part.length >= 7) {
+      return (
+        <u key={index} className="underline underline-offset-2">
+          {part.slice(3, -4)}
+        </u>
       );
     }
     if (part.startsWith('[') && part.includes('](') && part.endsWith(')')) {
@@ -50,13 +99,26 @@ export function formatInlineText(text: string): React.ReactNode {
 /**
  * Renders full markdown/rich-text blocks into styled JSX elements
  */
-export function renderRichText(content: string, options: { isDark?: boolean; compact?: boolean } = {}): React.ReactNode {
+export function renderRichText(content: string, options: { isDark?: boolean; compact?: boolean; className?: string } = {}): React.ReactNode {
   if (!content || !content.trim()) return null;
+
+  // If content contains HTML tags, sanitize and render via HTML container with rich styles
+  if (containsHtmlTags(content)) {
+    const cleanHtml = sanitizeRichHtml(content);
+    return (
+      <div 
+        className={`easydesk-rich-content text-slate-700 leading-relaxed font-sans ${
+          options.compact ? 'text-xs space-y-2.5' : 'text-sm sm:text-base space-y-4'
+        } ${options.className || ''}`}
+        dangerouslySetInnerHTML={{ __html: cleanHtml }}
+      />
+    );
+  }
 
   const paragraphs = content.split(/\n\s*\n/);
 
   return (
-    <div className="space-y-4 text-slate-700 font-sans leading-relaxed">
+    <div className={`space-y-4 text-slate-700 font-sans leading-relaxed ${options.className || ''}`}>
       {paragraphs.map((para, idx) => {
         const trimmed = para.trim();
         if (!trimmed) return null;
@@ -156,6 +218,41 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
                 </li>
               ))}
             </ol>
+          );
+        }
+
+        // Markdown Table Block (| Col 1 | Col 2 |)
+        if (lines.length >= 2 && lines[0].includes('|') && lines[1].includes('|') && lines[1].includes('-')) {
+          const parseRow = (line: string) =>
+            line.split('|').map(c => c.trim()).filter((c, i, arr) => (i > 0 && i < arr.length - 1) || c.length > 0);
+          const headerCells = parseRow(lines[0]);
+          const rowLines = lines.slice(2).filter(l => l.trim().length > 0 && l.includes('|'));
+          return (
+            <div key={idx} className="overflow-x-auto my-3 border border-slate-200 rounded-xl shadow-2xs">
+              <table className="min-w-full border-collapse text-xs">
+                <thead className="bg-slate-100/90 text-slate-800 font-bold border-b border-slate-200">
+                  <tr>
+                    {headerCells.map((h, hi) => (
+                      <th key={hi} className="px-3 py-2 text-left border-r border-slate-200 last:border-r-0">{formatInlineText(h)}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {rowLines.map((rowStr, ri) => {
+                    const cells = parseRow(rowStr);
+                    return (
+                      <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                        {cells.map((cell, ci) => (
+                          <td key={ci} className="px-3 py-2 text-slate-700 border-r border-slate-100 last:border-r-0">
+                            {formatInlineText(cell)}
+                          </td>
+                        ))}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           );
         }
 

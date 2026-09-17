@@ -2,6 +2,11 @@ import React, { useState, useRef } from 'react';
 import { 
   Bold, 
   Italic, 
+  Underline as UnderlineIcon,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Table as TableIcon,
   Heading2, 
   Heading3, 
   List, 
@@ -167,12 +172,17 @@ export const RichFormattingEditor: React.FC<RichFormattingEditorProps> = ({
       </div>
 
       {/* Shortcuts helper drawer */}
+      {/* Shortcuts helper drawer */}
       {showTips && (
         <div className="bg-blue-50/80 border border-blue-200 rounded-xl p-3 text-[11px] text-blue-900 grid grid-cols-2 sm:grid-cols-4 gap-2 animate-in fade-in duration-150">
           <div><span className="font-mono font-bold">**Bold Text**</span> → <strong>Bold</strong></div>
           <div><span className="font-mono font-bold">*Italic Text*</span> → <em>Italic</em></div>
+          <div><span className="font-mono font-bold">&lt;u&gt;Text&lt;/u&gt;</span> → <u>Underline</u></div>
           <div><span className="font-mono font-bold">## Heading</span> → H2 Title</div>
           <div><span className="font-mono font-bold">- Bullet Item</span> → List</div>
+          <div><span className="font-mono font-bold">| Col 1 | Col 2 |</span> → Table</div>
+          <div><span className="font-mono font-bold">&lt;div style="text-align:center"&gt;</span> → Align</div>
+          <div><span className="font-mono font-bold">[Text](url)</span> → Link</div>
         </div>
       )}
 
@@ -199,6 +209,41 @@ export const RichFormattingEditor: React.FC<RichFormattingEditorProps> = ({
               title="Italic (*text*)"
             >
               <Italic className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('<u>', '</u>', 'underlined text')}
+              className="p-1.5 hover:bg-white hover:text-slate-900 rounded-lg transition text-xs"
+              title="Underline (<u>text</u>)"
+            >
+              <UnderlineIcon className="w-3.5 h-3.5" />
+            </button>
+
+            <div className="h-4 w-px bg-slate-300 mx-1" />
+
+            <button
+              type="button"
+              onClick={() => insertFormatting('<div style="text-align: left;">\n', '\n</div>', 'Left aligned content')}
+              className="p-1.5 hover:bg-white hover:text-slate-900 rounded-lg transition text-xs"
+              title="Align Left"
+            >
+              <AlignLeft className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('<div style="text-align: center;">\n', '\n</div>', 'Centered content')}
+              className="p-1.5 hover:bg-white hover:text-slate-900 rounded-lg transition text-xs"
+              title="Align Center"
+            >
+              <AlignCenter className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => insertFormatting('<div style="text-align: right;">\n', '\n</div>', 'Right aligned content')}
+              className="p-1.5 hover:bg-white hover:text-slate-900 rounded-lg transition text-xs"
+              title="Align Right"
+            >
+              <AlignRight className="w-3.5 h-3.5" />
             </button>
 
             <div className="h-4 w-px bg-slate-300 mx-1" />
@@ -248,6 +293,15 @@ export const RichFormattingEditor: React.FC<RichFormattingEditorProps> = ({
             </button>
 
             <div className="h-4 w-px bg-slate-300 mx-1" />
+
+            <button
+              type="button"
+              onClick={() => insertFormatting('\n| Header 1 | Header 2 | Header 3 |\n| :--- | :--- | :--- |\n| Value 1 | Value 2 | Value 3 |\n| Value 4 | Value 5 | Value 6 |\n', '', '')}
+              className="p-1.5 hover:bg-white hover:text-indigo-700 rounded-lg transition text-xs"
+              title="Insert Data Table"
+            >
+              <TableIcon className="w-3.5 h-3.5" />
+            </button>
 
             <button
               type="button"

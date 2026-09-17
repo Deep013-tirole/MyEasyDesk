@@ -246,7 +246,10 @@ export interface EmployeeAccount {
   username?: string;
   role: UserRole | string;
   permissions?: string[];
-  accountStatus: 'Active' | 'Inactive' | 'Locked';
+  accountStatus: 'Active' | 'Inactive' | 'Locked' | 'Disabled';
+  loginAllowed?: boolean;
+  loginId?: string;
+  password?: string;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -449,6 +452,12 @@ export interface Service {
   estimatedTime?: string;
   govFees: number;
   serviceCharge: number;
+  pricingType?: 'fixed' | 'per_page' | 'per_unit' | 'variable';
+  unitLabel?: string;
+  pricePerUnit?: number;
+  gstRate?: number;
+  otherCharges?: number;
+  discount?: number;
   faqs: FAQItem[];
   howItWorks?: string;
   seoTitle?: string;
@@ -458,6 +467,7 @@ export interface Service {
   whatsAppEnabled?: boolean;
   featured?: boolean;
   popular?: boolean;
+  trending?: boolean;
   displayOrder?: number;
   popularity: number; // For trending
 }
@@ -525,6 +535,12 @@ export interface Order {
   whatsAppSentAt?: string;
   govFees?: number;
   serviceCharge?: number;
+  pricingType?: 'fixed' | 'per_page' | 'per_unit' | 'variable';
+  unitLabel?: string;
+  unitQuantity?: number;
+  pricePerUnit?: number;
+  gstAmount?: number;
+  otherCharges?: number;
   processingFee?: number;
   discount?: number;
   couponCode?: string;

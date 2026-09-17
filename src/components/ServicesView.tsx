@@ -3,7 +3,8 @@ import {
   Search, ShieldAlert, CheckSquare,
   MessageSquare, FileText, ArrowRight, Sparkles,
   ShieldCheck, Clock, CheckCircle2, Bot, Layers,
-  HelpCircle, Zap, ArrowUpDown, X, ChevronDown
+  HelpCircle, Zap, ArrowUpDown, X, ChevronDown,
+  LayoutGrid, List as ListIcon
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Service, ServiceCategory } from '../types.js';
@@ -35,6 +36,7 @@ export default function ServicesView({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'recommended' | 'price-asc' | 'price-desc' | 'fastest'>('recommended');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Reset scroll to top when category tab changes
   useScrollToTopOnChange([selectedCategory]);
@@ -202,29 +204,55 @@ export default function ServicesView({
 
         </div>
 
-        {/* 3. ACTIVE RESULTS METRICS */}
-        <div className="flex items-center justify-between text-xs text-slate-500 font-medium px-1">
-          <span>
-            Showing <strong className="text-slate-900 tabular-nums">{filteredServices.length}</strong> of <span className="tabular-nums">{services.length}</span> services
-            {selectedCategory !== 'all' && (
-              <span> in <strong className="text-[#0F4C81]">{categories.find(c => c.id === selectedCategory)?.name}</strong></span>
+        {/* 3. ACTIVE RESULTS METRICS & VIEW SWITCHER (Requirement 3) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 font-medium px-1">
+          <div className="flex items-center gap-2">
+            <span>
+              Showing <strong className="text-slate-900 tabular-nums">{filteredServices.length}</strong> of <span className="tabular-nums">{services.length}</span> services
+              {selectedCategory !== 'all' && (
+                <span> in <strong className="text-[#0F4C81]">{categories.find(c => c.id === selectedCategory)?.name}</strong></span>
+              )}
+            </span>
+            {(searchQuery || selectedCategory !== 'all' || sortBy !== 'recommended') && (
+              <button
+                onClick={() => {
+                  setSearchQuery('');
+                  setSelectedCategory('all');
+                  setSortBy('recommended');
+                }}
+                className="text-[#0F4C81] hover:underline font-bold cursor-pointer ml-2"
+              >
+                Reset Filters
+              </button>
             )}
-          </span>
-          {(searchQuery || selectedCategory !== 'all' || sortBy !== 'recommended') && (
+          </div>
+
+          {/* Grid vs List View Toggle */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
             <button
-              onClick={() => {
-                setSearchQuery('');
-                setSelectedCategory('all');
-                setSortBy('recommended');
-              }}
-              className="text-[#0F4C81] hover:underline font-bold cursor-pointer"
+              type="button"
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
+                viewMode === 'grid' ? 'bg-white text-[#0F4C81] shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="Grid View"
             >
-              Reset Filters
+              <LayoutGrid className="w-3.5 h-3.5" />
             </button>
-          )}
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`p-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
+                viewMode === 'list' ? 'bg-white text-[#0F4C81] shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+              title="List View"
+            >
+              <ListIcon className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* 4. SERVICES GRID / SKELETON / EMPTY STATE */}
+        {/* 4. SERVICES GRID / LIST / SKELETON / EMPTY STATE */}
         {isLoading ? (
           <GridSkeleton count={6} type="service" />
         ) : services.length === 0 && !searchQuery ? (
@@ -262,62 +290,110 @@ export default function ServicesView({
               </button>
             </div>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
+          /* GRID VIEW WITH CLEAN BANNER IMAGES */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredServices.map(service => {
               const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
               const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
+              const bannerImg = service.bannerImage || service.imageUrl || service.image;
 
               return (
                 <div
                   key={service.id}
                   className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col justify-between group"
                 >
-                  <div className="p-5 flex-1 space-y-3">
-                    {/* Badge Row */}
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
-                        {catName}
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
-                        <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                        <span>{service.processingTime || '3–5 Working Days'}</span>
-                      </span>
-                    </div>
-
-                    {/* Title */}
-                    <h3
-                      onClick={() => handleOpenDetails(service.id)}
-                      className="font-bold text-base text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug"
-                      title={service.title}
-                    >
-                      {service.title}
-                    </h3>
-
-                    {/* Short Description (STRICT: only shortDescription, fallback only if missing) */}
-                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
-                      {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
-                    </p>
-
-                    {/* Document Checklist Preview */}
-                    <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                      <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                        Required Documents:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {(service.requiredDocuments || []).slice(0, 2).map((doc, dIdx) => (
-                          <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
-                            ✓ {doc}
-                          </span>
-                        ))}
-                        {(service.requiredDocuments || []).length > 2 && (
-                          <span className="text-[10px] text-slate-500 px-1 py-0.5 font-bold">
-                            +{(service.requiredDocuments || []).length - 2} more
+                  <div>
+                    {/* Banner Image with Clean Fallback */}
+                    {bannerImg ? (
+                      <div 
+                        onClick={() => handleOpenDetails(service.id)}
+                        className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-slate-100"
+                      >
+                        <img
+                          src={bannerImg}
+                          alt={service.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                          {service.featured && (
+                            <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                              Featured
+                            </span>
+                          )}
+                          {service.popular && (
+                            <span className="bg-amber-500/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                              Popular
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => handleOpenDetails(service.id)}
+                        className="w-full h-24 bg-gradient-to-r from-blue-900 via-[#0F4C81] to-slate-900 flex items-center justify-between px-4 text-white cursor-pointer border-b border-slate-100"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Layers className="w-5 h-5 text-cyan-300" />
+                          <span className="text-[11px] font-bold text-slate-100">Official Desk Service</span>
+                        </div>
+                        {service.featured && (
+                          <span className="bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded">
+                            Featured
                           </span>
                         )}
-                        {(!service.requiredDocuments || service.requiredDocuments.length === 0) && (
-                          <span className="text-[10px] text-slate-400 italic">Pre-requisites guided on desk</span>
-                        )}
+                      </div>
+                    )}
+
+                    <div className="p-5 space-y-3">
+                      {/* Badge Row */}
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                          {catName}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
+                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>{service.processingTime || '3–5 Working Days'}</span>
+                        </span>
+                      </div>
+
+                      {/* Title */}
+                      <h3
+                        onClick={() => handleOpenDetails(service.id)}
+                        className="font-bold text-base text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug"
+                        title={service.title}
+                      >
+                        {service.title}
+                      </h3>
+
+                      {/* Short Description */}
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
+                        {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
+                      </p>
+
+                      {/* Document Checklist Preview */}
+                      <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                        <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                          Required Documents:
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {(service.requiredDocuments || []).slice(0, 2).map((doc, dIdx) => (
+                            <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
+                              ✓ {doc}
+                            </span>
+                          ))}
+                          {(service.requiredDocuments || []).length > 2 && (
+                            <span className="text-[10px] text-slate-500 px-1 py-0.5 font-bold">
+                              +{(service.requiredDocuments || []).length - 2} more
+                            </span>
+                          )}
+                          {(!service.requiredDocuments || service.requiredDocuments.length === 0) && (
+                            <span className="text-[10px] text-slate-400 italic">Pre-requisites guided on desk</span>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -349,6 +425,127 @@ export default function ServicesView({
                       >
                         <MessageSquare className="w-3.5 h-3.5" /> Apply
                       </button>
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          /* LIST VIEW WITH HORIZONTAL RESPONSIVE ROWS (Requirement 3) */
+          <div className="space-y-4">
+            {filteredServices.map(service => {
+              const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
+              const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
+              const bannerImg = service.bannerImage || service.imageUrl || service.image;
+
+              return (
+                <div
+                  key={service.id}
+                  className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col sm:flex-row group"
+                >
+                  {/* Left Banner Thumbnail */}
+                  {bannerImg ? (
+                    <div
+                      onClick={() => handleOpenDetails(service.id)}
+                      className="sm:w-60 h-48 sm:h-auto min-h-[140px] relative overflow-hidden bg-slate-100 cursor-pointer shrink-0"
+                    >
+                      <img
+                        src={bannerImg}
+                        alt={service.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                        {service.featured && (
+                          <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                            Featured
+                          </span>
+                        )}
+                        {service.popular && (
+                          <span className="bg-amber-500/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                            Popular
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      onClick={() => handleOpenDetails(service.id)}
+                      className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-blue-900 via-[#0F4C81] to-slate-900 p-4 flex flex-col justify-between text-white shrink-0 cursor-pointer"
+                    >
+                      <Layers className="w-6 h-6 text-cyan-300" />
+                      <span className="text-[10px] font-bold text-slate-200">Official Service Desk</span>
+                    </div>
+                  )}
+
+                  {/* Middle Content */}
+                  <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                          {catName}
+                        </span>
+                        <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
+                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                          <span>{service.processingTime || '3–5 Working Days'}</span>
+                        </span>
+                      </div>
+
+                      <h3
+                        onClick={() => handleOpenDetails(service.id)}
+                        className="font-bold text-base sm:text-lg text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug"
+                      >
+                        {service.title}
+                      </h3>
+
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
+                      </p>
+
+                      {/* Required Documents Checklist */}
+                      <div className="flex flex-wrap items-center gap-1 pt-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Docs:</span>
+                        {(service.requiredDocuments || []).slice(0, 3).map((doc, dIdx) => (
+                          <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
+                            ✓ {doc}
+                          </span>
+                        ))}
+                        {(service.requiredDocuments || []).length > 3 && (
+                          <span className="text-[10px] text-slate-500 font-bold">
+                            +{(service.requiredDocuments || []).length - 3} more
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Bottom Pricing & Actions */}
+                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Starting Fee</span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-lg font-black text-slate-900 tabular-nums">₹{totalFee}</span>
+                          <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenDetails(service.id)}
+                          className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-2xs"
+                        >
+                          View Details
+                        </button>
+                        <button
+                          onClick={() => openWhatsAppForService(service, catName)}
+                          className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> Apply on WhatsApp
+                        </button>
+                      </div>
                     </div>
                   </div>
 

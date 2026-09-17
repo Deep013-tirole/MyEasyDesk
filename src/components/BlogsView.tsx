@@ -3,7 +3,8 @@ import {
   Search, BookOpen, Layers, MessageSquare, ArrowRight,
   ShieldCheck, HelpCircle, X, Sparkles, Filter, Newspaper,
   ChevronRight, CheckCircle2, Lock, Headphones, Zap, CheckCircle,
-  ArrowUpDown, SlidersHorizontal, FileText, Bot
+  ArrowUpDown, SlidersHorizontal, FileText, Bot,
+  Calendar, Clock, LayoutGrid, List
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { Blog, BlogCategory, Service } from '../types.js';
@@ -58,6 +59,7 @@ export default function BlogsView({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'latest' | 'oldest'>('latest');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // Reset scroll on selecting/deselecting blog or changing category
   useScrollToTopOnChange([selectedBlog, selectedCategory]);
@@ -347,19 +349,50 @@ export default function BlogsView({
             })}
           </div>
 
-          {/* Sort Dropdown */}
-          <div className="flex items-center gap-1.5 shrink-0 text-xs font-medium text-slate-500">
-            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline">Sort:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'latest' | 'oldest')}
-              aria-label="Sort guides by date"
-              className="bg-slate-100/80 hover:bg-slate-200/80 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer border border-transparent focus:border-slate-300"
-            >
-              <option value="latest">Latest First</option>
-              <option value="oldest">Oldest First</option>
-            </select>
+          {/* Controls: View Mode Switch & Sort Dropdown */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            {/* View Mode Switcher */}
+            <div className="flex items-center bg-slate-100/90 p-0.5 rounded-xl border border-slate-200/60">
+              <button
+                type="button"
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-white text-[#0F4C81] shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="Grid View"
+                aria-label="Switch to Grid View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden md:inline text-[11px]">Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 cursor-pointer ${
+                  viewMode === 'list' ? 'bg-white text-[#0F4C81] shadow-2xs' : 'text-slate-500 hover:text-slate-800'
+                }`}
+                title="List View"
+                aria-label="Switch to List View"
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden md:inline text-[11px]">List</span>
+              </button>
+            </div>
+
+            {/* Sort Dropdown */}
+            <div className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+              <span className="hidden sm:inline">Sort:</span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'latest' | 'oldest')}
+                aria-label="Sort guides by date"
+                className="bg-slate-100/80 hover:bg-slate-200/80 text-slate-800 text-xs font-bold px-3 py-1.5 rounded-xl outline-none cursor-pointer border border-transparent focus:border-slate-300"
+              >
+                <option value="latest">Latest First</option>
+                <option value="oldest">Oldest First</option>
+              </select>
+            </div>
           </div>
         </div>
       </section>
@@ -449,18 +482,113 @@ export default function BlogsView({
                   <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                     {selectedCategory === 'all' && !searchQuery ? 'All Filing Guides & Articles' : 'Matching Guides'}
                   </h2>
+                  <span className="text-xs text-slate-400 font-medium">
+                    Showing in {viewMode === 'grid' ? 'Grid' : 'List'} mode
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {gridBlogs.map((blog) => (
-                    <BlogCard
-                      key={blog.id}
-                      blog={blog}
-                      blogCategories={blogCategories}
-                      onSelect={handleSelectBlog}
-                    />
-                  ))}
-                </div>
+                {viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {gridBlogs.map((blog) => (
+                      <BlogCard
+                        key={blog.id}
+                        blog={blog}
+                        blogCategories={blogCategories}
+                        onSelect={handleSelectBlog}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {gridBlogs.map((blog) => {
+                      const matchedCat = blogCategories.find(
+                        c => c.id === blog.categoryId || c.name.toLowerCase() === (blog.category || '').toLowerCase()
+                      );
+                      const catName = matchedCat ? matchedCat.name : (blog.category || 'Government Services');
+                      const wordCount = (blog.content || '').trim().split(/\s+/).length;
+                      const readTime = Math.max(2, Math.ceil(wordCount / 180));
+                      const fmtDate = blog.date 
+                        ? new Date(blog.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+                        : (blog.createdAt ? new Date(blog.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Guide');
+                      const rawExcerpt = blog.content ? blog.content.replace(/^[#>\s*-]+/gm, '').trim() : '';
+                      const excerpt = rawExcerpt.slice(0, 160) + (rawExcerpt.length > 160 ? '...' : '');
+
+                      return (
+                        <article
+                          key={blog.id}
+                          onClick={() => handleSelectBlog(blog)}
+                          className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-5 shadow-xs hover-lift hover-glow-blue transition-all duration-300 flex flex-col sm:flex-row items-start gap-4 sm:gap-5 cursor-pointer group"
+                        >
+                          {/* Left: Thumbnail Image with Category Badge */}
+                          <div className="relative w-full sm:w-48 h-36 sm:h-32 rounded-xl bg-slate-100 overflow-hidden shrink-0 border border-slate-100">
+                            {blog.image ? (
+                              <img
+                                src={blog.image}
+                                alt={blog.title}
+                                loading="lazy"
+                                referrerPolicy="no-referrer"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#0B2545] to-[#0F4C81] text-white p-3 text-center">
+                                <FileText className="w-6 h-6 text-cyan-300 mb-1" />
+                                <span className="text-[9px] font-mono tracking-wider uppercase text-cyan-200 font-bold">
+                                  EASYDESK GUIDE
+                                </span>
+                              </div>
+                            )}
+                            <div className="absolute top-2 left-2">
+                              <span className="bg-slate-900/90 text-cyan-300 border border-white/20 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full shadow-xs">
+                                {catName}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Right: Content & Metadata */}
+                          <div className="flex-1 min-w-0 flex flex-col justify-between h-full space-y-2">
+                            <div>
+                              <div className="flex items-center gap-2 text-[11px] text-slate-500 font-medium">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span>{fmtDate}</span>
+                                </span>
+                                <span className="text-slate-300">•</span>
+                                <span className="flex items-center gap-1">
+                                  <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                  <span>{readTime} min read</span>
+                                </span>
+                                {blog.author && (
+                                  <>
+                                    <span className="text-slate-300">•</span>
+                                    <span className="text-slate-600 truncate">{blog.author}</span>
+                                  </>
+                                )}
+                              </div>
+
+                              <h3 className="font-extrabold text-sm sm:text-base text-slate-900 leading-snug group-hover:text-[#0F4C81] transition-colors mt-1 line-clamp-2">
+                                {blog.title}
+                              </h3>
+
+                              <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 mt-1 font-normal">
+                                {excerpt}
+                              </p>
+                            </div>
+
+                            <div className="pt-2 flex items-center justify-between border-t border-slate-100/80">
+                              <span className="text-[11px] font-mono text-slate-400">
+                                {blog.views ? `${blog.views.toLocaleString()} reads` : 'Official Guide'}
+                              </span>
+                              <span className="inline-flex items-center gap-1 text-xs font-black text-[#0F4C81] group-hover:text-blue-700 transition-all">
+                                <span>Read Full Guide</span>
+                                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+                              </span>
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </div>

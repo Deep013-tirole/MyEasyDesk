@@ -2,7 +2,8 @@ import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { 
   Users, Search, Filter, Plus, Edit, Trash2, Eye, Printer, UserX, UserCheck, 
   FileText, ShieldCheck, CreditCard, Clock, Building2, MapPin, Mail, Phone,
-  AlertCircle, Upload, CheckCircle2, XCircle, ChevronRight, Lock, Loader2
+  AlertCircle, Upload, CheckCircle2, XCircle, ChevronRight, Lock, Loader2,
+  Key, Unlock, Sparkles
 } from 'lucide-react';
 import { EmployeeProfile, EmployeeKYC, EmployeePayroll, EmployeeDocument, MasterData } from '../../types.js';
 const EmployeeIDCardModal = lazy(() => import('./EmployeeIDCardModal.js'));
@@ -50,6 +51,109 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
     confirmStyle: 'primary',
     onConfirm: () => {}
   });
+
+  // Login Credentials Modal State (Create Login / No Login)
+  const [loginModalEmp, setLoginModalEmp] = useState<any | null>(null);
+  const [loginAllowed, setLoginAllowed] = useState(true);
+  const [loginId, setLoginId] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginRole, setLoginRole] = useState('STAFF');
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSavingLogin, setIsSavingLogin] = useState(false);
+  const [loginError, setLoginError] = useState('');
+
+  const handleOpenLoginModal = (emp: any) => {
+    setLoginModalEmp(emp);
+    setLoginAllowed(!!emp.hasLogin);
+    setLoginId(emp.loginId || emp.employeeCode || '');
+    setPassword('');
+    setLoginRole(emp.loginRole || 'STAFF');
+    setShowPassword(false);
+    setLoginError('');
+  };
+
+  const handleGeneratePassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%';
+    let result = '';
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setPassword(result);
+    setShowPassword(true);
+  };
+
+  const handleSaveEmployeeLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginModalEmp) return;
+
+    if (loginAllowed && !loginId.trim()) {
+      setLoginError('Login ID / Username cannot be empty.');
+      return;
+    }
+
+    if (loginAllowed && !loginModalEmp.hasLogin && (!password || password.length < 6)) {
+      setLoginError('Password must be at least 6 characters for a new login.');
+      return;
+    }
+
+    setIsSavingLogin(true);
+    setLoginError('');
+
+    try {
+      if (!loginAllowed) {
+        // No Login option
+        const res = await adminFetch(`/api/admin/employees/${loginModalEmp.id}/account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            loginAllowed: false,
+            noLogin: true,
+            accountStatus: 'Disabled'
+          })
+        });
+
+        if (res.ok) {
+          triggerAlert(`Login disabled for ${loginModalEmp.fullName}. Set to No Login.`);
+          setLoginModalEmp(null);
+          fetchEmployees();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setLoginError(err.message || 'Failed to revoke login.');
+        }
+      } else {
+        // Create Login option
+        const payload: any = {
+          loginAllowed: true,
+          username: loginId.trim(),
+          loginId: loginId.trim(),
+          role: loginRole,
+          accountStatus: 'Active'
+        };
+        if (password) {
+          payload.password = password;
+        }
+
+        const res = await adminFetch(`/api/admin/employees/${loginModalEmp.id}/account`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          triggerAlert(`Login configured for ${loginModalEmp.fullName} (${loginId.trim()}).`);
+          setLoginModalEmp(null);
+          fetchEmployees();
+        } else {
+          const err = await res.json().catch(() => ({}));
+          setLoginError(err.message || 'Failed to save login.');
+        }
+      }
+    } catch (err: any) {
+      setLoginError(err.message || 'Network error saving login.');
+    } finally {
+      setIsSavingLogin(false);
+    }
+  };
   
   // Tab inside Modal
   const [modalTab, setModalTab] = useState<'profile' | 'kyc' | 'payroll' | 'history'>('profile');
@@ -707,6 +811,20 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
                   )}
                 </div>
 
+                {/* Login Credentials Status */}
+                <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                  <span className="text-slate-500 font-medium">Dashboard Access:</span>
+                  {(emp as any).hasLogin ? (
+                    <span className="bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+                      <Key className="w-3 h-3 text-emerald-600" /> {(emp as any).loginId || 'Active'}
+                    </span>
+                  ) : (
+                    <span className="bg-slate-200 text-slate-600 font-bold px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-slate-400" /> No Login
+                    </span>
+                  )}
+                </div>
+
                 {/* Touch-Friendly Action Buttons */}
                 <div className="pt-1 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                   <button
@@ -718,6 +836,14 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
                   </button>
 
                   <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); handleOpenLoginModal(emp); }}
+                      className="p-2 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-xl transition cursor-pointer border border-purple-200"
+                      title="Manage Login Credentials (Create Login / No Login)"
+                    >
+                      <Key className="w-3.5 h-3.5" />
+                    </button>
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); handleOpenView(emp); }}
@@ -767,7 +893,7 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
 
         {/* Desktop View: Table */}
         <div className="hidden sm:block overflow-x-auto text-xs">
-          <table className="w-full min-w-[850px] text-left border-collapse">
+          <table className="w-full min-w-[950px] text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[9px]">
                 <th className="p-3">Code & Employee</th>
@@ -776,17 +902,18 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
                 <th className="p-3">Joining Date</th>
                 <th className="p-3">Contact Email & Phone</th>
                 <th className="p-3">Status</th>
+                <th className="p-3">Login Access</th>
                 <th className="p-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">Loading internal employee records...</td>
+                  <td colSpan={8} className="p-8 text-center text-slate-400">Loading internal employee records...</td>
                 </tr>
               ) : filteredEmployees.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-slate-400">No matching employee records found in system archives.</td>
+                  <td colSpan={8} className="p-8 text-center text-slate-400">No matching employee records found in system archives.</td>
                 </tr>
               ) : (
                 filteredEmployees.map(emp => (
@@ -827,6 +954,19 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
                         {emp.employmentStatus}
                       </span>
                     </td>
+                    <td className="p-3">
+                      {(emp as any).hasLogin ? (
+                        <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5 shadow-2xs">
+                          <Key className="w-3 h-3 text-emerald-600" />
+                          <span>{(emp as any).loginId || 'Active'}</span>
+                        </span>
+                      ) : (
+                        <span className="bg-slate-100 text-slate-500 px-2.5 py-0.5 rounded-full text-[10px] font-bold inline-flex items-center gap-1.5">
+                          <Lock className="w-3 h-3 text-slate-400" />
+                          <span>No Login</span>
+                        </span>
+                      )}
+                    </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
@@ -837,6 +977,14 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
                         >
                           <CreditCard className="w-3.5 h-3.5" />
                           <span className="hidden sm:inline">ID Card</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); handleOpenLoginModal(emp); }}
+                          className="p-1.5 text-purple-600 hover:text-purple-700 bg-purple-50 hover:bg-purple-100 rounded-lg transition cursor-pointer border border-purple-200"
+                          title="Manage System Login Credentials (Create Login / No Login)"
+                        >
+                          <Key className="w-3.5 h-3.5" />
                         </button>
                         <button
                           type="button"
@@ -2121,6 +2269,162 @@ export default function EmployeeManagementModule({ adminFetch, triggerAlert, mas
             onEmployeeUpdated={fetchEmployees}
           />
         </Suspense>
+      )}
+
+      {/* EMPLOYEE LOGIN CREDENTIALS MODAL (SUPER ADMIN ONLY) */}
+      {loginModalEmp && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200 flex items-center justify-center">
+                  <Key className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">
+                    {loginModalEmp.hasLogin ? 'Update Login Credentials' : 'Create Employee Login'}
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">{loginModalEmp.fullName} ({loginModalEmp.employeeCode})</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setLoginModalEmp(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 cursor-pointer"
+              >
+                <XCircle className="w-5 h-5" />
+              </button>
+            </div>
+
+            {loginError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveEmployeeLogin} className="space-y-4 text-xs">
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Access Option</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setLoginAllowed(true)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
+                      loginAllowed ? 'bg-blue-50 border-blue-300 text-blue-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Unlock className="w-4 h-4 text-blue-600" />
+                    <div>
+                      <p className="text-xs">Create Login</p>
+                      <span className="text-[10px] text-slate-400 font-normal">Enable dashboard access</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setLoginAllowed(false)}
+                    className={`p-3 rounded-xl border text-left transition cursor-pointer flex items-center gap-2 ${
+                      !loginAllowed ? 'bg-amber-50 border-amber-300 text-amber-900 font-bold' : 'bg-slate-50 border-slate-200 text-slate-600'
+                    }`}
+                  >
+                    <Lock className="w-4 h-4 text-amber-600" />
+                    <div>
+                      <p className="text-xs">No Login</p>
+                      <span className="text-[10px] text-slate-400 font-normal">Revoke system access</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {loginAllowed ? (
+                <div className="space-y-3 pt-2 border-t border-slate-100">
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Login ID / Username *</label>
+                    <input
+                      type="text"
+                      value={loginId}
+                      onChange={(e) => setLoginId(e.target.value)}
+                      placeholder="e.g. EMP101"
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono focus:outline-none focus:border-blue-600"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-bold text-slate-700">
+                        {loginModalEmp.hasLogin ? 'New Password (optional)' : 'Set Password *'}
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleGeneratePassword}
+                        className="text-[10px] font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Sparkles className="w-3 h-3" /> Auto-Generate
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder={loginModalEmp.hasLogin ? 'Leave empty to keep current password' : 'Min 6 characters'}
+                        className="w-full border border-slate-200 rounded-xl pl-3 pr-9 py-2 text-xs font-mono focus:outline-none focus:border-blue-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 cursor-pointer"
+                      >
+                        {showPassword ? <Eye className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-bold text-slate-700 block mb-1">Access Role</label>
+                    <select
+                      value={loginRole}
+                      onChange={(e) => setLoginRole(e.target.value)}
+                      className="w-full border border-slate-200 rounded-xl px-3 py-2 text-xs bg-white focus:outline-none focus:border-blue-600 cursor-pointer"
+                    >
+                      <option value="STAFF">STAFF (Assigned Orders Only)</option>
+                      <option value="OPERATOR">OPERATOR (Assigned Orders & Processing)</option>
+                      <option value="ADMIN">ADMIN (Full Admin Access)</option>
+                    </select>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs">
+                  <p className="font-bold">Disable System Login Access</p>
+                  <p className="text-[11px] text-amber-800 mt-0.5">
+                    This employee will not be able to log into the admin dashboard. Assigned orders and historical records remain intact.
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setLoginModalEmp(null)}
+                  className="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-xl font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingLogin}
+                  className={`px-4 py-2 rounded-xl text-white font-bold transition cursor-pointer shadow-xs ${
+                    loginAllowed ? 'bg-blue-600 hover:bg-blue-700' : 'bg-amber-600 hover:bg-amber-700'
+                  }`}
+                >
+                  {isSavingLogin ? 'Saving...' : loginAllowed ? 'Save Credentials' : 'Disable Login (No Login)'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
     </div>

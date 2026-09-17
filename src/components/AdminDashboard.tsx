@@ -31,6 +31,7 @@ const MediaLibraryAdminModule = lazy(() => import('./admin/MediaLibraryAdminModu
 const ReviewsAdminModule = lazy(() => import('./admin/ReviewsAdminModule.js'));
 const CreateManualOrderModal = lazy(() => import('./admin/CreateManualOrderModal.js'));
 const EditOrderModal = lazy(() => import('./admin/EditOrderModal.js'));
+const EmployeeLoginAccessModule = lazy(() => import('./admin/EmployeeLoginAccessModule.js'));
 
 import { ServiceEditorModule } from './admin/ServiceEditorModule.js';
 import { BlogEditorModule } from './admin/BlogEditorModule.js';
@@ -197,7 +198,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
   const [actionNotif, setActionNotif] = useState<string | null>(null);
 
   // Security Access & Users Filter state
-  const [userTabFilter, setUserTabFilter] = useState<'staff' | 'customers' | 'all'>('staff');
+  const [userTabFilter, setUserTabFilter] = useState<'employee_logins' | 'staff' | 'customers' | 'all'>('employee_logins');
   const [userTabSearch, setUserTabSearch] = useState('');
   const [isPurgingTests, setIsPurgingTests] = useState(false);
 
@@ -1431,10 +1432,17 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
     );
   }
 
-  // Single Admin role definition
-  const isSuper = true;
-  const isAdmin = true;
-  const isOperator = true;
+  // Role definitions based on authenticated admin user
+  const roleStr = String(adminUser?.role || '').toUpperCase();
+  const emailStr = String(adminUser?.email || '').toLowerCase().trim();
+  const usernameStr = String(adminUser?.username || (adminUser as any)?.loginId || '').toLowerCase().trim();
+  const isSuper = roleStr === 'SUPER_ADMIN' || 
+    emailStr === 'tideepak8@gmail.com' || 
+    usernameStr === 'admin' || 
+    usernameStr === 'superadmin' || 
+    (roleStr === 'ADMIN' && !(adminUser as any)?.employeeId);
+  const isAdmin = isSuper || roleStr === 'ADMIN';
+  const isOperator = isSuper || isAdmin || roleStr === 'OPERATOR';
 
   return (
     <div className="notranslate portal-container py-8 font-sans text-slate-800" translate="no">
@@ -2094,65 +2102,85 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
               </div>
             )}
 
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Record Management</span>
-              <div className="flex flex-col gap-1 text-xs font-semibold">
-                <button
-                  onClick={() => setActiveTab('employee_records')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'employee_records' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <Users className="w-4 h-4 text-blue-600" /> Employee Records
-                </button>
-                <button
-                  onClick={() => setActiveTab('customer_records')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'customer_records' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <UserCheck className="w-4 h-4 text-emerald-600" /> Customer Records
-                </button>
-                <button
-                  onClick={() => setActiveTab('master_data')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'master_data' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <FolderOpen className="w-4 h-4 text-purple-600" /> Master Data
-                </button>
-                <button
-                  onClick={() => setActiveTab('record_integrity')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'record_integrity' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <ShieldCheck className="w-4 h-4 text-indigo-600" /> Record Integrity
-                </button>
+            {(hasPermission(['employees.view', 'employees.manage', 'customers.view', 'customers.manage']) || isSuper) && (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-3">Record Management</span>
+                <div className="flex flex-col gap-1 text-xs font-semibold">
+                  {hasPermission(['employees.view', 'employees.manage']) && (
+                    <button
+                      onClick={() => setActiveTab('employee_records')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'employee_records' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <Users className="w-4 h-4 text-blue-600" /> Employee Records
+                    </button>
+                  )}
+                  {hasPermission(['customers.view', 'customers.manage']) && (
+                    <button
+                      onClick={() => setActiveTab('customer_records')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'customer_records' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <UserCheck className="w-4 h-4 text-emerald-600" /> Customer Records
+                    </button>
+                  )}
+                  {(isSuper || hasPermission(['master_data.view', 'master_data.manage'])) && (
+                    <button
+                      onClick={() => setActiveTab('master_data')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'master_data' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <FolderOpen className="w-4 h-4 text-purple-600" /> Master Data
+                    </button>
+                  )}
+                  {(isSuper || hasPermission('system_settings.manage')) && (
+                    <button
+                      onClick={() => setActiveTab('record_integrity')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'record_integrity' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <ShieldCheck className="w-4 h-4 text-indigo-600" /> Record Integrity
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="mt-4 border-t border-slate-100 pt-4">
-              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-3">System & Security</span>
-              <div className="flex flex-col gap-1 text-xs font-semibold">
-                <button
-                  onClick={() => setActiveTab('calendar')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'calendar' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <Clock className="w-4 h-4 text-cyan-600" /> Calendar Events
-                </button>
-                <button
-                  onClick={() => setActiveTab('notifications')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'notifications' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <BellRing className="w-4 h-4" /> Alert Dispatcher
-                </button>
-                <button
-                  onClick={() => setActiveTab('users')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <Users className="w-4 h-4" /> Security & Role Access
-                </button>
-                <button
-                  onClick={() => setActiveTab('audit')}
-                  className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'audit' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
-                >
-                  <ShieldAlert className="w-4 h-4" /> Audit Logs
-                </button>
+            {(isSuper || hasPermission(['audit_logs.view', 'whatsapp_delivery.update', 'dashboard.view'])) && (
+              <div className="mt-4 border-t border-slate-100 pt-4">
+                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-3">System & Security</span>
+                <div className="flex flex-col gap-1 text-xs font-semibold">
+                  {(isSuper || hasPermission('dashboard.view')) && (
+                    <button
+                      onClick={() => setActiveTab('calendar')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'calendar' ? 'bg-blue-50 text-blue-700 font-bold' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <Clock className="w-4 h-4 text-cyan-600" /> Calendar Events
+                    </button>
+                  )}
+                  {(isSuper || hasPermission('whatsapp_delivery.update')) && (
+                    <button
+                      onClick={() => setActiveTab('notifications')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'notifications' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <BellRing className="w-4 h-4" /> Alert Dispatcher
+                    </button>
+                  )}
+                  {isSuper && (
+                    <button
+                      onClick={() => setActiveTab('users')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'users' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <Users className="w-4 h-4" /> Security & Role Access
+                    </button>
+                  )}
+                  {(isSuper || hasPermission('audit_logs.view')) && (
+                    <button
+                      onClick={() => setActiveTab('audit')}
+                      className={`w-full text-left p-2.5 rounded-xl transition flex items-center gap-2 ${activeTab === 'audit' ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                      <ShieldAlert className="w-4 h-4" /> Audit Logs
+                    </button>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>
@@ -3371,16 +3399,27 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                 </div>
 
                 {/* Account Category Tabs & Stats */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => setUserTabFilter('employee_logins')}
+                    className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${userTabFilter === 'employee_logins' ? 'bg-purple-50/90 border-purple-300 shadow-xs' : 'bg-white border-slate-200/80 hover:bg-slate-50'}`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700">Employee Logins</span>
+                      <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-purple-100 text-purple-800">RBAC</span>
+                    </div>
+                    <p className="text-xs font-semibold text-slate-900 mt-1">Create Login / No Login</p>
+                  </button>
+
                   <button
                     onClick={() => setUserTabFilter('staff')}
                     className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${userTabFilter === 'staff' ? 'bg-blue-50/80 border-blue-200 shadow-xs' : 'bg-white border-slate-200/80 hover:bg-slate-50'}`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Staff & Administrators</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Staff Accounts</span>
                       <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">{staffList.length}</span>
                     </div>
-                    <p className="text-xs font-semibold text-slate-800 mt-1">Authorized Team Members</p>
+                    <p className="text-xs font-semibold text-slate-800 mt-1">Authorized Team</p>
                   </button>
 
                   <button
@@ -3391,7 +3430,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Customer Accounts</span>
                       <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{customerList.length}</span>
                     </div>
-                    <p className="text-xs font-semibold text-slate-800 mt-1">Registered Platform Clients</p>
+                    <p className="text-xs font-semibold text-slate-800 mt-1">Registered Clients</p>
                   </button>
 
                   <button
@@ -3399,14 +3438,21 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                     className={`p-3.5 rounded-xl border text-left transition cursor-pointer ${userTabFilter === 'all' ? 'bg-blue-50/80 border-blue-200 shadow-xs' : 'bg-white border-slate-200/80 hover:bg-slate-50'}`}
                   >
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">All System Accounts</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">All Accounts</span>
                       <span className="text-xs font-extrabold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">{allUsersList.length}</span>
                     </div>
-                    <p className="text-xs font-semibold text-slate-800 mt-1">Complete User Directory</p>
+                    <p className="text-xs font-semibold text-slate-800 mt-1">User Directory</p>
                   </button>
                 </div>
 
-                {/* Table Container */}
+                {userTabFilter === 'employee_logins' ? (
+                  <EmployeeLoginAccessModule 
+                    adminFetch={adminFetch} 
+                    triggerAlert={triggerAlert} 
+                    isSuper={isSuper} 
+                  />
+                ) : (
+                /* Table Container */
                 <div className="bg-white border border-slate-200/60 rounded-2xl shadow-sm overflow-hidden">
                   <div className="p-3.5 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
                     <div className="flex items-center gap-2">
@@ -3563,6 +3609,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                     </table>
                   </div>
                 </div>
+                )}
               </div>
             );
           })()}

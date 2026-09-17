@@ -3711,6 +3711,9 @@ app.post(['/api/auth/admin/login', '/api/admin/login'], async (req, res) => {
         (acc.userId && acc.userId.toLowerCase() === normalizedInput)
     ) as any;
     if (accEntry) {
+      if (accEntry.loginAllowed === false || accEntry.accountStatus === 'Disabled') {
+        return res.status(403).json({ message: 'Login access has not been enabled for this employee account by the Super Admin.' });
+      }
       const emp = findEmployee(accEntry.employeeId);
       admin = {
         id: accEntry.userId || `staff-${accEntry.employeeId}`,
@@ -3720,12 +3723,20 @@ app.post(['/api/auth/admin/login', '/api/admin/login'], async (req, res) => {
         role: accEntry.role || 'STAFF',
         employeeId: accEntry.employeeId,
         department: emp?.department || 'Operations',
-        status: accEntry.status === 'Active' ? 'Active' : ((emp as any)?.status || emp?.employmentStatus || 'Active'),
+        status: accEntry.accountStatus === 'Active' ? 'Active' : 'Disabled',
         joiningDate: emp?.joiningDate || new Date().toISOString(),
         profileImage: emp?.profilePhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400',
         password: accEntry.password,
-        permissions: accEntry.permissions || []
+        permissions: accEntry.permissions || ['orders.view_assigned', 'orders.update']
       };
+    }
+  }
+
+  // Verify employee account status if admin has an associated employeeId
+  if (admin && admin.employeeId && dbState.employeeAccounts && dbState.employeeAccounts[admin.employeeId]) {
+    const linkedAcc = dbState.employeeAccounts[admin.employeeId];
+    if (linkedAcc.loginAllowed === false || linkedAcc.accountStatus === 'Disabled') {
+      return res.status(403).json({ message: 'Login access has not been enabled for this employee account by the Super Admin.' });
     }
   }
 
@@ -4244,42 +4255,53 @@ app.post('/api/admin/profile', async (req, res) => {
   });
 });
 
-// Admin Orders Endpoints (Requires orders.view or orders.view_assigned)
+// Role-Based Order Authorization Helpers
+function isSuperAdminUser(reqUser: any): boolean {
+  if (!reqUser) return false;
+  return (
+    reqUser.role === 'SUPER_ADMIN' ||
+    reqUser.email?.toLowerCase() === 'tideepak8@gmail.com' ||
+    reqUser.id === 'super-admin-deepak' ||
+    reqUser.id === 'superadmin' ||
+    reqUser.username === 'deepak'
+  );
+}
+
+function canUserAccessOrder(reqUser: any, order: any): boolean {
+  if (!reqUser || !order) return false;
+  if (isSuperAdminUser(reqUser)) return true;
+  const empId = reqUser.employeeId || getLinkedEmployeeId(reqUser);
+  const userId = reqUser.id;
+  return Boolean(
+    (empId && (order.assignedEmployeeId === empId || order.assignedStaffId === empId || order.assignedEmployeeCode === empId)) ||
+    (userId && (order.assignedUserId === userId || order.assignedStaffId === userId || order.assignedEmployeeId === userId))
+  );
+}
+
+// Admin Orders Endpoints (Super Admin sees all orders; Employee/Staff sees ONLY their assigned orders)
 app.get('/api/admin/orders', requirePermission(['orders.view', 'orders.view_assigned']), async (req, res) => {
   const reqUser = (req as any).user;
-  const perms = reqUser.permissions || [];
   const allOrders = await readCollectionWithFallback('orders', () => dbState.orders || []);
   allOrders.forEach((o: any) => ensureOrderPricingLocked(o, dbState.services));
   
-  if ((reqUser.role as string) === 'SUPER_ADMIN' || reqUser.role === UserRole.ADMIN || perms.includes('orders.view')) {
+  if (isSuperAdminUser(reqUser)) {
     return res.json(allOrders);
   }
 
-  const empId = reqUser.employeeId || getLinkedEmployeeId(reqUser);
-  const assignedOrders = allOrders.filter(o =>
-    (empId && (o.assignedEmployeeId === empId || o.assignedStaffId === empId || o.assignedEmployeeCode === empId)) ||
-    (reqUser.id && (o.assignedUserId === reqUser.id || o.assignedStaffId === reqUser.id || o.assignedEmployeeId === reqUser.id))
-  );
-
+  const assignedOrders = allOrders.filter(o => canUserAccessOrder(reqUser, o));
   res.json(assignedOrders);
 });
 
 app.get('/api/admin/orders/assigned', requirePermission(['orders.view_assigned', 'orders.view']), async (req, res) => {
   const reqUser = (req as any).user;
-  const perms = reqUser.permissions || [];
   const allOrders = await readCollectionWithFallback('orders', () => dbState.orders || []);
   allOrders.forEach((o: any) => ensureOrderPricingLocked(o, dbState.services));
   
-  if ((reqUser.role as string) === 'SUPER_ADMIN' || reqUser.role === UserRole.ADMIN || perms.includes('orders.view')) {
+  if (isSuperAdminUser(reqUser)) {
     return res.json(allOrders);
   }
 
-  const empId = reqUser.employeeId || getLinkedEmployeeId(reqUser);
-  const assignedOrders = allOrders.filter(o =>
-    (empId && (o.assignedEmployeeId === empId || o.assignedStaffId === empId || o.assignedEmployeeCode === empId)) ||
-    (reqUser.id && (o.assignedUserId === reqUser.id || o.assignedStaffId === reqUser.id || o.assignedEmployeeId === reqUser.id))
-  );
-
+  const assignedOrders = allOrders.filter(o => canUserAccessOrder(reqUser, o));
   res.json(assignedOrders);
 });
 
@@ -4370,26 +4392,17 @@ app.get('/api/services/:id', async (req, res) => {
 });
 
 // Order System (Administrative & Staff Order Management)
-app.get('/api/orders', authenticateToken, (req, res) => {
+app.get('/api/orders', authenticateToken, async (req, res) => {
   const reqUser = (req as any).user;
-  const userRole = reqUser?.role;
-  const userId = reqUser?.id;
+  const allOrders = await readCollectionWithFallback('orders', () => dbState.orders || []);
+  allOrders.forEach(o => ensureOrderPricingLocked(o, dbState.services));
 
-  (dbState.orders || []).forEach(o => ensureOrderPricingLocked(o, dbState.services));
-
-  if (userRole === UserRole.ADMIN || userRole === 'SUPER_ADMIN' || userRole === 'ADMIN') {
-    return res.json(dbState.orders);
-  }
-  if (userRole === 'STAFF' || userRole === 'OPERATOR') {
-    const linkedEmpId = getLinkedEmployeeId({ id: String(userId || ''), email: reqUser?.email || '' });
-    const staffOrders = dbState.orders.filter(o => 
-      (linkedEmpId && (o.assignedEmployeeId === linkedEmpId || o.assignedStaffId === linkedEmpId || o.assignedEmployeeCode === linkedEmpId)) ||
-      (userId && (o.assignedUserId === userId || o.assignedStaffId === userId || o.assignedEmployeeId === userId))
-    );
-    return res.json(staffOrders);
+  if (isSuperAdminUser(reqUser)) {
+    return res.json(allOrders);
   }
 
-  return res.status(403).json({ message: 'Access denied: Insufficient permissions to access orders.' });
+  const staffOrders = allOrders.filter(o => canUserAccessOrder(reqUser, o));
+  return res.json(staffOrders);
 });
 
 app.post('/api/orders', async (req, res) => {
@@ -4742,6 +4755,9 @@ app.patch('/api/orders/:id/status', authenticateToken, requireRole(['SUPER_ADMIN
   }
 
   const reqUser = (req as any).user;
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
+  }
 
   if (status) {
     order.orderStatus = status as OrderStatus;
@@ -4785,6 +4801,9 @@ app.patch('/api/orders/:id/payment', authenticateToken, requireRole(['SUPER_ADMI
   }
 
   const reqUser = (req as any).user;
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
+  }
   order.paymentStatus = paymentStatus as PaymentStatus;
   if (paymentStatus === 'Verified' || paymentStatus === 'Paid') {
     order.amountPaid = order.totalAmount;
@@ -4904,6 +4923,9 @@ app.patch('/api/orders/:id/delivery', authenticateToken, requireRole(['SUPER_ADM
   }
 
   const reqUser = (req as any).user;
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
+  }
 
   if (finalDocumentUrl) {
     order.finalDocumentUrl = finalDocumentUrl;
@@ -4939,6 +4961,9 @@ app.post('/api/admin/orders/:id/final-document', authenticateToken, requireRole(
   if (!finalDocumentUrl) return res.status(400).json({ message: 'finalDocumentUrl is required.' });
 
   const reqUser = (req as any).user;
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
+  }
   order.finalDocumentUrl = finalDocumentUrl;
   order.finalDocumentName = finalDocumentName || 'Final_Document.pdf';
   order.finalDocumentUploadedAt = new Date().toISOString();
@@ -4962,6 +4987,9 @@ app.put('/api/admin/orders/:id/final-document', authenticateToken, requireRole([
   if (!finalDocumentUrl) return res.status(400).json({ message: 'finalDocumentUrl is required.' });
 
   const reqUser = (req as any).user;
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
+  }
   order.finalDocumentUrl = finalDocumentUrl;
   order.finalDocumentName = finalDocumentName || 'Final_Document.pdf';
   order.finalDocumentUploadedAt = new Date().toISOString();
@@ -4980,6 +5008,9 @@ app.patch('/api/admin/orders/:id/whatsapp-delivery', authenticateToken, requireR
   if (!order) return res.status(404).json({ message: 'Order not found.' });
 
   const reqUser = (req as any).user;
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
+  }
   order.documentDeliveryStatus = 'SENT_VIA_WHATSAPP';
   order.whatsAppSentAt = new Date().toISOString();
   order.whatsAppDeliveryNotes = whatsAppDeliveryNotes || 'Sent via WhatsApp manually by staff';
@@ -4999,10 +5030,15 @@ app.patch('/api/admin/orders/:id/whatsapp-delivery', authenticateToken, requireR
 // EMPLOYEE ORDER ASSIGNMENT & WORKSPACE ENDPOINTS
 // =========================================================
 
-// Order Assignment Route (Admin)
+// Order Assignment Route (Super Admin Only)
 app.patch('/api/admin/orders/:id/assign', authenticateToken, requirePermission(['orders.assign', 'orders.update']), async (req, res) => {
   const { id } = req.params;
   const { assignedEmployeeId } = req.body;
+  const reqUser = (req as any).user;
+
+  if (!isSuperAdminUser(reqUser)) {
+    return res.status(403).json({ message: 'Access denied: Only Super Admin can assign orders to employees.' });
+  }
 
   const order = dbState.orders.find(o => o.id === id);
   if (!order) {
@@ -5085,49 +5121,25 @@ app.patch('/api/admin/orders/:id/assign', authenticateToken, requirePermission([
 // Staff "My Assigned Orders" List
 app.get('/api/staff/my-orders', authenticateToken, (req, res) => {
   const reqUser = (req as any).user;
-  const userRole = reqUser?.role || 'STAFF';
 
-  if (['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
+  if (isSuperAdminUser(reqUser)) {
     return res.json(dbState.orders);
   }
 
-  const employeeId = reqUser.employeeId || getLinkedEmployeeId(reqUser);
-
-  if (!employeeId) {
-    return res.status(403).json({ message: 'Access denied: No linked employee profile found for your system login account.' });
-  }
-
-  const myOrders = dbState.orders.filter(o => 
-    o.assignedEmployeeId === employeeId || 
-    o.assignedStaffId === employeeId || 
-    (o.assignedEmployeeCode && o.assignedEmployeeCode === employeeId)
-  );
-
+  const myOrders = (dbState.orders || []).filter(o => canUserAccessOrder(reqUser, o));
   res.json(myOrders);
 });
 
 // Staff Get Single Order (with RBAC enforcement)
 app.get('/api/staff/orders/:id', authenticateToken, (req, res) => {
   const reqUser = (req as any).user;
-  const userRole = reqUser?.role || 'STAFF';
   const order = dbState.orders.find(o => o.id === req.params.id);
 
   if (!order) {
     return res.status(404).json({ message: 'Order not found.' });
   }
 
-  if (['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
-    return res.json(order);
-  }
-
-  const employeeId = reqUser.employeeId || getLinkedEmployeeId(reqUser);
-  const isAssigned = (
-    order.assignedEmployeeId === employeeId || 
-    order.assignedStaffId === employeeId ||
-    (order.assignedEmployeeCode && order.assignedEmployeeCode === employeeId)
-  );
-
-  if (!isAssigned) {
+  if (!canUserAccessOrder(reqUser, order)) {
     return res.status(403).json({ message: 'Access denied: You are not assigned to this customer order.' });
   }
 
@@ -5139,24 +5151,14 @@ app.patch('/api/staff/orders/:id/documents/verify', authenticateToken, async (re
   const { id } = req.params;
   const { documentName, documentIndex, verificationStatus, rejectionReason } = req.body;
   const reqUser = (req as any).user;
-  const userRole = reqUser?.role || 'STAFF';
 
   const order = dbState.orders.find(o => o.id === id);
   if (!order) {
     return res.status(404).json({ message: 'Order not found.' });
   }
 
-  if (!['SUPER_ADMIN', 'ADMIN'].includes(userRole)) {
-    const employeeId = reqUser.employeeId || getLinkedEmployeeId(reqUser);
-    const isAssigned = (
-      order.assignedEmployeeId === employeeId || 
-      order.assignedStaffId === employeeId ||
-      (order.assignedEmployeeCode && order.assignedEmployeeCode === employeeId)
-    );
-
-    if (!isAssigned) {
-      return res.status(403).json({ message: 'Access denied: You are not assigned to this customer order.' });
-    }
+  if (!canUserAccessOrder(reqUser, order)) {
+    return res.status(403).json({ message: 'Access denied: You are not assigned to this customer order.' });
   }
 
   if (!['Pending', 'Verified', 'Rejected'].includes(verificationStatus)) {
@@ -5713,11 +5715,13 @@ app.post('/api/reviews', async (req, res) => {
   });
 });
 
-// Blogs API
-app.get('/api/blogs', (req, res) => {
+// Blogs API (Authoritative database-backed retrieval)
+app.get('/api/blogs', async (req, res) => {
   const { categoryId, category } = req.query;
-  const mapped = (dbState.blogs || []).map(b => {
-    const blogCat = (dbState.blogCategories || []).find(c => c.id === b.categoryId || c.name.toLowerCase() === (b.category || '').toLowerCase());
+  const allBlogs = await readCollectionWithFallback('blogs', () => dbState.blogs || []);
+  const allBlogCats = await readCollectionWithFallback('blogCategories', () => dbState.blogCategories || []);
+  const mapped = allBlogs.map(b => {
+    const blogCat = allBlogCats.find(c => c.id === b.categoryId || c.name.toLowerCase() === (b.category || '').toLowerCase());
     return {
       ...b,
       categoryId: blogCat ? blogCat.id : (b.categoryId || 'blog-cat-gov'),
@@ -5754,11 +5758,22 @@ app.post('/api/notifications/read', async (req, res) => {
 });
 
 // Admin Dashboard Analytics - Strict Cloudflare D1 Single Source of Truth
-app.get('/api/admin/analytics', (req, res) => {
-  const allOrders = dbState.orders || [];
-  const allCustomers = dbState.customers || [];
-  const allServices = dbState.services || [];
-  const allUsers = dbState.users || [];
+// Super Admin sees all orders/analytics; Employee/Staff sees strictly assigned orders & personal revenue
+app.get('/api/admin/analytics', authenticateToken, async (req, res) => {
+  const reqUser = (req as any).user;
+  const rawOrders = await readCollectionWithFallback('orders', () => dbState.orders || []);
+  rawOrders.forEach((o: any) => ensureOrderPricingLocked(o, dbState.services));
+
+  // Non-super-admins strictly receive ONLY analytics computed from their assigned orders
+  const allOrders = isSuperAdminUser(reqUser)
+    ? rawOrders
+    : rawOrders.filter((o: any) => canUserAccessOrder(reqUser, o));
+
+  const allCustomers = isSuperAdminUser(reqUser)
+    ? (await readCollectionWithFallback('customers', () => dbState.customers || []))
+    : [];
+  const allServices = await readCollectionWithFallback('services', () => dbState.services || []);
+  const allUsers = isSuperAdminUser(reqUser) ? (dbState.users || []) : [];
 
   const totalOrders = allOrders.length;
   
@@ -5783,16 +5798,33 @@ app.get('/api/admin/analytics', (req, res) => {
   });
 
   // Calculate verified vs pending revenue strictly from database
+  // Revenue Formula: Portal Charges + Service Charges = Total Income
   let verifiedRevenue = 0;
   let pendingRevenue = 0;
   let totalOrderValue = 0;
+  let portalCharges = 0;
+  let serviceCharges = 0;
+  let totalIncome = 0;
+  let tax = 0;
+  let otherCharges = 0;
 
   allOrders.forEach(o => {
     const amt = typeof o.totalAmount === 'number' ? o.totalAmount : (parseFloat(o.totalAmount as any) || 0);
+    const gov = typeof o.govFees === 'number' ? o.govFees : (parseFloat(o.govFees as any) || 0);
+    const srv = typeof o.serviceCharge === 'number' ? o.serviceCharge : (typeof o.govFees === 'number' && amt >= gov ? amt - gov : amt);
+    const tx = typeof o.gstAmount === 'number' ? o.gstAmount : 0;
+    const oth = typeof o.otherCharges === 'number' ? o.otherCharges : 0;
+    const inc = gov + srv;
+
     totalOrderValue += amt;
     const pSt = (o.paymentStatus || '').toLowerCase();
     if (pSt === 'verified' || pSt === 'paid') {
       verifiedRevenue += amt;
+      portalCharges += gov;
+      serviceCharges += srv;
+      totalIncome += inc;
+      tax += tx;
+      otherCharges += oth;
     } else {
       pendingRevenue += amt;
     }
@@ -5800,7 +5832,9 @@ app.get('/api/admin/analytics', (req, res) => {
 
   // Calculate customer metrics
   const uniqueCustomerIdsWithOrders = new Set(allOrders.map(o => o.customerId || o.userId).filter(Boolean));
-  const totalCustomers = allCustomers.length > 0 ? allCustomers.length : allUsers.filter(u => u.role === UserRole.USER).length;
+  const totalCustomers = isSuperAdminUser(reqUser)
+    ? (allCustomers.length > 0 ? allCustomers.length : allUsers.filter(u => u.role === UserRole.USER).length)
+    : uniqueCustomerIdsWithOrders.size;
   const customersWithOrdersCount = uniqueCustomerIdsWithOrders.size;
 
   // Group by date strictly from real createdAt
@@ -6305,7 +6339,25 @@ app.post(['/api/admin/employees/upload-photo', '/api/admin/team/upload-photo'], 
 app.get('/api/admin/employees', authenticateToken, requirePermission(['employees.view', 'employees.manage']), async (req, res) => {
   const employees = await readCollectionWithFallback('employees', () => dbState.employees || []);
   console.log(`[EMPLOYEE FETCH] Employee count loaded after login/fetch: ${employees.length}`);
-  res.json(employees);
+  const enriched = employees.map(emp => {
+    const acc = getEmployeeAccount(emp.id);
+    const adminObj = (dbState.admins || []).find(
+      (a: any) => (a.employeeId && a.employeeId === emp.id) || 
+                  (a.email && emp.personalEmail && a.email.toLowerCase() === emp.personalEmail.toLowerCase()) || 
+                  a.id === `staff-${emp.id}` || 
+                  a.id === emp.id
+    );
+    const hasLogin = !!(adminObj && (!acc || acc.loginAllowed !== false) && !adminObj.isSuspended && acc?.accountStatus !== 'Disabled');
+    return {
+      ...emp,
+      hasLogin,
+      loginAllowed: acc ? acc.loginAllowed !== false : !!adminObj,
+      loginId: acc?.loginId || acc?.username || adminObj?.username || adminObj?.email || '',
+      loginRole: acc?.role || adminObj?.role || null,
+      accountStatus: acc?.accountStatus || (adminObj ? (adminObj.isSuspended ? 'Disabled' : 'Active') : 'Disabled')
+    };
+  });
+  res.json(enriched);
 });
 
 // GET single employee profile
@@ -6914,24 +6966,42 @@ app.get('/api/admin/employees/:id/account', authenticateToken, requirePermission
 
 app.post('/api/admin/employees/:id/account', authenticateToken, requirePermission(['staff_accounts.manage', 'employees.manage']), async (req, res) => {
   const { id } = req.params;
-  const { systemEmail, password, role, accountStatus, permissions } = req.body;
-
-  if (!systemEmail) {
-    return res.status(400).json({ message: 'systemEmail is required' });
-  }
-
+  const { systemEmail, username, loginId, password, role, accountStatus, permissions, loginAllowed, noLogin } = req.body;
   const emp = findEmployee(id);
   const canonicalId = emp ? emp.id : id;
   const empName = emp ? emp.fullName : 'Employee User';
   const targetRole = role || 'STAFF';
 
-  let userObj = dbState.users.find(u => u.email.toLowerCase() === systemEmail.toLowerCase());
+  // Handle "No Login" option
+  if (loginAllowed === false || noLogin === true || accountStatus === 'Disabled') {
+    const updatedAccount = setEmployeeAccount(canonicalId, {
+      employeeId: canonicalId,
+      systemEmail: systemEmail || (emp as any)?.email || emp?.personalEmail || `${canonicalId.toLowerCase()}@easydesk.internal`,
+      username: username || loginId || emp?.employeeCode || canonicalId,
+      role: targetRole,
+      loginAllowed: false,
+      accountStatus: 'Disabled'
+    });
+
+    if (dbState.admins) {
+      dbState.admins = dbState.admins.filter(a => a.employeeId !== canonicalId && (!canonicalId || a.id !== `staff-${canonicalId}`));
+    }
+
+    logAudit(req, 'EMPLOYEE_LOGIN_REVOKED', `Disabled/revoked system login credentials for employee ${canonicalId}`, canonicalId);
+    await persistDatabase('employeeAccounts', canonicalId);
+    return res.json({ message: 'Employee login revoked. No login allowed for this employee.', account: updatedAccount });
+  }
+
+  const effectiveEmail = systemEmail || (emp as any)?.email || emp?.personalEmail || `${(username || loginId || emp?.employeeCode || canonicalId).toLowerCase()}@easydesk.internal`;
+  const rawLoginId = (username || loginId || emp?.employeeCode || canonicalId).trim();
+
+  let userObj = dbState.users.find(u => (u.email && u.email.toLowerCase() === effectiveEmail.toLowerCase()) || (u.id && u.id === `staff-${canonicalId}`));
   if (!userObj && password) {
     const hashedPassword = bcrypt.hashSync(password, 10);
     userObj = {
-      id: `user-${Date.now()}`,
+      id: `staff-${canonicalId}`,
       name: empName,
-      email: systemEmail,
+      email: effectiveEmail,
       password: hashedPassword,
       role: targetRole,
       createdAt: new Date().toISOString()
@@ -6942,51 +7012,76 @@ app.post('/api/admin/employees/:id/account', authenticateToken, requirePermissio
     if (password) userObj.password = bcrypt.hashSync(password, 10);
   }
 
-  const assignedPermissions = Array.isArray(permissions) ? permissions : undefined;
+  const assignedPermissions = Array.isArray(permissions) ? permissions : ['orders.view_assigned', 'orders.update'];
 
-  // Also sync with dbState.admins so employee can log into the admin portal
-  const isAdminRole = ['SUPER_ADMIN', 'ADMIN', 'STAFF', 'OPERATOR'].includes(targetRole);
-  let adminObj = dbState.admins?.find(a => a.email.toLowerCase() === systemEmail.toLowerCase());
-  if (isAdminRole) {
-    if (!dbState.admins) dbState.admins = [];
-    if (!adminObj && password) {
-      adminObj = {
-        id: userObj ? userObj.id : `admin-${Date.now()}`,
-        name: empName,
-        email: systemEmail,
-        password: bcrypt.hashSync(password, 10),
-        role: targetRole,
-        department: emp ? emp.department : 'Operations',
-        status: accountStatus === 'Active' ? 'Active' : 'Suspended',
-        isSuspended: accountStatus !== 'Active',
-        permissions: assignedPermissions || ['READ', 'WRITE', 'MANAGE_ORDERS', 'VERIFY_DOCUMENTS'],
-        createdAt: new Date().toISOString()
-      };
-      dbState.admins.push(adminObj);
-    } else if (adminObj) {
-      adminObj.role = targetRole;
-      if (password) adminObj.password = bcrypt.hashSync(password, 10);
-      adminObj.status = accountStatus === 'Active' ? 'Active' : 'Suspended';
-      adminObj.isSuspended = accountStatus !== 'Active';
-      if (assignedPermissions) {
-        adminObj.permissions = assignedPermissions;
-      }
-    }
+  if (!dbState.admins) dbState.admins = [];
+  let adminObj = dbState.admins.find(a => (a.employeeId && a.employeeId === canonicalId) || (a.email && a.email.toLowerCase() === effectiveEmail.toLowerCase()));
+  if (!adminObj) {
+    adminObj = {
+      id: `staff-${canonicalId}`,
+      employeeId: canonicalId,
+      name: empName,
+      email: effectiveEmail,
+      username: rawLoginId,
+      password: password ? bcrypt.hashSync(password, 10) : (userObj?.password || bcrypt.hashSync('easydesk123', 10)),
+      role: targetRole,
+      department: emp ? emp.department : 'Operations',
+      status: 'Active',
+      isSuspended: false,
+      permissions: assignedPermissions,
+      createdAt: new Date().toISOString()
+    };
+    dbState.admins.push(adminObj);
+  } else {
+    adminObj.employeeId = canonicalId;
+    adminObj.name = empName;
+    adminObj.email = effectiveEmail;
+    adminObj.username = rawLoginId;
+    adminObj.role = targetRole;
+    if (password) adminObj.password = bcrypt.hashSync(password, 10);
+    adminObj.status = 'Active';
+    adminObj.isSuspended = false;
+    adminObj.permissions = assignedPermissions;
   }
 
   const updatedAccount = setEmployeeAccount(canonicalId, {
-    userId: userObj ? userObj.id : (adminObj ? adminObj.id : undefined),
-    systemEmail,
+    userId: adminObj.id,
+    employeeId: canonicalId,
+    systemEmail: effectiveEmail,
+    username: rawLoginId,
+    loginId: rawLoginId,
     role: targetRole,
-    permissions: assignedPermissions || adminObj?.permissions || [],
-    accountStatus: accountStatus || 'Active'
+    loginAllowed: true,
+    permissions: assignedPermissions,
+    accountStatus: 'Active'
   });
 
-  logAudit(req, 'EMPLOYEE_ACCOUNT_UPDATED', `Configured system login account and RBAC permissions for employee ${canonicalId} (${systemEmail})`, canonicalId);
+  logAudit(req, 'EMPLOYEE_ACCOUNT_CONFIGURED', `Created/updated system login account for employee ${canonicalId} (${rawLoginId})`, canonicalId);
   await persistDatabase('employeeAccounts', canonicalId);
+  await persistDatabase('admins', adminObj.id);
 
-  const { password: _, ...cleanUser } = userObj || {};
-  res.json({ message: 'Employee system account configured successfully.', account: updatedAccount, user: cleanUser });
+  const { password: _, ...cleanAdmin } = adminObj;
+  res.json({ message: 'Employee login credentials configured successfully.', account: updatedAccount, admin: cleanAdmin });
+});
+
+app.delete('/api/admin/employees/:id/account', authenticateToken, requirePermission(['staff_accounts.manage', 'employees.manage']), async (req, res) => {
+  const { id } = req.params;
+  const emp = findEmployee(id);
+  const canonicalId = emp ? emp.id : id;
+
+  const updatedAccount = setEmployeeAccount(canonicalId, {
+    employeeId: canonicalId,
+    loginAllowed: false,
+    accountStatus: 'Disabled'
+  });
+
+  if (dbState.admins) {
+    dbState.admins = dbState.admins.filter(a => a.employeeId !== canonicalId && a.id !== `staff-${canonicalId}`);
+  }
+
+  logAudit(req, 'EMPLOYEE_ACCOUNT_DELETED', `Revoked and deleted login account for employee ${canonicalId}`, canonicalId);
+  await persistDatabase('employeeAccounts', canonicalId);
+  res.json({ message: 'Employee login credentials removed successfully.', account: updatedAccount });
 });
 
 app.put('/api/admin/employees/:id/account/status', authenticateToken, requirePermission(['staff_accounts.manage', 'employees.manage']), async (req, res) => {
@@ -7896,6 +7991,10 @@ app.put('/api/admin/orders/:id', authenticateToken, requireRole(['SUPER_ADMIN', 
     const order = (dbState.orders || []).find(o => o.id === id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found in database.' });
+    }
+
+    if (!canUserAccessOrder(user, order)) {
+      return res.status(403).json({ message: 'Access denied: You can only view and manage orders assigned to you.' });
     }
 
     const {
@@ -8809,12 +8908,14 @@ app.put('/api/admin/blogs/:id', authenticateToken, requireRole(['SUPER_ADMIN', '
   res.json(dbState.blogs[idx]);
 });
 
-app.get(['/api/blogs/:id', '/api/blog/:id'], (req, res) => {
-  const blog = (dbState.blogs || []).find(b => b.id === req.params.id || b.slug === req.params.id);
+app.get(['/api/blogs/:id', '/api/blog/:id'], async (req, res) => {
+  const allBlogs = await readCollectionWithFallback('blogs', () => dbState.blogs || []);
+  const blog = allBlogs.find(b => b.id === req.params.id || b.slug === req.params.id);
   if (!blog) {
     return res.status(404).json({ message: 'Blog article not found.' });
   }
-  const blogCat = (dbState.blogCategories || []).find(c => c.id === blog.categoryId || c.name.toLowerCase() === (blog.category || '').toLowerCase());
+  const allBlogCats = await readCollectionWithFallback('blogCategories', () => dbState.blogCategories || []);
+  const blogCat = allBlogCats.find(c => c.id === blog.categoryId || c.name.toLowerCase() === (blog.category || '').toLowerCase());
   res.json({
     ...blog,
     categoryId: blogCat ? blogCat.id : (blog.categoryId || 'blog-cat-gov'),
