@@ -114,6 +114,15 @@ export default function Footer({ setView }: FooterProps) {
     return [];
   });
 
+  const [logoUrl, setLogoUrl] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('easydesk_general_settings');
+      if (saved) return JSON.parse(saved).logoUrl || '';
+    } catch {}
+    return '';
+  });
+  const [logoFailed, setLogoFailed] = useState(false);
+
   useEffect(() => {
     let isMounted = true;
     const applyContact = (data: any) => {
@@ -137,6 +146,28 @@ export default function Footer({ setView }: FooterProps) {
     const unsubscribe = onContactSettingsUpdated((data) => {
       applyContact(data);
     });
+
+    fetch('/api/general-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (!isMounted) return;
+        if (data?.logoUrl) {
+          setLogoUrl(data.logoUrl);
+          try {
+            const current = JSON.parse(localStorage.getItem('easydesk_general_settings') || '{}');
+            localStorage.setItem('easydesk_general_settings', JSON.stringify({ ...current, ...data }));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    const onGeneralSettingsUpdate = (e: any) => {
+      if (e.detail?.logoUrl !== undefined) {
+        setLogoUrl(e.detail.logoUrl || '');
+        setLogoFailed(false);
+      }
+    };
+    window.addEventListener('easydesk_general_settings_updated', onGeneralSettingsUpdate);
 
     fetch(`/api/social-media-links?_t=${Date.now()}`)
       .then(res => res.ok ? res.json() : null)
@@ -181,6 +212,7 @@ export default function Footer({ setView }: FooterProps) {
     return () => {
       isMounted = false;
       unsubscribe();
+      window.removeEventListener('easydesk_general_settings_updated', onGeneralSettingsUpdate);
       window.removeEventListener('easydesk_social_links_updated', onSocialUpdated);
       window.removeEventListener('storage', onStorageChange);
     };
@@ -209,12 +241,22 @@ export default function Footer({ setView }: FooterProps) {
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && setView('home')}
+              aria-label="My EasyDesk Home"
             >
-              <div className="w-8 h-8 bg-white text-[#0F4C81] rounded-xl flex items-center justify-center font-black shadow-md">
-                <Shield className="w-4 h-4 text-[#0F4C81]" />
-              </div>
+              {logoUrl && !logoFailed ? (
+                <img
+                  src={logoUrl}
+                  alt="My EasyDesk Logo"
+                  className="w-8 h-8 rounded-xl object-contain shadow-md bg-white shrink-0"
+                  onError={() => setLogoFailed(true)}
+                />
+              ) : (
+                <div className="w-8 h-8 bg-white text-[#0F4C81] rounded-xl flex items-center justify-center font-black shadow-md">
+                  <Shield className="w-4 h-4 text-[#0F4C81]" />
+                </div>
+              )}
               <div>
-                <span className="text-xl font-black text-white tracking-tight leading-none block notranslate" translate="no">EasyDesk</span>
+                <span className="text-xl font-black text-white tracking-tight leading-none block notranslate" translate="no">My EasyDesk</span>
                 <span className="block text-[9px] text-cyan-300 font-extrabold tracking-wider uppercase mt-0.5">Digital Service Portal</span>
               </div>
             </div>
@@ -284,7 +326,7 @@ export default function Footer({ setView }: FooterProps) {
             <ul className="space-y-2.5 text-xs text-slate-300 mb-4">
               <li>
                 <button
-                  onClick={() => openGeneralWhatsApp('Hello EasyDesk, I need assistance with an application.')}
+                  onClick={() => openGeneralWhatsApp('Hello My EasyDesk, I need assistance with an application.')}
                   className="hover:text-emerald-400 transition cursor-pointer text-left font-bold text-emerald-400 flex items-center gap-1.5"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
@@ -349,7 +391,7 @@ export default function Footer({ setView }: FooterProps) {
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`EasyDesk on ${getPlatformTitle(item.platform)}`}
+                  aria-label={`My EasyDesk on ${getPlatformTitle(item.platform)}`}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-200 hover:text-white transition cursor-pointer notranslate"
                   translate="no"
                 >
@@ -363,7 +405,7 @@ export default function Footer({ setView }: FooterProps) {
 
         {/* Bottom Legal Copyright */}
         <div className="mt-10 pt-6 border-t border-slate-800 text-center flex flex-col sm:flex-row justify-between items-center gap-4 text-[11px] text-slate-400">
-          <p className="m-0">© 2026 <span className="notranslate" translate="no">EasyDesk Solutions Private Limited</span>. All rights reserved.</p>
+          <p className="m-0">© 2026 <span className="notranslate" translate="no">My EasyDesk Solutions Private Limited</span>. All rights reserved.</p>
           <div className="flex flex-wrap justify-center gap-4">
             <button onClick={() => setView('privacy-security')} className="hover:text-white transition cursor-pointer">Privacy Policy</button>
             <button onClick={() => setView('about')} className="hover:text-white transition cursor-pointer">Terms & Conditions</button>

@@ -193,6 +193,8 @@ export function parseRouteFromLocation(
   return { view: 'not-found', serviceId: null, blogId: null, adminTab: 'analytics' };
 }
 
+const DEFAULT_FAVICON = "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%230F4C81'/><rect x='8' y='8' width='16' height='16' rx='3' fill='none' stroke='white' stroke-width='3'/></svg>";
+
 export default function App() {
 
   // Synchronous route initialization directly from current URL
@@ -202,6 +204,46 @@ export default function App() {
   const [selectedBlogId, setSelectedBlogId] = useState<string | null>(() => initialRoute.blogId);
   const [adminTab, setAdminTab] = useState<string>(() => initialRoute.adminTab || 'analytics');
   const [isOnline, setIsOnline] = useState<boolean>(() => typeof navigator !== 'undefined' ? navigator.onLine : true);
+
+  // Dynamic Favicon state & synchronization
+  const [faviconUrl, setFaviconUrl] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('easydesk_general_settings');
+      if (saved) return JSON.parse(saved).faviconUrl || '';
+    } catch {}
+    return '';
+  });
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail?.faviconUrl !== undefined) {
+        setFaviconUrl(e.detail.faviconUrl || '');
+      }
+    };
+    window.addEventListener('easydesk_general_settings_updated', handleUpdate);
+
+    fetch('/api/general-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.faviconUrl) {
+          setFaviconUrl(data.faviconUrl);
+          try {
+            const current = JSON.parse(localStorage.getItem('easydesk_general_settings') || '{}');
+            localStorage.setItem('easydesk_general_settings', JSON.stringify({ ...current, ...data }));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    return () => window.removeEventListener('easydesk_general_settings_updated', handleUpdate);
+  }, []);
+
+  useEffect(() => {
+    const link = document.querySelector("link[rel*='icon']") as HTMLLinkElement;
+    if (link) {
+      link.href = faviconUrl || DEFAULT_FAVICON;
+    }
+  }, [faviconUrl]);
 
   // Global scroll-to-top on route / main view transition
   useScrollToTopOnChange([view, selectedServiceId, selectedBlogId, adminTab]);
@@ -527,14 +569,15 @@ export default function App() {
         <Helmet>
           <title>{seoConfig.title}</title>
           <meta name="description" content={seoConfig.description} />
-          <meta name="robots" content={seoConfig.robots} />
+          {/* Favicon */}
+          <link rel="icon" href={faviconUrl || DEFAULT_FAVICON} />
 
           {/* Open Graph / Facebook */}
           <meta property="og:type" content={seoConfig.ogType || 'website'} />
           <meta property="og:url" content={seoConfig.canonicalUrl} />
           <meta property="og:title" content={seoConfig.ogTitle || seoConfig.title} />
           <meta property="og:description" content={seoConfig.ogDescription || seoConfig.description} />
-          <meta property="og:site_name" content={seoConfig.ogSiteName || 'EasyDesk'} />
+          <meta property="og:site_name" content={seoConfig.ogSiteName || 'My EasyDesk'} />
           {seoConfig.ogImage && <meta property="og:image" content={seoConfig.ogImage} />}
 
           {/* Twitter Meta */}

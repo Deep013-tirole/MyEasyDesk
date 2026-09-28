@@ -26,6 +26,88 @@ interface ServiceDetailsViewProps {
   isLoadingCatalogs?: boolean;
 }
 
+export interface EligibilityPoint {
+  type: 'numbered' | 'bullet';
+  number?: number;
+  text: string;
+}
+
+export function parseEligibilityPoints(eligibility?: string | string[]): EligibilityPoint[] {
+  if (!eligibility) return [];
+
+  if (Array.isArray(eligibility)) {
+    return eligibility
+      .map(item => ({ type: 'bullet' as const, text: String(item).trim() }))
+      .filter(p => p.text.length > 0);
+  }
+
+  const raw = String(eligibility).trim();
+  if (!raw) return [];
+
+  // Split by newlines first
+  const rawLines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const parsed: EligibilityPoint[] = [];
+
+  for (const line of rawLines) {
+    const numMatch = line.match(/^(\d+)[\.\)\-\:]\s*(.+)/);
+    if (numMatch) {
+      parsed.push({
+        type: 'numbered',
+        number: parseInt(numMatch[1], 10),
+        text: numMatch[2].trim()
+      });
+      continue;
+    }
+
+    const bulletMatch = line.match(/^[\u2022\u25E6\u2043\u2219\*\-\–\—\▪\✦\>]\s*(.+)/);
+    if (bulletMatch) {
+      parsed.push({
+        type: 'bullet',
+        text: bulletMatch[1].trim()
+      });
+      continue;
+    }
+
+    if (line.includes('•')) {
+      const parts = line.split('•').map(p => p.trim()).filter(Boolean);
+      for (const part of parts) {
+        parsed.push({ type: 'bullet', text: part });
+      }
+      continue;
+    }
+
+    if (line.includes(';') && line.length > 40) {
+      const parts = line.split(';').map(p => p.trim()).filter(Boolean);
+      if (parts.length > 1) {
+        for (const part of parts) {
+          parsed.push({ type: 'bullet', text: part });
+        }
+        continue;
+      }
+    }
+
+    parsed.push({
+      type: 'bullet',
+      text: line
+    });
+  }
+
+  if (parsed.length === 1 && /\b[1-9]\.\s+[A-Za-z]/.test(parsed[0].text)) {
+    const inlineMatches = parsed[0].text.split(/(?=\b\d+[\.\)])/g).map(s => s.trim()).filter(Boolean);
+    if (inlineMatches.length > 1) {
+      return inlineMatches.map(item => {
+        const m = item.match(/^(\d+)[\.\)]\s*(.+)/);
+        if (m) {
+          return { type: 'numbered', number: parseInt(m[1], 10), text: m[2].trim() };
+        }
+        return { type: 'bullet', text: item };
+      });
+    }
+  }
+
+  return parsed;
+}
+
 export default function ServiceDetailsView({
   serviceId,
   services,
@@ -86,12 +168,17 @@ export default function ServiceDetailsView({
 
   const categoryName = category?.name || 'Digital Service';
 
-  // Related services in same category (excluding current)
+  // Related services in same category (excluding current and inactive)
   const relatedServices = useMemo(() => {
     if (!service) return [];
-    let rel = services.filter(s => s.id !== service.id && s.categoryId === service.categoryId);
+    const isServiceActive = (s: Service) => {
+      const st = (s.status || 'Active').toLowerCase();
+      return st !== 'inactive' && st !== 'draft' && st !== 'hidden' && s.active !== false;
+    };
+    const activeServices = services.filter(isServiceActive);
+    let rel = activeServices.filter(s => s.id !== service.id && s.categoryId === service.categoryId);
     if (rel.length < 3) {
-      const others = services.filter(s => s.id !== service.id && s.categoryId !== service.categoryId);
+      const others = activeServices.filter(s => s.id !== service.id && s.categoryId !== service.categoryId);
       rel = [...rel, ...others];
     }
     return rel.slice(0, 3);
@@ -183,6 +270,7 @@ export default function ServiceDetailsView({
   }
 
   const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
+  const isServiceInactive = (service.status || 'active').toLowerCase() === 'inactive' || service.active === false;
 
   const hasTimeline = Boolean(service?.timeline?.enabled && service.timeline?.startDate && service.timeline?.endDate);
 
@@ -241,7 +329,7 @@ export default function ServiceDetailsView({
   const origin = getCanonicalOrigin();
   const canonicalUrl = `${origin}/services/${service.slug || service.id}`;
   const rawTitle = service.seoTitle || `${service.title} Online Assistance`;
-  const seoTitle = rawTitle.includes('EasyDesk') ? rawTitle : `${rawTitle} | EasyDesk`;
+  const seoTitle = rawTitle.includes('My EasyDesk') ? rawTitle : (rawTitle.includes('EasyDesk') ? rawTitle.replace('EasyDesk', 'My EasyDesk') : `${rawTitle} | My EasyDesk`);
   const seoDesc = service.seoDescription || service.shortDescription || service.description || `Apply online for ${service.title} with verified desk assistance, full document verification, transparent fees, and real-time tracking on WhatsApp.`;
 
   return (
@@ -257,7 +345,7 @@ export default function ServiceDetailsView({
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
-        <meta property="og:site_name" content="EasyDesk" />
+        <meta property="og:site_name" content="My EasyDesk" />
         {(service.imageUrl || service.image) && (
           <meta property="og:image" content={service.imageUrl || service.image} />
         )}
@@ -349,6 +437,14 @@ export default function ServiceDetailsView({
         </div>
       </div>
 
+      {/* Inactive Service Notification Banner */}
+      {isServiceInactive && (
+        <div className="bg-amber-500 text-white font-bold text-xs py-2.5 px-4 text-center shadow-xs flex items-center justify-center gap-2">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>This service is currently paused or inactive. Online applications are temporarily closed.</span>
+        </div>
+      )}
+
       {/* 2. SERVICE HERO SECTION */}
       <section className="bg-white border-b border-slate-200/80 pt-6 sm:pt-8 pb-8 sm:pb-10 w-full max-w-full">
         <div className="portal-container">
@@ -398,22 +494,6 @@ export default function ServiceDetailsView({
                 {service.shortDescription || service.description || 'Assisted citizen and business documentation support with guaranteed portal verification and zero rejection guidance.'}
               </p>
 
-              {/* Quick Hero Value Chips */}
-              <div className="pt-2 flex flex-wrap gap-2 text-[11px] font-medium text-slate-700">
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 sm:px-3 py-1.5 rounded-xl">
-                  <ShieldCheck className="w-3.5 h-3.5 text-[#0F4C81]" />
-                  <span>100% Verified Filing</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 sm:px-3 py-1.5 rounded-xl">
-                  <Award className="w-3.5 h-3.5 text-[#10B981]" />
-                  <span>Transparent Government Fees</span>
-                </div>
-                <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200/80 px-2.5 sm:px-3 py-1.5 rounded-xl">
-                  <Zap className="w-3.5 h-3.5 text-amber-600" />
-                  <span>Fast WhatsApp Updates</span>
-                </div>
-              </div>
-
             </div>
 
             {/* Right Hero Image / Illustration Card */}
@@ -444,7 +524,7 @@ export default function ServiceDetailsView({
 
                     {/* Verified Badge */}
                     <div className="absolute top-2.5 left-2.5 z-20 bg-slate-900/80 backdrop-blur-xs text-white text-[9px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1 shadow-xs">
-                      <ShieldCheck className="w-3 h-3 text-cyan-300" /> EasyDesk Verified
+                      <ShieldCheck className="w-3 h-3 text-cyan-300" /> My EasyDesk Verified
                     </div>
 
                     {/* Expand/View Full Button */}
@@ -694,7 +774,7 @@ export default function ServiceDetailsView({
               </div>
 
               <p className="text-xs text-slate-500">
-                EasyDesk handles the complete application filing through dedicated WhatsApp desk assistance. No complicated online forms to fill by yourself.
+                My EasyDesk handles the complete application filing through dedicated WhatsApp desk assistance. No complicated online forms to fill by yourself.
               </p>
 
               {/* 5-Step Visual Connected Timeline */}
@@ -759,7 +839,7 @@ export default function ServiceDetailsView({
                       <td className="p-3.5 text-right font-bold text-slate-900 notranslate" translate="no">₹{service.govFees || 0}</td>
                     </tr>
                     <tr className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="p-3.5 text-slate-600">EasyDesk Documentation & Advisory Charge</td>
+                      <td className="p-3.5 text-slate-600">My EasyDesk Documentation & Advisory Charge</td>
                       <td className="p-3.5 text-right font-bold text-slate-900 notranslate" translate="no">₹{service.serviceCharge || 0}</td>
                     </tr>
                     <tr className="bg-blue-50/50 font-bold">
@@ -777,14 +857,52 @@ export default function ServiceDetailsView({
 
             {/* SECTION 5: ELIGIBILITY (Conditional) */}
             {service.eligibility && (
-              <div id="section-eligibility" className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-3">
-                <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-                  <Users className="w-4 h-4 text-[#0F4C81]" />
-                  <h2 className="text-sm sm:text-base font-bold text-slate-900">Who is Eligible?</h2>
+              <div id="section-eligibility" className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-[#0F4C81]" />
+                    <h2 className="text-sm sm:text-base font-bold text-slate-900">Eligibility Criteria</h2>
+                  </div>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    Who Can Apply
+                  </span>
                 </div>
-                <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl text-xs text-slate-700 leading-relaxed">
-                  {service.eligibility}
-                </div>
+
+                {(() => {
+                  const points = parseEligibilityPoints(service.eligibility);
+                  if (points.length === 0) return null;
+
+                  return (
+                    <div className="space-y-2.5">
+                      {points.map((pt, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-start gap-3 p-3 sm:p-3.5 bg-slate-50/70 hover:bg-slate-50 border border-slate-200/70 rounded-xl transition"
+                        >
+                          <div className="shrink-0 mt-0.5">
+                            {pt.type === 'numbered' ? (
+                              <div className="w-6 h-6 rounded-lg bg-[#0F4C81] text-white flex items-center justify-center font-bold text-xs shadow-2xs">
+                                {pt.number || idx + 1}
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 rounded-lg bg-blue-50 border border-blue-200/80 text-[#0F4C81] flex items-center justify-center font-bold text-xs shadow-2xs">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-[#0F4C81]" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0 text-xs sm:text-sm text-slate-800 font-medium leading-relaxed pt-0.5">
+                            {pt.text}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+
+                <p className="text-[11px] text-slate-500 bg-blue-50/40 p-3 rounded-xl border border-blue-100 flex items-center gap-2">
+                  <span>ℹ️</span>
+                  <span><strong>Document Verification:</strong> Our desk officer will verify your documents against these criteria prior to portal filing.</span>
+                </p>
               </div>
             )}
 
@@ -844,7 +962,7 @@ export default function ServiceDetailsView({
                   className="w-full sm:w-auto bg-white hover:bg-slate-100 text-[#0F4C81] font-bold text-xs px-5 py-3 rounded-xl shadow-xs transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
                 >
                   <Bot className="w-4 h-4 text-[#0F4C81]" />
-                  <span>Ask EasyDesk AI Assistant</span>
+                  <span>Ask My EasyDesk AI Assistant</span>
                 </button>
               </div>
             </div>
@@ -872,14 +990,26 @@ export default function ServiceDetailsView({
               </div>
 
               {/* Primary Apply Online CTA */}
-              <button
-                id="btn-apply-online-primary"
-                onClick={() => setIsApplyModalOpen(true)}
-                className="w-full bg-[#0F4C81] hover:bg-[#0c3e69] text-white font-black text-sm py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
-              >
-                <FileText className="w-4 h-4" />
-                <span>Apply Online Now</span>
-              </button>
+              {isServiceInactive ? (
+                <button
+                  id="btn-apply-online-primary"
+                  disabled
+                  className="w-full bg-slate-100 text-slate-400 border border-slate-200 font-bold text-xs py-3.5 px-4 rounded-xl cursor-not-allowed flex items-center justify-center gap-2"
+                  title="Applications are currently unavailable"
+                >
+                  <AlertCircle className="w-4 h-4 text-slate-400" />
+                  <span>Applications Temporarily Closed</span>
+                </button>
+              ) : (
+                <button
+                  id="btn-apply-online-primary"
+                  onClick={() => setIsApplyModalOpen(true)}
+                  className="w-full bg-[#0F4C81] hover:bg-[#0c3e69] text-white font-black text-sm py-3.5 px-4 rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Apply Online Now</span>
+                </button>
+              )}
 
               {/* Secondary WhatsApp Order CTA */}
               <button
@@ -958,7 +1088,7 @@ export default function ServiceDetailsView({
                 <span className="text-[10px] text-slate-500">Talk to our lead desk coordinator</span>
               </div>
               <button
-                onClick={() => openGeneralWhatsApp(`Hello EasyDesk, I need help with ${service.title} (ID: ${service.id}).`)}
+                onClick={() => openGeneralWhatsApp(`Hello My EasyDesk, I need help with ${service.title} (ID: ${service.id}).`)}
                 className="bg-white border border-slate-200 hover:bg-slate-100 text-slate-800 font-bold text-[10px] px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs shrink-0"
               >
                 Chat Now

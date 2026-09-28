@@ -116,9 +116,9 @@ export function getCanonicalBusinessData(contactSettings?: any, companyProfile?:
   const settings = contactSettings || {};
   const profile = companyProfile || {};
 
-  const name = profile.companyName || settings.companyName || 'EasyDesk';
+  const name = profile.companyName || settings.companyName || 'My EasyDesk';
   const legalName = `${name} Facilitation & Advisory Desk`;
-  const description = 'Independent commercial digital document assistance and citizen advisory platform. EasyDesk is an independent commercial facilitation desk and is not affiliated with any government department.';
+  const description = 'Independent commercial digital document assistance and citizen advisory platform. My EasyDesk is an independent commercial facilitation desk and is not affiliated with any government department.';
 
   const phone = (settings.phone || profile.phone || '').trim() || undefined;
   const email = (settings.email || profile.email || '').trim() || undefined;
@@ -224,7 +224,7 @@ export function getWebSiteJsonLd(): object {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    'name': 'EasyDesk',
+    'name': 'My EasyDesk',
     'url': origin,
     'description': 'Commercial digital document assistance and citizen advisory portal for government, education, and business documentation.',
     'potentialAction': {
@@ -425,7 +425,7 @@ export function resolveSeoMetadata(
     contactSettings = dataOrServices.contactSettings;
     companyProfile = dataOrServices.companyProfile;
   }
-  const siteName = 'EasyDesk';
+  const siteName = 'My EasyDesk';
 
   // 1. Service Details
   if (route.view === 'service-details' && route.serviceId) {
@@ -438,7 +438,7 @@ export function resolveSeoMetadata(
     if (service) {
       const cat = categories.find(c => c.id === service.categoryId);
       const rawTitle = service.seoTitle || `${service.title} Online Assistance`;
-      const title = rawTitle.includes('EasyDesk') ? rawTitle : `${rawTitle} | EasyDesk`;
+      const title = rawTitle.includes('My EasyDesk') ? rawTitle : (rawTitle.includes('EasyDesk') ? rawTitle.replace('EasyDesk', 'My EasyDesk') : `${rawTitle} | My EasyDesk`);
       const description = service.seoDescription || service.shortDescription || service.description || `Online application filing, document pre-checks, transparent fees, and real-time tracking for ${service.title}.`;
       const canonicalUrl = `${origin}/services/${service.slug || service.id}`;
 
@@ -482,7 +482,7 @@ export function resolveSeoMetadata(
     );
     if (blog) {
       const rawBlogTitle = blog.seoTitle || blog.title;
-      const title = rawBlogTitle.includes('EasyDesk') ? rawBlogTitle : `${rawBlogTitle} | EasyDesk`;
+      const title = rawBlogTitle.includes('My EasyDesk') ? rawBlogTitle : (rawBlogTitle.includes('EasyDesk') ? rawBlogTitle.replace('EasyDesk', 'My EasyDesk') : `${rawBlogTitle} | My EasyDesk`);
       const description = blog.seoDescription || blog.shortDescription || blog.excerpt || blog.title;
       const canonicalUrl = `${origin}/blogs/${blog.slug || blog.id}`;
 
@@ -519,17 +519,17 @@ export function resolveSeoMetadata(
   if (route.view === 'not-found' || route.isNotFound) {
     const canonicalUrl = `${origin}/404`;
     return {
-      title: 'Page Not Found (404) | EasyDesk',
-      description: 'The requested page could not be found on EasyDesk. Browse our digital services catalog or search for citizen documentation assistance.',
+      title: 'Page Not Found (404) | My EasyDesk',
+      description: 'The requested page could not be found on My EasyDesk. Browse our digital services catalog or search for citizen documentation assistance.',
       canonicalUrl,
       robots: 'noindex, nofollow',
       ogType: 'website',
-      ogTitle: 'Page Not Found (404) | EasyDesk',
+      ogTitle: 'Page Not Found (404) | My EasyDesk',
       ogDescription: 'The requested page could not be found.',
       ogUrl: canonicalUrl,
       ogSiteName: siteName,
       twitterCard: 'summary',
-      twitterTitle: 'Page Not Found (404) | EasyDesk',
+      twitterTitle: 'Page Not Found (404) | My EasyDesk',
       twitterDescription: 'The requested page could not be found.',
       schemas: []
     };
@@ -539,8 +539,8 @@ export function resolveSeoMetadata(
   switch (route.view) {
     case 'services': {
       const canonicalUrl = `${origin}/services`;
-      const title = 'Online Services Catalog & Citizen Assistance | EasyDesk';
-      const description = 'Browse EasyDesk services: PAN card assistance, Aadhaar demographics, passport filing guidance, MSME registration, GST, and online forms.';
+      const title = 'Online Services Catalog & Citizen Assistance | My EasyDesk';
+      const description = 'Browse My EasyDesk services: PAN card assistance, Aadhaar demographics, passport filing guidance, MSME registration, GST, and online forms.';
       return {
         title,
         description,
@@ -564,7 +564,7 @@ export function resolveSeoMetadata(
     }
     case 'blogs': {
       const canonicalUrl = `${origin}/blogs`;
-      const title = 'Knowledge Hub, Citizen Guides & Updates | EasyDesk';
+      const title = 'Knowledge Hub, Citizen Guides & Updates | My EasyDesk';
       const description = 'Read practical step-by-step application guides, document checklists, scholarship windows, and public-service notification updates.';
       return {
         title,
@@ -589,8 +589,8 @@ export function resolveSeoMetadata(
     }
     case 'about': {
       const canonicalUrl = `${origin}/about`;
-      const title = 'About EasyDesk — Commercial Citizen Assistance Platform';
-      const description = 'Learn about EasyDesk: an independent commercial digital document assistance desk helping citizens complete documentation with verified guidance.';
+      const title = 'About My EasyDesk — Commercial Citizen Assistance Platform';
+      const description = 'Learn about My EasyDesk: an independent commercial digital document assistance desk helping citizens complete documentation with verified guidance.';
       return {
         title,
         description,
@@ -615,8 +615,8 @@ export function resolveSeoMetadata(
     }
     case 'contact': {
       const canonicalUrl = `${origin}/contact`;
-      const title = 'Contact EasyDesk — Support & Helpdesk';
-      const description = 'Contact EasyDesk for application inquiries, document guidance, and tracking assistance via WhatsApp, telephonic support, or email.';
+      const title = 'Contact My EasyDesk — Support & Helpdesk';
+      const description = 'Contact My EasyDesk for application inquiries, document guidance, and tracking assistance via WhatsApp, telephonic support, or email.';
       return {
         title,
         description,
@@ -641,8 +641,8 @@ export function resolveSeoMetadata(
     }
     case 'payment': {
       const canonicalUrl = `${origin}/payment`;
-      const title = 'Payment Information | EasyDesk';
-      const description = 'Payment methods, fee policies, and transaction verification instructions for EasyDesk service requests.';
+      const title = 'Payment Information | My EasyDesk';
+      const description = 'Payment methods, fee policies, and transaction verification instructions for My EasyDesk service requests.';
       return {
         title,
         description,
@@ -661,7 +661,7 @@ export function resolveSeoMetadata(
     }
     case 'track': {
       const canonicalUrl = `${origin}/track`;
-      const title = 'Track Application Status | EasyDesk';
+      const title = 'Track Application Status | My EasyDesk';
       const description = 'Track the real-time processing status of your digital service request using your Order ID and mobile number.';
       return {
         title,
@@ -686,8 +686,8 @@ export function resolveSeoMetadata(
     }
     case 'privacy-security': {
       const canonicalUrl = `${origin}/privacy-security`;
-      const title = 'Privacy Policy & Data Security | EasyDesk';
-      const description = 'Learn how EasyDesk safeguards user documents, adheres to data protection norms, and enforces document privacy.';
+      const title = 'Privacy Policy & Data Security | My EasyDesk';
+      const description = 'Learn how My EasyDesk safeguards user documents, adheres to data protection norms, and enforces document privacy.';
       return {
         title,
         description,
@@ -713,17 +713,17 @@ export function resolveSeoMetadata(
     case 'admin-login': {
       const canonicalUrl = `${origin}/admin`;
       return {
-        title: 'Officer & Administrative Portal | EasyDesk',
-        description: 'EasyDesk administrative portal for authorized operators.',
+        title: 'Officer & Administrative Portal | My EasyDesk',
+        description: 'My EasyDesk administrative portal for authorized operators.',
         canonicalUrl,
         robots: 'noindex, nofollow',
         ogType: 'website',
-        ogTitle: 'Officer Portal | EasyDesk',
+        ogTitle: 'Officer Portal | My EasyDesk',
         ogDescription: 'Administrative desk for authorized operators.',
         ogUrl: canonicalUrl,
         ogSiteName: siteName,
         twitterCard: 'summary',
-        twitterTitle: 'Officer Portal | EasyDesk',
+        twitterTitle: 'Officer Portal | My EasyDesk',
         twitterDescription: 'Administrative desk.',
         schemas: []
       };
@@ -731,25 +731,25 @@ export function resolveSeoMetadata(
     case 'not-found': {
       const canonicalUrl = `${origin}/404`;
       return {
-        title: 'Page Not Found (404) | EasyDesk',
-        description: 'The requested page could not be found on EasyDesk. Browse our digital assistance services, blogs, and support desk.',
+        title: 'Page Not Found (404) | My EasyDesk',
+        description: 'The requested page could not be found on My EasyDesk. Browse our digital assistance services, blogs, and support desk.',
         canonicalUrl,
         robots: 'noindex, nofollow',
         ogType: 'website',
-        ogTitle: 'Page Not Found (404) | EasyDesk',
-        ogDescription: 'The requested page could not be found on EasyDesk.',
+        ogTitle: 'Page Not Found (404) | My EasyDesk',
+        ogDescription: 'The requested page could not be found on My EasyDesk.',
         ogUrl: canonicalUrl,
         ogSiteName: siteName,
         twitterCard: 'summary',
-        twitterTitle: 'Page Not Found (404) | EasyDesk',
-        twitterDescription: 'The requested page could not be found on EasyDesk.',
+        twitterTitle: 'Page Not Found (404) | My EasyDesk',
+        twitterDescription: 'The requested page could not be found on My EasyDesk.',
         schemas: []
       };
     }
     case 'home':
     default: {
       const canonicalUrl = `${origin}/`;
-      const title = 'EasyDesk — Citizen Support, Digital Services & Knowledge Hub';
+      const title = 'My EasyDesk — Citizen Support, Digital Services & Knowledge Hub';
       const description = 'Independent commercial digital document assistance and citizen advisory portal. Guided online application filing, pre-submission audits, and verified status updates.';
       return {
         title,

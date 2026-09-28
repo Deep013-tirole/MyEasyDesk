@@ -113,15 +113,15 @@ const DEFAULT_FOUNDER: FounderData = {
   designation: 'Founder & Managing Director',
   photoUrl: '',
   shortBio: 'Pioneer in digital governance and paperless document verification in India.',
-  detailedBio: 'Deep Tirole brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, EasyDesk has expanded into a nationwide technology-driven service portal servicing citizens across India with guaranteed transparency.',
-  founderMessage: 'Our mission with EasyDesk was born out of a simple observation: citizens should not have to sacrifice productive workdays waiting in physical government office lines when technology can verify and file documents with precision and speed.',
+  detailedBio: 'Deep Tirole brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, My EasyDesk has expanded into a nationwide technology-driven service portal servicing citizens across India with guaranteed transparency.',
+  founderMessage: 'Our mission with My EasyDesk was born out of a simple observation: citizens should not have to sacrifice productive workdays waiting in physical government office lines when technology can verify and file documents with precision and speed.',
   email: 'help.myeasydesks@gmail.com',
   signatureUrl: '',
   socialLinks: {}
 };
 
 const DEFAULT_ABOUT_DATA: AboutUsData = {
-  aboutText: 'EasyDesk is India\'s premier commercial digital service desk platform. We simplify complex government applications, educational documentation, corporate registrations, and personal identity paperwork through verified desk assistance and transparent processing.',
+  aboutText: 'My EasyDesk is India\'s premier commercial digital service desk platform. We simplify complex government applications, educational documentation, corporate registrations, and personal identity paperwork through verified desk assistance and transparent processing.',
   vision: 'To empower every citizen and small business with effortless, transparent, and paperless digital documentation services across India.',
   mission: 'To eliminate physical queue delays through automated document audits, step-by-step guidance, and verified desk officers.',
   coreValues: DEFAULT_CORE_VALUES,
@@ -334,7 +334,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
               className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed"
             >
               {aboutData?.aboutText || 
-                'EasyDesk revolutionizes government applications, legal affidavits, and corporate documentation across India through streamlined online workflows, automated audit checks, and verified expert desk personnel.'}
+                'My EasyDesk revolutionizes government applications, legal affidavits, and corporate documentation across India through streamlined online workflows, automated audit checks, and verified expert desk personnel.'}
             </motion.p>
 
             {/* Key Civic Value Proposition Badges (Real & Verifiable) */}
@@ -561,12 +561,12 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
 
                   <blockquote className="text-base sm:text-lg text-slate-800 italic leading-relaxed border-l-4 border-[#0F4C81] pl-4 py-1.5 bg-slate-50/60 rounded-r-2xl">
                     "{founder.founderMessage || 
-                      'Our mission with EasyDesk was born out of a simple observation: citizens should not have to sacrifice productive workdays waiting in physical government office lines when technology can verify and file documents with precision and speed.'}"
+                      'Our mission with My EasyDesk was born out of a simple observation: citizens should not have to sacrifice productive workdays waiting in physical government office lines when technology can verify and file documents with precision and speed.'}"
                   </blockquote>
 
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line">
                     {founder.detailedBio || 
-                      `${localizedFounderName} brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, EasyDesk has expanded from a regional assistance counter into a nationwide technology-driven service portal servicing thousands of citizens every month with guaranteed transparency.`}
+                      `${localizedFounderName} brings over a decade of hands-on experience in public administration, digital governance frameworks, and citizen service operations. Under his guidance, My EasyDesk has expanded from a regional assistance counter into a nationwide technology-driven service portal servicing thousands of citizens every month with guaranteed transparency.`}
                   </p>
 
                   {/* Official Signature */}
@@ -752,7 +752,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
               </div>
               <div>
                 <span className="text-[10px] text-[#0F4C81] font-bold uppercase tracking-wider block">Service Advantage</span>
-                <h3 className="text-xl font-black text-slate-900">Why Citizens Choose EasyDesk</h3>
+                <h3 className="text-xl font-black text-slate-900">Why Citizens Choose My EasyDesk</h3>
               </div>
             </div>
 
@@ -791,7 +791,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
               </div>
               <div>
                 <span className="text-[10px] text-blue-200 font-bold uppercase tracking-wider block">Transparent Workflow</span>
-                <h3 className="text-xl font-black text-white">How EasyDesk Works</h3>
+                <h3 className="text-xl font-black text-white">How My EasyDesk Works</h3>
               </div>
             </div>
 

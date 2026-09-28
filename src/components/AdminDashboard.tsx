@@ -1127,6 +1127,39 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
     }
   };
 
+  // Toggle service Active / Inactive (Show / Hide)
+  const handleToggleServiceStatus = async (service: Service) => {
+    const isCurrentlyActive = (service.status || 'Active').toLowerCase() !== 'inactive' && service.active !== false;
+    const newStatus = isCurrentlyActive ? 'Inactive' : 'Active';
+    try {
+      const res = await adminFetch(`/api/admin/services/${service.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          updaterId: adminUser?.id,
+          updaterName: adminUser?.name,
+          updaterRole: adminUser?.role,
+          service: {
+            ...service,
+            status: newStatus,
+            active: newStatus === 'Active'
+          }
+        })
+      });
+      if (res.ok) {
+        triggerAlert(`Service "${service.title}" is now ${newStatus === 'Active' ? 'Active (Visible)' : 'Inactive (Hidden)'}.`);
+        invalidateAllCatalogsCache();
+        onRefreshCatalogs?.();
+        fetchTabData();
+      } else {
+        const errorData = await res.json().catch(() => ({}));
+        triggerAlert(`Status change failed: ${errorData.message || 'Server error'}`);
+      }
+    } catch (err: any) {
+      triggerAlert(err.message || 'Failed to update service status.');
+    }
+  };
+
   // Simulate uploading a file in the media library
   const handleUploadMediaSimulate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1445,7 +1478,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
   const isOperator = isSuper || isAdmin || roleStr === 'OPERATOR';
 
   return (
-    <div className="notranslate portal-container py-8 font-sans text-slate-800" translate="no">
+    <div className="notranslate portal-container py-8 font-sans text-slate-800 w-full max-w-full min-w-0 overflow-x-hidden" translate="no">
 
       {/* Toast Notification Banner */}
       {actionNotif && (
@@ -1464,7 +1497,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
             </span>
             <span className="text-slate-400 text-xs">• Workspace Sandboxed</span>
           </div>
-          <h1 className="text-2xl font-black text-slate-900 mt-2">EasyDesk Control Operations Center</h1>
+          <h1 className="text-2xl font-black text-slate-900 mt-2">My EasyDesk Control Operations Center</h1>
         </div>
 
         <div className="flex items-center gap-2 bg-white border border-slate-200/60 p-2.5 rounded-2xl shadow-sm">
@@ -1535,7 +1568,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
         </div>
 
         {/* Quick Horizontal Scroll Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-thin print:hidden">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-bold scrollbar-thin print:hidden touch-pan-x w-full max-w-full">
           <button
             type="button"
             onClick={() => setActiveTab('analytics')}
@@ -1938,7 +1971,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
       )}
 
       {/* Main Control Panel Dashboard Layout */}
-      <div className="grid md:grid-cols-5 gap-8">
+      <div className="grid md:grid-cols-5 gap-8 w-full max-w-full min-w-0">
 
         {/* Left Side Control Panel Navigation Menu (Desktop Only) */}
         <div className="hidden md:block md:col-span-1 space-y-2">
@@ -2186,7 +2219,7 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
         </div>
 
         {/* Right Side Main Work Board */}
-        <div className="md:col-span-4 space-y-6">
+        <div className="md:col-span-4 min-w-0 w-full max-w-full overflow-x-hidden space-y-6">
           <Suspense fallback={<AdminModuleFallback />}>
             {/* Active Tab 1: Analytics Dashboard */}
             {activeTab === 'analytics' && (
@@ -2944,6 +2977,11 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <span className="font-mono text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-bold">{svc.id}</span>
                                 <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.5 rounded font-bold truncate max-w-[150px]">{catName}</span>
+                                {((svc.status || 'Active').toLowerCase() !== 'inactive' && svc.active !== false) ? (
+                                  <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-bold">Active</span>
+                                ) : (
+                                  <span className="text-[10px] bg-slate-100 text-slate-600 border border-slate-200 px-2 py-0.5 rounded-full font-bold">Inactive (Hidden)</span>
+                                )}
                               </div>
                               <h4 className="font-bold text-slate-900 text-sm mt-1">{svc.title}</h4>
                             </div>
@@ -2968,7 +3006,18 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                             </div>
                           </div>
 
-                          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100">
+                          <div className="flex items-center justify-end gap-2 pt-1 border-t border-slate-100 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleServiceStatus(svc)}
+                              className={`text-xs px-3 py-1.5 rounded-xl font-bold transition cursor-pointer border ${
+                                ((svc.status || 'Active').toLowerCase() !== 'inactive' && svc.active !== false)
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                  : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                              }`}
+                            >
+                              {((svc.status || 'Active').toLowerCase() !== 'inactive' && svc.active !== false) ? 'Hide / Deactivate' : 'Activate'}
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleDuplicateService(svc)}
@@ -3008,43 +3057,71 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
                         <th className="p-3">Gov Fees</th>
                         <th className="p-3">Service Charge</th>
                         <th className="p-3">Processing Time</th>
+                        <th className="p-3">Status</th>
                         <th className="p-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50 font-medium">
-                      {filteredServices.map(svc => (
-                        <tr key={svc.id} className="hover:bg-slate-50/40 transition">
-                          <td className="p-3 font-mono font-bold text-slate-900">{svc.id}</td>
-                          <td className="p-3">
-                            <p className="font-bold">{svc.title}</p>
-                            <span className="text-[9px] text-slate-400 block max-w-[200px] truncate">{svc.description}</span>
-                          </td>
-                          <td className="p-3 font-mono text-slate-500">{svc.categoryId}</td>
-                          <td className="p-3 text-slate-700">₹{svc.govFees}</td>
-                          <td className="p-3 text-slate-700 font-bold">₹{svc.serviceCharge}</td>
-                          <td className="p-3 text-slate-500 font-mono">{svc.processingTime}</td>
-                          <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
-                            <button
-                              onClick={() => handleDuplicateService(svc)}
-                              className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] px-2 py-1 rounded-lg font-bold"
-                            >
-                              Duplicate
-                            </button>
-                            <button
-                              onClick={() => openEditForm('service', svc)}
-                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded-lg font-bold"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteItem('service', svc.id)}
-                              className="bg-red-50 hover:bg-red-100 text-red-600 text-[10px] px-2 py-1 rounded-lg font-bold"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                      {filteredServices.map(svc => {
+                        const isActive = (svc.status || 'Active').toLowerCase() !== 'inactive' && svc.active !== false;
+                        return (
+                          <tr key={svc.id} className="hover:bg-slate-50/40 transition">
+                            <td className="p-3 font-mono font-bold text-slate-900">{svc.id}</td>
+                            <td className="p-3">
+                              <p className="font-bold">{svc.title}</p>
+                              <span className="text-[9px] text-slate-400 block max-w-[200px] truncate">{svc.description}</span>
+                            </td>
+                            <td className="p-3 font-mono text-slate-500">{svc.categoryId}</td>
+                            <td className="p-3 text-slate-700">₹{svc.govFees}</td>
+                            <td className="p-3 text-slate-700 font-bold">₹{svc.serviceCharge}</td>
+                            <td className="p-3 text-slate-500 font-mono">{svc.processingTime}</td>
+                            <td className="p-3">
+                              {isActive ? (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                  Active
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
+                                  Inactive
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                              <button
+                                onClick={() => handleToggleServiceStatus(svc)}
+                                title={isActive ? 'Deactivate this service (hide from public)' : 'Activate this service (show publicly)'}
+                                className={`text-[10px] px-2.5 py-1 rounded-lg font-bold transition cursor-pointer border ${
+                                  isActive
+                                    ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100'
+                                    : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                                }`}
+                              >
+                                {isActive ? 'Hide' : 'Activate'}
+                              </button>
+                              <button
+                                onClick={() => handleDuplicateService(svc)}
+                                className="bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] px-2 py-1 rounded-lg font-bold cursor-pointer"
+                              >
+                                Duplicate
+                              </button>
+                              <button
+                                onClick={() => openEditForm('service', svc)}
+                                className="bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] px-2 py-1 rounded-lg font-bold cursor-pointer"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteItem('service', svc.id)}
+                                className="bg-red-50 hover:bg-red-100 text-red-600 text-[10px] px-2 py-1 rounded-lg font-bold cursor-pointer"
+                              >
+                                Delete
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

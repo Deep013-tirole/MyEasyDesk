@@ -55,6 +55,30 @@ export default function ApplyOnlineModal({
 
   if (!isOpen) return null;
 
+  const isInactive = (service.status || 'Active').toLowerCase() === 'inactive' || service.active === false;
+  if (isInactive) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+        <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl text-center space-y-4 animate-in fade-in">
+          <div className="w-12 h-12 mx-auto rounded-full bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-600">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="font-bold text-lg text-slate-900">Service Currently Inactive</h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            "{service.title}" is currently inactive and is not accepting online applications. Please explore other active services or contact our service desk.
+          </p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full bg-[#0F4C81] hover:bg-[#0c3e69] text-white font-bold text-xs py-3 px-4 rounded-xl cursor-pointer transition shadow-xs"
+          >
+            Back to Available Services
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const baseGovFees = Number(service.govFees || 0);
   const baseServiceCharge = Number(service.serviceCharge || 0);
   const totalEstimatedAmount = baseGovFees + baseServiceCharge;

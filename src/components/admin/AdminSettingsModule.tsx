@@ -42,7 +42,7 @@ export default function AdminSettingsModule() {
 
   // General Settings state
   const [generalSettings, setGeneralSettings] = useState<any>({
-    websiteName: 'EasyDesk',
+    websiteName: 'My EasyDesk',
     logoUrl: '',
     faviconUrl: '',
     tagline: '',
@@ -223,6 +223,10 @@ export default function AdminSettingsModule() {
 
       if (res.ok) {
         setMsg('Admin General Settings saved successfully!');
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('easydesk_general_settings', JSON.stringify(generalSettings));
+          window.dispatchEvent(new CustomEvent('easydesk_general_settings_updated', { detail: generalSettings }));
+        }
       } else {
         const errorData = await res.json().catch(() => ({}));
         setErrMsg(errorData.message || 'Failed to save general settings.');

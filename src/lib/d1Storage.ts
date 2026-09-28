@@ -76,6 +76,7 @@ export const SETTING_KEYS = [
   'founder',
   'companyProfile',
   'contactSettings',
+  'generalSettings',
   'paymentConfig',
   'paymentSettings',
   'privacySecuritySettings',

@@ -308,6 +308,34 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
     markDirty();
   };
 
+  const handleAddEligibilityBullet = () => {
+    setEligibility(prev => {
+      const trimmed = (prev || '').trimEnd();
+      if (!trimmed) return '• ';
+      return `${trimmed}\n• `;
+    });
+    markDirty();
+  };
+
+  const handleAddEligibilityNumbered = () => {
+    setEligibility(prev => {
+      const trimmed = (prev || '').trimEnd();
+      if (!trimmed) return '1. ';
+      const lines = trimmed.split('\n');
+      let maxNum = 0;
+      for (const line of lines) {
+        const m = line.match(/^(\d+)[\.\)]/);
+        if (m) {
+          const n = parseInt(m[1], 10);
+          if (n > maxNum) maxNum = n;
+        }
+      }
+      const nextNum = maxNum > 0 ? maxNum + 1 : lines.length + 1;
+      return `${trimmed}\n${nextNum}. `;
+    });
+    markDirty();
+  };
+
   // Form Validation
   const validateForm = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -923,7 +951,7 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
               </div>
 
               {/* Processing Time & Eligibility */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
+              <div className="space-y-4 pt-3 border-t border-slate-100">
                 
                 {/* Processing Time Presets */}
                 <div className="space-y-1.5">
@@ -962,22 +990,44 @@ export const ServiceEditorModule: React.FC<ServiceEditorModuleProps> = ({
                   </div>
                 </div>
 
-                {/* Eligibility Criteria */}
-                <div className="space-y-1.5">
-                  <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> Eligibility Criteria
-                  </label>
-                  <input
-                    type="text"
+                {/* Eligibility Criteria (Supports Bullets and Numbered Points) */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-100/70">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                    <label className="text-[11px] font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> Eligibility Criteria (Bullet Points / Numbered List)
+                    </label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleAddEligibilityBullet}
+                        className="text-[10px] px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Append bullet point"
+                      >
+                        <span>• Add Bullet</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleAddEligibilityNumbered}
+                        className="text-[10px] px-2.5 py-1 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold transition flex items-center gap-1 cursor-pointer"
+                        title="Append numbered point"
+                      >
+                        <span>1. Add Number</span>
+                      </button>
+                    </div>
+                  </div>
+                  <textarea
+                    rows={4}
                     value={eligibility}
                     onChange={(e) => {
                       setEligibility(e.target.value);
                       markDirty();
                     }}
-                    placeholder="e.g. All Indian citizens with valid proof of identity"
-                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 focus:outline-none focus:border-blue-500"
+                    placeholder={`e.g.\n• All Indian citizens aged 18 and above\n• Active mobile number linked with Aadhaar\n• Valid proof of address`}
+                    className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs text-slate-800 font-normal leading-relaxed focus:outline-none focus:border-blue-500 transition"
                   />
-                  <span className="text-[10px] text-slate-400">Specifies who can apply for this document assistance</span>
+                  <div className="flex flex-wrap items-center justify-between text-[10px] text-slate-400">
+                    <span>Supports bullet points (•, -) and numbered lists (1., 2.). Displayed cleanly as structured cards rather than a single paragraph.</span>
+                  </div>
                 </div>
 
               </div>

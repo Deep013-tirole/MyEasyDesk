@@ -176,11 +176,8 @@ export async function fetchWithCache<T>(
     try {
       const apiData = await apiDataServiceLoader();
       if (apiData !== null && apiData !== undefined) {
-        const isArray = Array.isArray(apiData);
-        if (!isArray || apiData.length > 0) {
-          setCachedCatalog(cacheKey, apiData);
-          return { data: apiData, isCached: false };
-        }
+        setCachedCatalog(cacheKey, apiData);
+        return { data: apiData, isCached: false };
       }
     } catch (apiErr: any) {
       const isOffline = typeof navigator !== 'undefined' && navigator.onLine === false;

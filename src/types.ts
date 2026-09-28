@@ -464,6 +464,7 @@ export interface Service {
   seoDescription?: string;
   slug?: string;
   status?: string; // e.g. active, inactive, draft, published
+  active?: boolean;
   whatsAppEnabled?: boolean;
   featured?: boolean;
   popular?: boolean;

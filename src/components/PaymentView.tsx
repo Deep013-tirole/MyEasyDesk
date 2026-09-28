@@ -13,7 +13,7 @@ import TrustBadge from './ui/TrustBadge.js';
 
 const DEFAULT_PAYMENT_CONFIG: PaymentConfig = {
   upiId: '',
-  upiName: 'EasyDesk Digital Services',
+  upiName: 'My EasyDesk',
   qrCodeUrl: '',
   bankAccountName: '',
   bankName: '',

@@ -50,6 +50,11 @@ export default function ServicesView({
   const filteredServices = useMemo(() => {
     const q = searchQuery.toLowerCase().trim();
     let list = services.filter(s => {
+      // Exclude inactive and hidden services from public view
+      const st = (s.status || 'Active').toLowerCase();
+      const isPublic = st !== 'inactive' && st !== 'draft' && st !== 'hidden' && s.active !== false;
+      if (!isPublic) return false;
+
       const matchesCategory = selectedCategory === 'all' || s.categoryId === selectedCategory;
       const matchesSearch = !q ||
         (s.title || '').toLowerCase().includes(q) ||

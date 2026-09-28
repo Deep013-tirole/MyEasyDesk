@@ -50,8 +50,10 @@ export default function BlogsView({
       const match = blogs.find(b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId);
       if (match) {
         setSelectedBlog(match);
+      } else {
+        setSelectedBlog(null);
       }
-    } else if (!selectedBlogId) {
+    } else {
       setSelectedBlog(null);
     }
   }, [selectedBlogId, blogs]);
@@ -212,6 +214,38 @@ export default function BlogsView({
         services={services}
         onSelectService={onSelectService}
       />
+    );
+  }
+
+  // If a specific blog ID was requested but not found in published blogs
+  if (selectedBlogId && !selectedBlog) {
+    return (
+      <div id="easydesk-blog-not-found" className="min-h-[70vh] bg-[#F8FAFC] py-20 px-4 font-sans text-slate-900 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white border border-slate-200/80 rounded-3xl p-8 text-center shadow-xs space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-50 border border-amber-200/70 flex items-center justify-center text-amber-600">
+            <FileText className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="text-xl font-black text-slate-900">Article Not Found</h2>
+            <p className="text-xs text-slate-500 leading-relaxed">
+              This blog article or guide has been removed, unpublished, or is no longer available.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (onCloseBlog) {
+                onCloseBlog();
+              } else if (onSelectBlogId) {
+                onSelectBlogId(null);
+              }
+            }}
+            className="w-full bg-[#0F4C81] hover:bg-[#0b3b64] text-white font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer shadow-xs"
+          >
+            Browse All Knowledge Hub Guides
+          </button>
+        </div>
+      </div>
     );
   }
 

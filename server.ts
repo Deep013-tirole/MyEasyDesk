@@ -1625,7 +1625,7 @@ let dbState: Record<string, any> = {
   tickets: [] as SupportTicket[],
   coupons: [] as any[],
   reviews: [] as any[],
-  blogs: [...PRESEEDED_BLOGS],
+  blogs: [] as Blog[],
   notifications: [] as Notification[],
   faqs: [] as any[],
   banners: [] as any[],
@@ -2599,9 +2599,7 @@ function normalizeDatabaseRelationships(options?: { allowReseed?: boolean }) {
   });
 
   if (!Array.isArray(dbState.blogs)) {
-    dbState.blogs = allowReseed ? [...PRESEEDED_BLOGS] : [];
-  } else if (allowReseed && dbState.blogs.length === 0) {
-    dbState.blogs = [...PRESEEDED_BLOGS];
+    dbState.blogs = [];
   }
 
   if (Array.isArray(dbState.blogs)) {
@@ -4486,6 +4484,22 @@ app.post('/api/orders', async (req, res) => {
     return res.status(404).json({ message: 'Service not found.' });
   }
 
+  const isStaffOrAdmin = Boolean(
+    req.headers.authorization && (() => {
+      try {
+        const decoded = jwt.verify(req.headers.authorization.replace(/^Bearer\s+/i, ''), getJwtSecret()) as any;
+        return decoded && (decoded.role === 'ADMIN' || decoded.role === 'SUPER_ADMIN' || decoded.role === 'STAFF' || decoded.role === 'OPERATOR');
+      } catch {
+        return false;
+      }
+    })()
+  );
+
+  const isServiceInactive = service.active === false || (service.status || '').toLowerCase() === 'inactive' || (service.status || '').toLowerCase() === 'hidden';
+  if (isServiceInactive && !isStaffOrAdmin) {
+    return res.status(400).json({ message: 'This service is currently inactive and not accepting applications.' });
+  }
+
   // Permanently lock historical fees from service master catalog
   const lockedGovFees = Number(service.govFees || 0);
   const lockedServiceCharge = Number(service.serviceCharge || 0);
@@ -5306,8 +5320,8 @@ app.get(['/api/payment-settings', '/api/admin/payment-settings', '/api/settings/
   res.json(sanitizePaymentConfig(cfg));
 });
 
-app.post(['/api/admin/payment-settings', '/api/payment-settings', '/api/settings/payment', '/api/admin/settings/payment'], handlePaymentSettingsUpdate);
-app.put(['/api/admin/payment-settings', '/api/payment-settings', '/api/settings/payment', '/api/admin/settings/payment'], handlePaymentSettingsUpdate);
+app.post(['/api/admin/payment-settings', '/api/payment-settings', '/api/settings/payment', '/api/admin/settings/payment'], authenticateToken, requirePermission(['payment_settings.manage', 'system_settings.manage', 'settings.manage']), handlePaymentSettingsUpdate);
+app.put(['/api/admin/payment-settings', '/api/payment-settings', '/api/settings/payment', '/api/admin/settings/payment'], authenticateToken, requirePermission(['payment_settings.manage', 'system_settings.manage', 'settings.manage']), handlePaymentSettingsUpdate);
 
 // Submit / Resubmit Payment Proof for Order
 app.post('/api/orders/:id/submit-payment', async (req, res) => {
@@ -5717,6 +5731,9 @@ app.post('/api/reviews', async (req, res) => {
 
 // Blogs API (Authoritative database-backed retrieval)
 app.get('/api/blogs', async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const { categoryId, category } = req.query;
   const allBlogs = await readCollectionWithFallback('blogs', () => dbState.blogs || []);
   const allBlogCats = await readCollectionWithFallback('blogCategories', () => dbState.blogCategories || []);
@@ -7162,7 +7179,7 @@ app.get('/api/company-profile', (req, res) => {
   res.json(dbState.companyProfile || PRESEEDED_COMPANY_PROFILE);
 });
 
-app.post('/api/admin/company-profile', async (req, res) => {
+app.post('/api/admin/company-profile', authenticateToken, requirePermission(['system_settings.manage', 'settings.manage', 'employees.manage']), async (req, res) => {
   const { companyProfile, updaterId, updaterName, updaterRole } = req.body;
   if (companyProfile) {
     dbState.companyProfile = { ...(dbState.companyProfile || PRESEEDED_COMPANY_PROFILE), ...companyProfile };
@@ -7267,15 +7284,8 @@ const handleContactSettingsUpdate = async (req: express.Request, res: express.Re
   res.json({ message: 'Contact settings saved successfully.', contactSettings: dbState.contactSettings });
 };
 
-app.post('/api/admin/contact-settings', handleContactSettingsUpdate);
-app.post('/api/contact-settings', handleContactSettingsUpdate);
-app.post('/api/settings/contact', handleContactSettingsUpdate);
-app.post('/api/admin/settings/contact', handleContactSettingsUpdate);
-
-app.put('/api/admin/contact-settings', handleContactSettingsUpdate);
-app.put('/api/contact-settings', handleContactSettingsUpdate);
-app.put('/api/settings/contact', handleContactSettingsUpdate);
-app.put('/api/admin/settings/contact', handleContactSettingsUpdate);
+app.post(['/api/admin/contact-settings', '/api/contact-settings', '/api/settings/contact', '/api/admin/settings/contact'], authenticateToken, requirePermission(['contact_settings.manage', 'system_settings.manage', 'settings.manage']), handleContactSettingsUpdate);
+app.put(['/api/admin/contact-settings', '/api/contact-settings', '/api/settings/contact', '/api/admin/settings/contact'], authenticateToken, requirePermission(['contact_settings.manage', 'system_settings.manage', 'settings.manage']), handleContactSettingsUpdate);
 
 /**
  * Social Media Links validation helper
@@ -7503,11 +7513,12 @@ const handleMasterDataUpdate = async (req: express.Request, res: express.Respons
   res.json({ message: 'Master data updated successfully.', masterData: dbState.masterData });
 };
 
-app.post(['/api/admin/master-data', '/api/master-data'], handleMasterDataUpdate);
-app.put(['/api/admin/master-data', '/api/master-data'], handleMasterDataUpdate);
+app.post(['/api/admin/master-data', '/api/master-data'], authenticateToken, requirePermission(['master_data.manage', 'system_settings.manage', 'settings.manage']), handleMasterDataUpdate);
+app.put(['/api/admin/master-data', '/api/master-data'], authenticateToken, requirePermission(['master_data.manage', 'system_settings.manage', 'settings.manage']), handleMasterDataUpdate);
 
 // ---------------- ADMIN SETTINGS MODULE APIS ----------------
 app.get(['/api/general-settings', '/api/admin/general-settings', '/api/admin/settings/general', '/api/settings/general'], (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.json(dbState.generalSettings || PRESEEDED_GENERAL_SETTINGS);
 });
 
@@ -7516,14 +7527,28 @@ const handleGeneralSettingsUpdate = async (req: express.Request, res: express.Re
   const generalSettings = req.body.generalSettings || req.body;
   if (generalSettings) {
     dbState.generalSettings = { ...(dbState.generalSettings || PRESEEDED_GENERAL_SETTINGS), ...generalSettings };
+    if (generalSettings.logoUrl) {
+      if (!dbState.companyProfile) dbState.companyProfile = {} as any;
+      dbState.companyProfile.logoUrl = generalSettings.logoUrl;
+      if (!dbState.settings) dbState.settings = {} as any;
+      dbState.settings.logoUrl = generalSettings.logoUrl;
+    }
+    if (generalSettings.faviconUrl) {
+      if (!dbState.settings) dbState.settings = {} as any;
+      dbState.settings.faviconUrl = generalSettings.faviconUrl;
+    }
     logSystemAction(updaterId || 'super-admin-deepak', updaterName || 'Deepak', updaterRole || 'SUPER_ADMIN', 'GENERAL_SETTINGS_UPDATE', 'Updated system general settings and SEO meta config.');
     await persistDatabase('generalSettings');
+    if (generalSettings.logoUrl) {
+      await persistDatabase('companyProfile');
+      await persistDatabase('settings');
+    }
   }
   res.json({ message: 'General settings saved successfully.', generalSettings: dbState.generalSettings });
 };
 
-app.post(['/api/admin/general-settings', '/api/admin/settings/general', '/api/general-settings'], handleGeneralSettingsUpdate);
-app.put(['/api/admin/general-settings', '/api/admin/settings/general', '/api/general-settings'], handleGeneralSettingsUpdate);
+app.post(['/api/admin/general-settings', '/api/admin/settings/general', '/api/general-settings'], authenticateToken, requirePermission(['system_settings.manage', 'settings.manage']), handleGeneralSettingsUpdate);
+app.put(['/api/admin/general-settings', '/api/admin/settings/general', '/api/general-settings'], authenticateToken, requirePermission(['system_settings.manage', 'settings.manage']), handleGeneralSettingsUpdate);
 
 
 // ---------------- PRIVACY & SECURITY MODULE APIS ----------------
@@ -7555,8 +7580,8 @@ const handlePrivacySecurityUpdate = async (req: express.Request, res: express.Re
   res.json({ message: 'Privacy & Security CMS settings saved successfully.', privacySecuritySettings: dbState.privacySecuritySettings, privacySecurity: dbState.privacySecuritySettings });
 };
 
-app.post(['/api/admin/privacy-security', '/api/privacy-security', '/api/settings/privacy-security', '/api/admin/settings/privacy-security'], handlePrivacySecurityUpdate);
-app.put(['/api/admin/privacy-security', '/api/privacy-security', '/api/settings/privacy-security', '/api/admin/settings/privacy-security'], handlePrivacySecurityUpdate);
+app.post(['/api/admin/privacy-security', '/api/privacy-security', '/api/settings/privacy-security', '/api/admin/settings/privacy-security'], authenticateToken, requirePermission(['system_settings.manage', 'settings.manage', 'pages.manage']), handlePrivacySecurityUpdate);
+app.put(['/api/admin/privacy-security', '/api/privacy-security', '/api/settings/privacy-security', '/api/admin/settings/privacy-security'], authenticateToken, requirePermission(['system_settings.manage', 'settings.manage', 'pages.manage']), handlePrivacySecurityUpdate);
 
 app.post('/api/security/report-scam', async (req, res) => {
   const { reporterName, reporterEmail, reporterPhone, scamDetails, impersonatorContact, channelUsed } = req.body;
@@ -8797,7 +8822,7 @@ app.post('/api/admin/services/bulk-delete', authenticateToken, requireRole(['SUP
 });
 
 // Bulk Update Services Status
-app.post('/api/admin/services/bulk-status', async (req, res) => {
+app.post('/api/admin/services/bulk-status', authenticateToken, requireRole(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'OPERATOR']), async (req, res) => {
   const { ids, status, updaterId, updaterName, updaterRole } = req.body || {};
   if (!ids || !Array.isArray(ids) || !status) return res.status(400).json({ message: 'Array of ids and status required' });
   dbState.services.forEach(s => {
@@ -8909,6 +8934,9 @@ app.put('/api/admin/blogs/:id', authenticateToken, requireRole(['SUPER_ADMIN', '
 });
 
 app.get(['/api/blogs/:id', '/api/blog/:id'], async (req, res) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
   const allBlogs = await readCollectionWithFallback('blogs', () => dbState.blogs || []);
   const blog = allBlogs.find(b => b.id === req.params.id || b.slug === req.params.id);
   if (!blog) {
@@ -8925,12 +8953,16 @@ app.get(['/api/blogs/:id', '/api/blog/:id'], async (req, res) => {
 
 app.delete('/api/admin/blogs/:id', authenticateToken, requireRole(['SUPER_ADMIN', 'ADMIN', 'STAFF', 'OPERATOR']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body || {};
-  const blog = dbState.blogs.find(b => b.id === req.params.id);
+  let blog = dbState.blogs.find(b => b.id === req.params.id);
+  if (!blog) {
+    blog = dbState.blogs.find(b => b.slug === req.params.id);
+  }
   if (!blog) return res.status(404).json({ message: 'Blog not found' });
-  dbState.blogs = dbState.blogs.filter(b => b.id !== req.params.id);
+  const canonicalId = blog.id;
+  dbState.blogs = dbState.blogs.filter(b => b.id !== canonicalId);
   logSystemAction(updaterId || (req as any).user?.id || 'super-admin-deepak', updaterName || (req as any).user?.name || 'Deepak', updaterRole || (req as any).user?.role || 'SUPER_ADMIN', 'BLOG_DELETE', `Deleted blog ${blog.title}`);
-  await persistDatabase('blogs', req.params.id);
-  res.json({ message: 'Blog deleted' });
+  await persistDatabase('blogs', canonicalId);
+  res.json({ message: 'Blog deleted', id: canonicalId });
 });
 
 // FAQ CRUD & Public Endpoint
@@ -8948,7 +8980,7 @@ app.get('/api/admin/faqs', (req, res) => {
   res.json(dbState.faqs || []);
 });
 
-app.post('/api/admin/faqs', async (req, res) => {
+app.post('/api/admin/faqs', authenticateToken, requirePermission(['pages.manage', 'content.manage', 'settings.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const faq = req.body.faq || req.body;
   if (!faq || !faq.question || !faq.answer) return res.status(400).json({ message: 'Question and answer required' });
@@ -8965,7 +8997,7 @@ app.post('/api/admin/faqs', async (req, res) => {
   res.status(201).json(newFaq);
 });
 
-app.put('/api/admin/faqs/:id', async (req, res) => {
+app.put('/api/admin/faqs/:id', authenticateToken, requirePermission(['pages.manage', 'content.manage', 'settings.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const faq = req.body.faq || req.body;
   const idx = dbState.faqs.findIndex(f => f.id === req.params.id);
@@ -8976,7 +9008,7 @@ app.put('/api/admin/faqs/:id', async (req, res) => {
   res.json(dbState.faqs[idx]);
 });
 
-app.delete('/api/admin/faqs/:id', async (req, res) => {
+app.delete('/api/admin/faqs/:id', authenticateToken, requirePermission(['pages.manage', 'content.manage', 'settings.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const faq = dbState.faqs.find(f => f.id === req.params.id);
   if (!faq) return res.status(404).json({ message: 'FAQ not found' });
@@ -9156,7 +9188,7 @@ app.get('/api/admin/banners', (req, res) => {
   res.json(dbState.banners || []);
 });
 
-app.post('/api/admin/banners', async (req, res) => {
+app.post('/api/admin/banners', authenticateToken, requirePermission(['banners.manage', 'pages.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const banner = req.body.banner || req.body;
   if (!banner || !banner.title || !banner.imageUrl) return res.status(400).json({ message: 'Title and imageUrl are required' });
@@ -9200,7 +9232,7 @@ app.post('/api/admin/banners', async (req, res) => {
   res.status(201).json(newBanner);
 });
 
-app.put('/api/admin/banners/:id', async (req, res) => {
+app.put('/api/admin/banners/:id', authenticateToken, requirePermission(['banners.manage', 'pages.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const banner = req.body.banner || req.body;
   if (!dbState.banners) dbState.banners = [];
@@ -9241,7 +9273,7 @@ app.put('/api/admin/banners/:id', async (req, res) => {
   res.json(dbState.banners[idx]);
 });
 
-app.delete('/api/admin/banners/:id', async (req, res) => {
+app.delete('/api/admin/banners/:id', authenticateToken, requirePermission(['banners.manage', 'pages.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const b = dbState.banners.find(x => x.id === req.params.id);
   if (!b) return res.status(404).json({ message: 'Banner not found' });
@@ -9298,7 +9330,7 @@ app.get('/api/admin/pages', (req, res) => {
   res.json(dbState.pages);
 });
 
-app.post('/api/admin/pages', async (req, res) => {
+app.post('/api/admin/pages', authenticateToken, requirePermission(['pages.manage', 'content.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const page = req.body.page || req.body;
   if (!page || !page.title || !page.content) return res.status(400).json({ message: 'Title and content required' });
@@ -9315,7 +9347,7 @@ app.post('/api/admin/pages', async (req, res) => {
   res.status(201).json(newPage);
 });
 
-app.put('/api/admin/pages/:id', async (req, res) => {
+app.put('/api/admin/pages/:id', authenticateToken, requirePermission(['pages.manage', 'content.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const page = req.body.page || req.body;
   const idx = dbState.pages.findIndex(p => p.id === req.params.id);
@@ -9326,7 +9358,7 @@ app.put('/api/admin/pages/:id', async (req, res) => {
   res.json(dbState.pages[idx]);
 });
 
-app.delete('/api/admin/pages/:id', async (req, res) => {
+app.delete('/api/admin/pages/:id', authenticateToken, requirePermission(['pages.manage', 'content.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const p = dbState.pages.find(x => x.id === req.params.id);
   if (!p) return res.status(404).json({ message: 'Page not found' });
@@ -9354,7 +9386,7 @@ app.get('/api/admin/media', (req, res) => {
 });
 
 // File upload or linking endpoint for Media Library
-app.post(['/api/admin/media/upload', '/api/admin/media'], async (req, res) => {
+app.post(['/api/admin/media/upload', '/api/admin/media'], authenticateToken, requirePermission(['media.manage', 'pages.manage']), async (req, res) => {
   const { fileData, fileName, originalName, mimeType, folder, title, altText, uploadedBy, file, updaterId, updaterName, updaterRole } = req.body;
 
   // Case 1: Binary / Base64 File Upload
@@ -9520,7 +9552,7 @@ app.post(['/api/admin/media/upload', '/api/admin/media'], async (req, res) => {
 });
 
 // UPDATE media item metadata
-app.put('/api/admin/media/:id', async (req, res) => {
+app.put('/api/admin/media/:id', authenticateToken, requirePermission(['media.manage', 'pages.manage']), async (req, res) => {
   const { title, altText, folder, name, updaterId, updaterName, updaterRole } = req.body;
   const idx = (dbState.media || []).findIndex(x => x.id === req.params.id);
   if (idx === -1) return res.status(404).json({ message: 'Media resource not found' });
@@ -9541,7 +9573,7 @@ app.put('/api/admin/media/:id', async (req, res) => {
 });
 
 // DELETE media resource
-app.delete('/api/admin/media/:id', async (req, res) => {
+app.delete('/api/admin/media/:id', authenticateToken, requirePermission(['media.manage', 'pages.manage']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   const m = (dbState.media || []).find(x => x.id === req.params.id);
   if (!m) return res.status(404).json({ message: 'Media item not found' });
@@ -9599,7 +9631,7 @@ app.get('/api/admin/notifications', (req, res) => {
   res.json(dbState.notifications);
 });
 
-app.post('/api/admin/notifications', async (req, res) => {
+app.post('/api/admin/notifications', authenticateToken, requireRole(['SUPER_ADMIN', 'ADMIN', 'STAFF']), async (req, res) => {
   const { notification, updaterId, updaterName, updaterRole } = req.body;
   if (!notification || !notification.message) return res.status(400).json({ message: 'Notification message is required' });
   
@@ -9621,7 +9653,7 @@ app.post('/api/admin/notifications', async (req, res) => {
   res.status(201).json(newNotif);
 });
 
-app.delete('/api/admin/notifications/:id', async (req, res) => {
+app.delete('/api/admin/notifications/:id', authenticateToken, requireRole(['SUPER_ADMIN', 'ADMIN', 'STAFF']), async (req, res) => {
   const { updaterId, updaterName, updaterRole } = req.body;
   dbState.notifications = dbState.notifications.filter(x => x.id !== req.params.id);
   logSystemAction(updaterId || 'super-admin-deepak', updaterName || 'Deepak', updaterRole || 'SUPER_ADMIN', 'NOTIFICATION_DELETE', 'Deleted notification dispatch entry');

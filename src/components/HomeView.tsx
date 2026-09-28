@@ -54,7 +54,7 @@ export default function HomeView({
   // Curated services based on Popular / Trending / Featured (Requirement 3)
   const isServiceActive = (s: Service) => {
     const st = (s.status || 'Active').toLowerCase();
-    return st === 'active' || st === 'published';
+    return st !== 'inactive' && st !== 'draft' && st !== 'hidden' && s.active !== false;
   };
 
   const displayedServices = useMemo(() => {
@@ -121,7 +121,7 @@ export default function HomeView({
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => openGeneralWhatsApp('Hello EasyDesk, I need help with an online application.')}
+                onClick={() => openGeneralWhatsApp('Hello My EasyDesk, I need help with an online application.')}
                 className="inline-flex items-center gap-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs sm:text-sm px-5 py-3 rounded-xl transition cursor-pointer shadow-sm active:scale-95 btn-glow-emerald"
               >
                 <MessageSquare className="w-4 h-4" />
@@ -143,7 +143,7 @@ export default function HomeView({
                 className="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs sm:text-sm px-4 py-3 rounded-xl transition cursor-pointer shadow-2xs active:scale-95"
               >
                 <Bot className="w-4 h-4 text-[#0F4C81]" />
-                <span>Ask EasyDesk AI</span>
+                <span>Ask My EasyDesk AI</span>
               </button>
             </div>
 
@@ -428,7 +428,7 @@ export default function HomeView({
             Straightforward Process
           </span>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight m-0">
-            How EasyDesk Works
+            How My EasyDesk Works
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-normal m-0">
             Five transparent stages to complete your civic and digital documentation from home.
@@ -466,7 +466,7 @@ export default function HomeView({
             Uncompromising Standards
           </span>
           <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight m-0">
-            Why Choose EasyDesk
+            Why Choose My EasyDesk
           </h2>
           <p className="text-xs sm:text-sm text-slate-500 font-normal m-0">
             Designed specifically for citizens and businesses requiring error-free digital applications.
@@ -558,11 +558,11 @@ export default function HomeView({
           <div className="flex flex-wrap gap-3 shrink-0">
             <button
               type="button"
-              onClick={() => openGeneralWhatsApp('Hello EasyDesk, I need help with an online application.')}
+              onClick={() => openGeneralWhatsApp('Hello My EasyDesk, I need help with an online application.')}
               className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs sm:text-sm px-6 py-3 rounded-xl transition cursor-pointer shadow-md flex items-center gap-2 active:scale-95 btn-glow-emerald"
             >
               <MessageSquare className="w-4 h-4" />
-              <span>Talk to EasyDesk</span>
+              <span>Talk to My EasyDesk</span>
             </button>
             <button
               type="button"

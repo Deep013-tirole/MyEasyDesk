@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu, X, LogOut, MessageSquare, ShieldCheck, Search, Shield
 } from 'lucide-react';
@@ -26,6 +26,39 @@ export default function Header({
 }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { t } = useLanguage();
+  const [logoUrl, setLogoUrl] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('easydesk_general_settings');
+      if (saved) return JSON.parse(saved).logoUrl || '';
+    } catch {}
+    return '';
+  });
+  const [logoFailed, setLogoFailed] = useState(false);
+
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      if (e.detail?.logoUrl !== undefined) {
+        setLogoUrl(e.detail.logoUrl || '');
+        setLogoFailed(false);
+      }
+    };
+    window.addEventListener('easydesk_general_settings_updated', handleUpdate);
+
+    fetch('/api/general-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data?.logoUrl) {
+          setLogoUrl(data.logoUrl);
+          try {
+            const current = JSON.parse(localStorage.getItem('easydesk_general_settings') || '{}');
+            localStorage.setItem('easydesk_general_settings', JSON.stringify({ ...current, ...data }));
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    return () => window.removeEventListener('easydesk_general_settings_updated', handleUpdate);
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -76,14 +109,23 @@ export default function Header({
             role="button"
             tabIndex={0}
             onKeyDown={(e) => e.key === 'Enter' && setView('home')}
-            aria-label="EasyDesk Home"
+            aria-label="My EasyDesk Home"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-[#0F4C81] to-[#0A2540] rounded-xl flex items-center justify-center shadow-xs text-white shrink-0">
-              <Shield className="w-4 h-4 text-cyan-300" />
-            </div>
+            {logoUrl && !logoFailed ? (
+              <img
+                src={logoUrl}
+                alt="My EasyDesk Logo"
+                className="w-8 h-8 rounded-xl object-contain shadow-xs bg-white shrink-0"
+                onError={() => setLogoFailed(true)}
+              />
+            ) : (
+              <div className="w-8 h-8 bg-gradient-to-br from-[#0F4C81] to-[#0A2540] rounded-xl flex items-center justify-center shadow-xs text-white shrink-0">
+                <Shield className="w-4 h-4 text-cyan-300" />
+              </div>
+            )}
             <div>
               <span className="text-lg sm:text-xl font-black tracking-tight text-[#0F4C81] leading-none block notranslate" translate="no">
-                EasyDesk
+                My EasyDesk
               </span>
               <span className="hidden sm:block text-[9px] text-slate-500 font-extrabold tracking-wider uppercase mt-0.5">
                 {t('nav.portalSubtitle', 'Digital Service Portal')}
@@ -155,7 +197,7 @@ export default function Header({
 
             {/* WhatsApp Quick Desk CTA - visible on desktop xl+ */}
             <button
-              onClick={() => openGeneralWhatsApp('Hello EasyDesk, I would like to inquire about digital document services.')}
+              onClick={() => openGeneralWhatsApp('Hello My EasyDesk, I would like to inquire about digital document services.')}
               className="hidden xl:inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold rounded-xl text-xs transition-all cursor-pointer shadow-xs active:scale-95 btn-glow-emerald"
             >
               <MessageSquare className="w-3.5 h-3.5" />
@@ -220,7 +262,7 @@ export default function Header({
           <div className="pt-3 border-t border-slate-100 mt-2 space-y-2">
             <button
               onClick={() => {
-                openGeneralWhatsApp('Hello EasyDesk, I need help with an application.');
+                openGeneralWhatsApp('Hello My EasyDesk, I need help with an application.');
                 setMobileMenuOpen(false);
               }}
               className="w-full flex items-center justify-center gap-2 bg-[#10B981] text-white py-2.5 rounded-xl text-xs font-bold shadow-xs"
