@@ -26,8 +26,8 @@ export default function NotFoundView({ setView, onOpenSearch }: NotFoundViewProp
   return (
     <div id="not-found-view" className="portal-container py-16 sm:py-24 max-w-3xl mx-auto text-center font-sans">
       <Helmet>
-        <title>Page Not Found (404) | EasyDesk</title>
-        <meta name="description" content="The page you requested does not exist on EasyDesk. Browse our digital services catalog or contact our desk officers for guidance." />
+        <title>Page Not Found (404) | My EasyDesk — Your Online Work, Done Easily</title>
+        <meta name="description" content="The page you requested does not exist on My EasyDesk. Browse our digital services catalog or contact our desk officers for guidance." />
         <meta name="robots" content="noindex, nofollow" />
         <link rel="canonical" href={`${origin}/404`} />
       </Helmet>

@@ -92,7 +92,7 @@ export default function BlogSidebar({
         {subscribed ? (
           <div className="bg-teal-500/20 border border-teal-500/30 text-teal-200 rounded-xl p-3.5 text-xs flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-teal-400 shrink-0" />
-            <span>Thank you for subscribing to EasyDesk guides.</span>
+            <span>Thank you for subscribing to My EasyDesk guides.</span>
           </div>
         ) : (
           <form onSubmit={handleSubscribe} className="space-y-2">
@@ -136,7 +136,7 @@ export default function BlogSidebar({
         </p>
 
         <button
-          onClick={() => openGeneralWhatsApp('Hello EasyDesk, I was reading your knowledge hub and need help with a government/digital service.')}
+          onClick={() => openGeneralWhatsApp('Hello My EasyDesk, I was reading your knowledge hub and need help with a government/digital service.')}
           className="w-full bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs py-2.5 rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs active:scale-[0.98] btn-glow-emerald hover-scale-sm"
         >
           <MessageSquare className="w-4 h-4" />

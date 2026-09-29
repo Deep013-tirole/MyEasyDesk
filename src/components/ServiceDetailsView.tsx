@@ -1262,7 +1262,7 @@ export default function ServiceDetailsView({
 
                     <div className="mt-3 pt-2.5 border-t border-slate-200/40 text-[10px] text-slate-400 flex justify-between items-center">
                       <span>{rev.date || 'Recent customer'}</span>
-                      <span>Assisted by EasyDesk</span>
+                      <span>Assisted by My EasyDesk</span>
                     </div>
                   </div>
                 );
@@ -1378,7 +1378,7 @@ export default function ServiceDetailsView({
             {/* Lightbox Footer */}
             <div className="px-4 py-2.5 bg-slate-900 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
               <span className="flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Pre-verified by EasyDesk Officers
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Pre-verified by My EasyDesk Officers
               </span>
               <button
                 onClick={() => openWhatsAppForService(service, categoryName)}

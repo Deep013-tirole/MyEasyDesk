@@ -10,6 +10,8 @@ import {
 import { motion } from 'motion/react';
 import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { getClientPrivacySecurity } from '../lib/apiDataService.js';
+import { getCanonicalOrigin } from '../lib/seoConfig.js';
+import { Helmet } from 'react-helmet-async';
 import Breadcrumbs from './ui/Breadcrumbs.js';
 import TrustBadge from './ui/TrustBadge.js';
 
@@ -81,7 +83,7 @@ export interface PrivacySecurityData {
 const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
   hero: {
     heading: 'Your Privacy & Security Matter',
-    subtitle: 'EasyDesk follows secure document handling practices and protects your personal information throughout the service process.',
+    subtitle: 'My EasyDesk follows secure document handling practices and protects your personal information throughout the service process.',
     badgeText: 'Privacy & Security Notice',
     trustCards: [
       { id: 'tc-1', title: 'Secure Document Handling', description: 'End-to-end audit pipeline with strict access controls.', icon: 'ShieldCheck' },
@@ -92,7 +94,7 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
     ]
   },
   mayRequest: {
-    title: 'Information EasyDesk May Request',
+    title: 'Information My EasyDesk May Request',
     subtitle: 'To process government filings and authorized digital services on your behalf, we may voluntarily collect:',
     importantNote: 'Login credentials and OTP are used ONLY for completing the requested service. They are NEVER reused for any other purpose.',
     items: [
@@ -105,9 +107,9 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
     ]
   },
   neverRequest: {
-    title: 'Information EasyDesk WILL NEVER REQUEST',
-    warningHeading: 'EASYDESK WILL NEVER ASK FOR',
-    largeWarning: 'If anyone asks for these details while claiming to represent EasyDesk, it is fraudulent.',
+    title: 'Information My EasyDesk WILL NEVER REQUEST',
+    warningHeading: 'MY EASYDESK WILL NEVER ASK FOR',
+    largeWarning: 'If anyone asks for these details while claiming to represent My EasyDesk, it is fraudulent.',
     redItems: [
       'Bank OTP', 'UPI PIN', 'ATM PIN', 'Debit Card PIN', 'Credit Card PIN',
       'Net Banking Password', 'CVV Number', 'Debit Card OTP', 'Credit Card OTP',
@@ -117,7 +119,7 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
     ]
   },
   dataProtection: {
-    title: 'How EasyDesk Protects Your Data',
+    title: 'How My EasyDesk Protects Your Data',
     subtitle: 'Multi-layered administrative, technical, and physical security measures.',
     measures: [
       { id: 'dp-1', title: 'SSL/TLS Encryption', description: 'All web traffic and API endpoints communicate exclusively over TLS 1.3 encryption.', icon: 'Lock' },
@@ -144,8 +146,8 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
       'Sending real-time order status updates via SMS / WhatsApp / Email',
       'Fulfilling statutory legal and regulatory record-keeping obligations'
     ],
-    neverSellStatement: 'EasyDesk NEVER sells customer data under any circumstances.',
-    neverShareStatement: 'EasyDesk NEVER shares customer data with unauthorized third parties.'
+    neverSellStatement: 'My EasyDesk NEVER sells customer data under any circumstances.',
+    neverShareStatement: 'My EasyDesk NEVER shares customer data with unauthorized third parties.'
   },
   dataRetention: {
     title: 'Data Retention Policy',
@@ -156,7 +158,7 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
   employeeControls: {
     title: 'Employee Privacy & Access Controls',
     rules: [
-      'Only authorized and background-verified EasyDesk staff can access customer application files.',
+      'Only authorized and background-verified My EasyDesk staff can access customer application files.',
       'Staff access is continuously monitored by automated internal compliance checkers.',
       'Every customer document view or download generates an unalterable audit log entry.',
       'Fine-grained permission matrices prevent employees from accessing data outside active assignments.',
@@ -170,24 +172,24 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
       { id: 'cr-2', title: 'Keep Documents Genuine', description: 'Upload authentic, unaltered document scans to prevent rejection or legal penalties.' },
       { id: 'cr-3', title: 'Never Share Banking Passwords', description: 'Do not disclose Net Banking passwords, CVV, or card PINs to anyone.' },
       { id: 'cr-4', title: 'Never Share PINs or Secrets', description: 'Keep UPI PINs, ATM PINs, and banking passwords completely confidential.' },
-      { id: 'cr-5', title: 'Report Suspicious Activity Immediately', description: 'If anyone asks for financial passwords claiming to represent EasyDesk, report them instantly.' },
-      { id: 'cr-6', title: 'Use Official EasyDesk Channels', description: 'Interact only through easydesk.com website, verified WhatsApp, or official desk numbers.' },
-      { id: 'cr-7', title: 'Verify Phone Numbers Before Sharing OTP', description: 'Confirm that the agent requesting an application filing OTP is officially assigned on your EasyDesk order tracking screen.' }
+      { id: 'cr-5', title: 'Report Suspicious Activity Immediately', description: 'If anyone asks for financial passwords claiming to represent My EasyDesk, report them instantly.' },
+      { id: 'cr-6', title: 'Use Official My EasyDesk Channels', description: 'Interact only through official My EasyDesk website, verified WhatsApp, or official desk numbers.' },
+      { id: 'cr-7', title: 'Verify Phone Numbers Before Sharing OTP', description: 'Confirm that the agent requesting an application filing OTP is officially assigned on your My EasyDesk order tracking screen.' }
     ]
   },
   fraudTimeline: {
     title: 'Fraud & Scam Awareness Guide',
-    subtitle: 'What to do if someone claims to represent EasyDesk and asks for secret credentials:',
+    subtitle: 'What to do if someone claims to represent My EasyDesk and asks for secret credentials:',
     steps: [
-      { step: 1, title: 'Do Not Panic', description: 'EasyDesk will never demand urgent payments or banking PINs over unsolicited calls.' },
-      { step: 2, title: 'Verify Identity', description: 'Cross-check the caller number against official contact numbers on easydesk.com or check your live order tracking screen.' },
+      { step: 1, title: 'Do Not Panic', description: 'My EasyDesk will never demand urgent payments or banking PINs over unsolicited calls.' },
+      { step: 2, title: 'Verify Identity', description: 'Cross-check the caller number against official contact numbers on the My EasyDesk website or check your live order tracking screen.' },
       { step: 3, title: 'Never Share Banking Credentials', description: 'Immediately decline if asked for Bank OTP, UPI PIN, Card CVV, or Net Banking passwords.' },
-      { step: 4, title: 'Contact Official Support', description: 'Reach out to support@easydesk.com or call our official desk hotline.' },
+      { step: 4, title: 'Contact Official Support', description: 'Reach out to help.myeasydesks@gmail.com or call our official desk hotline.' },
       { step: 5, title: 'Report Suspicious Activity', description: 'Submit an emergency fraud alert via our online report form for immediate security response.' }
     ]
   },
   securityContact: {
-    title: 'Contact EasyDesk Security Team',
+    title: 'Contact My EasyDesk Security Team',
     securityEmail: 'security@easydesk.com',
     supportEmail: 'help.myeasydesks@gmail.com',
     customerCarePhone: '',
@@ -197,16 +199,17 @@ const DEFAULT_PRIVACY_SECURITY_FALLBACK: PrivacySecurityData = {
   },
   legalCompliance: {
     title: 'Legal Compliance Statement',
-    statement: 'EasyDesk operates in strict compliance with the Information Technology Act 2000, Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules 2011, and Digital Personal Data Protection (DPDP) Act norms.'
+    statement: 'My EasyDesk operates in strict compliance with the Information Technology Act 2000, Information Technology (Reasonable Security Practices and Procedures and Sensitive Personal Data or Information) Rules 2011, and Digital Personal Data Protection (DPDP) Act norms.'
   },
   faqs: [
-    { question: 'Why does EasyDesk need my ID proofs?', answer: 'Official government department filings for certificates, cards, and tax services mandate proof of identity and address submission.' },
-    { question: 'Does EasyDesk store my password?', answer: 'No passwords are stored in plain text. Account passwords are encrypted using one-way cryptographic bcrypt hashing.' },
+    { question: 'Why does My EasyDesk need my ID proofs?', answer: 'Official government department filings for certificates, cards, and tax services mandate proof of identity and address submission.' },
+    { question: 'Does My EasyDesk store my password?', answer: 'No passwords are stored in plain text. Account passwords are encrypted using one-way cryptographic bcrypt hashing.' },
     { question: 'Can an employee see my files after order completion?', answer: 'No. Access permissions are automatically revoked once an application has reached final completion status.' }
   ]
 };
 
 export default function PrivacySecurityView({ setView }: { setView?: (v: string) => void }) {
+  const origin = getCanonicalOrigin();
   const [data, setData] = useState<PrivacySecurityData>(() => {
     try {
       const cached = localStorage.getItem('easydesk_cache_privacy_security');
@@ -426,13 +429,18 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
 
   return (
     <div id="easydesk-privacy-view" className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 w-full max-w-full overflow-x-hidden">
-      
+      <Helmet>
+        <title>Privacy & Security Trust Center | My EasyDesk — Your Online Work, Done Easily</title>
+        <meta name="description" content="Learn how My EasyDesk protects your personal data, SSL 256-bit encryption, DPDP Act compliance, and strict anti-fraud guarantees." />
+        <link rel="canonical" href={`${origin}/privacy-security`} />
+      </Helmet>
+
       {/* 1. TOP TRUST ANNOUNCEMENT BAR */}
       <div className="bg-[#0B2545] text-white py-2.5 px-4 border-b border-blue-900/40">
         <div className="portal-container flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-2 text-slate-300">
             <Shield className="w-4 h-4 text-emerald-400 shrink-0" />
-            <span className="font-semibold text-slate-200">EasyDesk Trust Center — ISO 27001 Certified Security & DPDP Compliance</span>
+            <span className="font-semibold text-slate-200">My EasyDesk Trust Center — ISO 27001 Certified Security & DPDP Compliance</span>
           </div>
           <div className="relative w-full sm:w-80">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
@@ -590,7 +598,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
             </div>
 
             <p className="text-xs text-red-100 leading-relaxed m-0 font-medium">
-              To protect your financial accounts from phishing and fraud, EasyDesk software and personnel will <strong className="text-white underline decoration-red-400">NEVER</strong> ask you for any of the following secret credentials:
+              To protect your financial accounts from phishing and fraud, My EasyDesk software and personnel will <strong className="text-white underline decoration-red-400">NEVER</strong> ask you for any of the following secret credentials:
             </p>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
@@ -615,7 +623,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
                     {data.neverRequest.largeWarning}
                   </p>
                   <p className="text-[11px] text-red-200 mt-0.5 mb-0 font-normal">
-                    Never share financial secrets on phone calls, WhatsApp, or email claiming to be from EasyDesk.
+                    Never share financial secrets on phone calls, WhatsApp, or email claiming to be from My EasyDesk.
                   </p>
                 </div>
               </div>
@@ -1049,7 +1057,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
                     required
                     value={scamDetails} 
                     onChange={e => setScamDetails(e.target.value)}
-                    placeholder="They claimed to be an EasyDesk desk officer and asked for my Bank OTP / UPI PIN..."
+                    placeholder="They claimed to be a My EasyDesk desk officer and asked for my Bank OTP / UPI PIN..."
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-xs focus:bg-white input-focus-glow outline-none font-medium"
                   />
                 </div>

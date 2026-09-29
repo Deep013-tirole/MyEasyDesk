@@ -257,7 +257,7 @@ export default function Footer({ setView }: FooterProps) {
               )}
               <div>
                 <span className="text-xl font-black text-white tracking-tight leading-none block notranslate" translate="no">My EasyDesk</span>
-                <span className="block text-[9px] text-cyan-300 font-extrabold tracking-wider uppercase mt-0.5">Digital Service Portal</span>
+                <span className="block text-[9px] text-cyan-300 font-extrabold tracking-wider uppercase mt-0.5">Your Online Work, Done Easily</span>
               </div>
             </div>
 

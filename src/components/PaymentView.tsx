@@ -332,14 +332,14 @@ export default function PaymentView({
                   {method === PaymentMethod.UPI && (
                     <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-4 text-xs">
                       <div className="flex justify-between items-center">
-                        <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official EasyDesk UPI VPA</span>
+                        <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official My EasyDesk UPI VPA</span>
                         {copiedText === 'upi' && <span className="text-emerald-600 font-bold text-[10px]">✓ Copied to Clipboard</span>}
                       </div>
 
                       <div className="flex items-center justify-between bg-white border border-slate-200/80 p-4 rounded-xl shadow-2xs">
                         <div>
                           <p className="font-mono text-sm sm:text-base font-black text-[#0F4C81] m-0 notranslate" translate="no">{paymentConfig?.upiId || 'Pending Verification'}</p>
-                          <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5 notranslate" translate="no">{paymentConfig?.upiName || 'EasyDesk Digital Services'}</p>
+                          <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5 notranslate" translate="no">{paymentConfig?.upiName || 'My EasyDesk Digital Services'}</p>
                         </div>
                         <button
                           onClick={() => copyToClipboard(paymentConfig?.upiId || '', 'upi')}
@@ -364,7 +364,7 @@ export default function PaymentView({
                         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 inline-block shadow-sm hover-scale transition-transform">
                           <img
                             src={paymentConfig.qrCodeUrl}
-                            alt="EasyDesk Official Payment QR"
+                            alt="My EasyDesk Official Payment QR"
                             loading="lazy"
                             decoding="async"
                             referrerPolicy="no-referrer"
@@ -399,7 +399,7 @@ export default function PaymentView({
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Account Name:</span>
-                          <span className="font-bold text-slate-900">{paymentConfig?.bankAccountName || 'EasyDesk Digital Services'}</span>
+                          <span className="font-bold text-slate-900">{paymentConfig?.bankAccountName || 'My EasyDesk Digital Services'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Account Number:</span>
@@ -477,7 +477,7 @@ export default function PaymentView({
 
               <form onSubmit={handleSubmitProof} className="space-y-4 text-xs">
                 <div>
-                  <label htmlFor="payment-order-id" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">EasyDesk Order ID *</label>
+                  <label htmlFor="payment-order-id" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">My EasyDesk Order ID *</label>
                   <input
                     id="payment-order-id"
                     name="orderId"
@@ -568,8 +568,50 @@ export default function PaymentView({
 
             </div>
           </div>
-
         </div>
+
+        {/* 3. IMPORTANT PAYMENT SECURITY & ANTI-FRAUD NOTICE */}
+        <div className="mt-10 bg-slate-50 border border-slate-200/90 rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xs">
+          <div className="flex items-center gap-2.5 border-b border-slate-200/80 pb-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-[#0F4C81] flex items-center justify-center font-bold">
+              <ShieldCheck className="w-4 h-4 text-[#0F4C81]" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-black text-slate-900 m-0">Important Security & Charge Guidelines</h3>
+              <p className="text-[11px] text-slate-500 m-0">Read before making statutory or consultation fee transfers</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
+            <div className="bg-white border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
+              <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Verify Recipient
+              </span>
+              <p className="text-[11px] text-slate-500 leading-relaxed m-0">
+                Always confirm the recipient name matches <strong>"{paymentConfig?.upiName || 'My EasyDesk'}"</strong> before confirming the transfer in your UPI or banking application.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
+              <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-[#0F4C81]" /> Zero Hidden Surcharges
+              </span>
+              <p className="text-[11px] text-slate-500 leading-relaxed m-0">
+                All fees quoted in your order summary are all-inclusive (official portal statutory fee + My EasyDesk documentation charge). Zero additional gateway fees.
+              </p>
+            </div>
+
+            <div className="bg-white border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
+              <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> No Cash Transactions
+              </span>
+              <p className="text-[11px] text-slate-500 leading-relaxed m-0">
+                My EasyDesk does not accept cash. Never pay personal UPI IDs or unverified numbers. If suspicious, verify immediately with our helpline.
+              </p>
+            </div>
+          </div>
+        </div>
+
       </div>
 
     </div>

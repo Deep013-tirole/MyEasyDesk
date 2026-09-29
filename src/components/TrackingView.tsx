@@ -327,7 +327,7 @@ export default function TrackingView() {
 
   const handlePrint = () => {
     const trackEl = document.getElementById('easydesk-tracking');
-    printElement(trackEl, `EasyDesk-Tracking-Receipt-${order?.id || orderId || 'Receipt'}`);
+    printElement(trackEl, `MyEasyDesk-Tracking-Receipt-${order?.id || orderId || 'Receipt'}`);
   };
 
   const isOrderCompleted = order && (
@@ -614,7 +614,7 @@ export default function TrackingView() {
 
                   <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1">
                     <span>Submitted on: {new Date(order.submittedReview.createdAt || Date.now()).toLocaleDateString()}</span>
-                    <span>EasyDesk Verified Customer Feedback</span>
+                    <span>My EasyDesk Verified Customer Feedback</span>
                   </div>
                 </div>
               ) : (
@@ -866,7 +866,7 @@ export default function TrackingView() {
                 <span className="font-semibold text-slate-800 notranslate" translate="no">₹{effectiveGovFees}</span>
               </div>
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 font-medium">EasyDesk Service Charge</span>
+                <span className="text-slate-500 font-medium">My EasyDesk Service Charge</span>
                 <span className="font-semibold text-slate-800 notranslate" translate="no">₹{effectiveServiceCharge}</span>
               </div>
               {effectiveProcessingFee > 0 && (
@@ -928,7 +928,7 @@ export default function TrackingView() {
                 </div>
                 <div>
                   <h1 className="text-xl font-black tracking-tight text-slate-900 uppercase">
-                    {contactSettings?.companyName || 'EasyDesk Solutions Private Limited'}
+                    {contactSettings?.companyName || 'My EasyDesk'}
                   </h1>
                   <p className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
                     Government Services Citizen Advisory & Digital Documentation Facilitation Portal
@@ -1024,7 +1024,7 @@ export default function TrackingView() {
               <div className="space-y-1 text-xs">
                 <p><span className="text-slate-500 font-semibold inline-block w-28">Service Applied:</span> <strong className="text-slate-900">{order.serviceTitle}</strong></p>
                 <p><span className="text-slate-500 font-semibold inline-block w-28">Fulfillment Mode:</span> <span className="text-slate-800">{order.documentDeliveryStatus || 'Digital Clearance & Physical Dispatch'}</span></p>
-                <p><span className="text-slate-500 font-semibold inline-block w-28">Application Channel:</span> <span className="text-slate-800">EasyDesk Assisted Online Portal</span></p>
+                <p><span className="text-slate-500 font-semibold inline-block w-28">Application Channel:</span> <span className="text-slate-800">My EasyDesk Assisted Online Portal</span></p>
                 <p><span className="text-slate-500 font-semibold inline-block w-28">Assigned Desk:</span> <span className="text-slate-800">{order.assignedEmployeeName ? `${order.assignedEmployeeName} (${order.assignedEmployeeCode || 'Desk'})` : 'Citizen Services Central Desk'}</span></p>
                 <div className="pt-1">
                   <span className="text-slate-500 font-semibold block text-[10px] uppercase">Enclosed Documents ({order.uploadedDocuments?.length || 0}):</span>
@@ -1067,7 +1067,7 @@ export default function TrackingView() {
                   <td className="py-2 px-3 text-right font-medium text-slate-900">₹{effectiveGovFees}</td>
                 </tr>
                 <tr>
-                  <td className="py-2 px-3 font-semibold text-slate-900">EasyDesk Service Charge</td>
+                  <td className="py-2 px-3 font-semibold text-slate-900">My EasyDesk Service Charge</td>
                   <td className="py-2 px-3 text-slate-600 text-[11px]">Professional Filing, Facilitation & Consultation</td>
                   <td className="py-2 px-3 text-right font-medium text-slate-900">₹{effectiveServiceCharge}</td>
                 </tr>
@@ -1190,7 +1190,7 @@ export default function TrackingView() {
               </p>
             </div>
             <div className="text-right space-y-0.5">
-              <p className="font-bold text-slate-800">{contactSettings?.companyName || 'EasyDesk Solutions Private Limited'}</p>
+              <p className="font-bold text-slate-800">{contactSettings?.companyName || 'My EasyDesk'}</p>
               {/* Contact single-source-of-truth: Replaced hardcoded support@easydesk.in with dynamic contactSettings.email */}
               <p>Email: {contactSettings?.email || 'help.myeasydesks@gmail.com'} • Web: {contactSettings?.website || 'myeasydesk.tideepak8.workers.dev'}</p>
               <p className="font-mono text-slate-500">Citizen Helpline: {contactSettings?.phone || '+91 9575538590'} ({contactSettings?.workingHours || 'Mon–Sat 9AM–7PM'})</p>

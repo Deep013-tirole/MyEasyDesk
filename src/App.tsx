@@ -694,7 +694,7 @@ export default function App() {
 
               {/* Contact Us View */}
               {view === 'contact' && (
-                <ContactView />
+                <ContactView setView={handleSetView} />
               )}
 
               {/* Privacy & Security View */}

@@ -52,7 +52,7 @@ export default function MobileBottomNav({ currentView, setView, onOpenCommandPal
       icon: MessageSquare,
       action: () => {
         window.dispatchEvent(new CustomEvent('easydesk-open-desk-assistant'));
-        openGeneralWhatsApp('Hello EasyDesk, I need assistance with an online application.');
+        openGeneralWhatsApp('Hello My EasyDesk, I need assistance with an online application.');
       },
       isAccent: true
     }

@@ -255,7 +255,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
     return (
       <div className="max-w-7xl mx-auto px-4 py-20 min-h-[50vh] flex flex-col items-center justify-center gap-3">
         <div className="w-10 h-10 border-4 border-[#0F4C81] border-t-transparent rounded-full animate-spin" />
-        <p className="text-slate-500 text-xs font-mono">Loading EasyDesk About Us Experience...</p>
+        <p className="text-slate-500 text-xs font-mono">Loading My EasyDesk About Us Experience...</p>
       </div>
     );
   }
@@ -901,12 +901,12 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
           <div className="max-w-3xl mx-auto space-y-3">
             {[
               {
-                q: 'How does EasyDesk ensure the security of my uploaded documents?',
-                a: 'All personal proofs and certificates uploaded to EasyDesk are stored in 256-bit AES encrypted storage, processed exclusively by authorized verification officers, and automatically purged according to IT compliance protocols after service delivery.'
+                q: 'How does My EasyDesk ensure the security of my uploaded documents?',
+                a: 'All personal proofs and certificates uploaded to My EasyDesk are stored in 256-bit AES encrypted storage, processed exclusively by authorized verification officers, and automatically purged according to IT compliance protocols after service delivery.'
               },
               {
-                q: 'Are certificates issued through EasyDesk legally valid?',
-                a: 'Yes, 100%. EasyDesk facilitates official filings directly through authorized central and state government portal APIs. All final certificates carry official government digital signatures and QR verifications.'
+                q: 'Are certificates issued through My EasyDesk legally valid?',
+                a: 'Yes, 100%. My EasyDesk facilitates official filings directly through authorized central and state government portal APIs. All final certificates carry official government digital signatures and QR verifications.'
               },
               {
                 q: 'What happens if my application gets rejected by a government authority?',

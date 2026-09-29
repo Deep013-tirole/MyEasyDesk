@@ -55,7 +55,7 @@ function BlogCard({ blog, blogCategories = [], onSelect, compact = false }: Blog
                 <FileText className="w-5 h-5 text-cyan-300" />
               </div>
               <span className="text-[10px] font-mono tracking-widest uppercase text-cyan-200/90 font-bold">
-                EASYDESK GUIDE
+                MY EASYDESK GUIDE
               </span>
             </div>
           )}

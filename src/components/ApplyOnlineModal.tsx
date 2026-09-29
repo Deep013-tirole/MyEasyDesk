@@ -517,7 +517,7 @@ export default function ApplyOnlineModal({
                   <span className="font-bold text-slate-900">₹{baseGovFees}</span>
                 </div>
                 <div className="flex justify-between text-xs text-slate-600">
-                  <span>EasyDesk Documentation & Advisory Charge:</span>
+                  <span>My EasyDesk Documentation & Advisory Charge:</span>
                   <span className="font-bold text-slate-900">₹{baseServiceCharge}</span>
                 </div>
                 <div className="flex justify-between text-xs font-black text-[#0F4C81] border-t border-slate-200 pt-2">

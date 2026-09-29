@@ -54,7 +54,7 @@ function FeaturedBlogCard({ blog, blogCategories = [], onSelect }: FeaturedBlogC
                 <FileText className="w-6 h-6 text-cyan-300" />
               </div>
               <span className="text-xs font-mono tracking-widest uppercase text-cyan-200 font-bold">
-                EASYDESK FEATURED GUIDE
+                MY EASYDESK FEATURED GUIDE
               </span>
             </div>
           )}

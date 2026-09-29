@@ -281,7 +281,7 @@ export default function BlogsView({
 
             {/* Title */}
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-              EasyDesk <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">Knowledge Hub</span> & Guides
+              My EasyDesk <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">Knowledge Hub</span> & Guides
             </h1>
 
             {/* Description */}

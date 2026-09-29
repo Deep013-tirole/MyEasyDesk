@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { 
   Phone, Mail, MapPin, Clock, Send, MessageSquare, 
-  Globe, CheckCircle2, AlertCircle, Share2, ShieldAlert,
-  Sparkles, Headphones, ShieldCheck, Zap, Bot
+  CheckCircle2, AlertCircle, ShieldAlert,
+  ShieldCheck, Zap, ExternalLink, ArrowRight
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { apiFetch, safeParseJsonResponse } from '../lib/apiClient.js';
 import { openGeneralWhatsApp } from '../lib/whatsapp.js';
-import { BaseCard, BaseCardBody } from './BaseCard.js';
 import { getClientContactSettings, formatFullAddress } from '../lib/apiDataService.js';
 import { onContactSettingsUpdated, updateCachedContactSettings } from '../lib/whatsapp.js';
-import Breadcrumbs from './ui/Breadcrumbs.js';
-import TrustBadge from './ui/TrustBadge.js';
+import { getCanonicalOrigin } from '../lib/seoConfig.js';
+import { SectionContainer, SectionHeader, PageHeader, CivicCard } from './ui/index.js';
 
 interface ContactSettings {
   companyName: string;
@@ -35,7 +35,7 @@ interface ContactSettings {
 }
 
 const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
-  companyName: 'EasyDesk Digital Services Pvt Ltd',
+  companyName: 'My EasyDesk Digital Services Pvt Ltd',
   phone: '',
   whatsapp: '',
   email: '',
@@ -56,6 +56,7 @@ const DEFAULT_CONTACT_SETTINGS: ContactSettings = {
 };
 
 export default function ContactView({ setView }: { setView?: (v: string) => void }) {
+  const origin = getCanonicalOrigin();
   const [contactInfo, setContactInfo] = useState<ContactSettings>(() => {
     try {
       const cached = localStorage.getItem('easydesk_cache_contact_settings');
@@ -150,7 +151,6 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
     };
   }, []);
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -165,7 +165,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
 
       const data = await safeParseJsonResponse<any>(res);
       if (res.ok) {
-        setSuccessMsg('Thank you! Your message has been received. A desk assistance officer will contact you shortly.');
+        setSuccessMsg('Thank you! Your message has been received. A My EasyDesk assistance officer will contact you shortly.');
         try {
           window.dispatchEvent(new CustomEvent('easydesk_contact_inquiry_submitted', { detail: data?.messageData || data?.inquiry }));
         } catch {}
@@ -194,204 +194,256 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
   }
 
   return (
-    <div id="easydesk-contact-view" className="font-sans text-slate-900 bg-[#F8FAFC] pb-20 w-full max-w-full overflow-x-hidden">
-      
-      {/* 1. HERO HEADER (Matching AboutUs Gradient Banner & Pulse Badge) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white py-12 sm:py-16 border-b border-slate-200/60 mb-10">
-        
-        {/* Subtle Decorative Background Blur */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
-          <div className="absolute -top-24 -left-20 w-80 h-80 bg-blue-200/40 rounded-full blur-3xl" />
-          <div className="absolute top-1/2 -right-20 w-72 h-72 bg-emerald-200/30 rounded-full blur-3xl" />
-        </div>
+    <div id="easydesk-contact-view" className="font-sans text-slate-900 bg-white w-full max-w-full overflow-x-hidden">
+      <Helmet>
+        <title>Contact Assistance Desk | My EasyDesk — Your Online Work, Done Easily</title>
+        <meta name="description" content="Get in touch with My EasyDesk officers. Direct WhatsApp helpdesk, phone support, office address, and online inquiry queue." />
+        <link rel="canonical" href={`${origin}/contact`} />
+      </Helmet>
 
-        <div className="portal-container relative z-10 space-y-6">
-          <Breadcrumbs items={[{ label: 'Contact Us', active: true }]} />
-
-          <motion.div 
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-            className="max-w-3xl space-y-4"
-          >
-            <div>
-              <TrustBadge title="Official Support Desk & Direct Inquiry" variant="pill" />
+      {/* SECTION 1: HERO & PAGE HEADER */}
+      <PageHeader
+        badge="Official Support Desk & Direct Inquiry"
+        title="Get in Touch with Our Assistance Team"
+        subtitle="Have questions about document requirements, application status, or need bespoke service assistance? Send us an inquiry or reach out directly through WhatsApp and phone channels."
+        breadcrumbs={[{ label: 'Contact Us', active: true }]}
+        actions={
+          <div className="flex flex-wrap gap-2.5 text-xs font-bold text-slate-700">
+            <div className="flex items-center gap-1.5 bg-white/95 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>Same-Day Response</span>
             </div>
-
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              Get in Touch with <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">Our Assistance Team</span>
-            </h1>
-
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-              Have questions about document requirements, application status, or need bespoke service assistance? Send us an inquiry or reach out directly through WhatsApp and phone channels.
-            </p>
-
-            {/* Quick Badges */}
-            <div className="pt-2 flex flex-wrap gap-3 text-xs font-bold text-slate-700">
-              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Same-Day Response</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                <ShieldCheck className="w-4 h-4 text-[#0F4C81]" />
-                <span>Verified Desk Officers</span>
-              </div>
-              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                <Zap className="w-4 h-4 text-amber-500" />
-                <span>Zero Automation Loops</span>
-              </div>
+            <div className="flex items-center gap-1.5 bg-white/95 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              <ShieldCheck className="w-4 h-4 text-[#0F4C81]" />
+              <span>Verified Desk Officers</span>
             </div>
-          </motion.div>
-        </div>
-      </section>
+            <div className="flex items-center gap-1.5 bg-white/95 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              <Zap className="w-4 h-4 text-amber-500" />
+              <span>Zero Automation Loops</span>
+            </div>
+          </div>
+        }
+      />
 
-      {/* 2. MAIN CONTACT SECTION */}
-      <div className="portal-container">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+      {/* SECTION 2: DIRECT ASSISTANCE CHANNELS */}
+      <SectionContainer id="contact-channels-section" variant="default" size="md" topDivider bottomDivider>
+        <SectionHeader
+          badge="Direct Channels"
+          icon={<Phone className="w-4 h-4" />}
+          title="Immediate Desk Assistance & Official Contacts"
+          subtitle="Connect directly with verified My EasyDesk personnel during operating hours."
+          align="left"
+        />
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           
-          {/* Company Contact Cards (Left column) */}
-          <div className="lg:col-span-5 space-y-6">
-            
-            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-7 space-y-5 hover-lift hover-glow-blue transition-all duration-300">
-              <div className="border-b border-slate-100 pb-3">
-                <span className="text-[10px] font-extrabold uppercase text-[#0F4C81] tracking-wider block">Official Headquarters</span>
-                <h3 className="font-black text-base text-slate-900 mt-1 m-0 notranslate" translate="no">
-                  {contactInfo?.companyName || 'EasyDesk Digital Services Pvt Ltd'}
-                </h3>
-              </div>
-
-              {/* Phone Support */}
-              <div className="flex gap-3.5 items-center group/item p-2 rounded-2xl hover:bg-slate-50/80 transition-colors">
-                <div className="w-11 h-11 bg-blue-50 text-[#0F4C81] border border-blue-100/80 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
-                  <Phone className="w-4 h-4" />
+          {/* Card 1: WhatsApp Live Support */}
+          <CivicCard variant="interactive" className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-11 h-11 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
+                  <MessageSquare className="w-5 h-5" />
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Phone Support</span>
+                <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider">
+                  Fastest Response
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">WhatsApp Helpdesk</span>
+                <h3 className="text-base font-black text-slate-900 mt-0.5">Live Desk Chat</h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Chat directly with an officer for quick eligibility verification, fees, and filing queries.
+                </p>
+              </div>
+            </div>
+
+            <button 
+              onClick={() => openGeneralWhatsApp()}
+              className="w-full bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs hover-scale-sm"
+            >
+              <span>{contactInfo?.whatsapp ? `Chat +${contactInfo.whatsapp}` : 'Open WhatsApp Chat'}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </CivicCard>
+
+          {/* Card 2: Phone Support */}
+          <CivicCard variant="interactive" className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-11 h-11 bg-blue-50 text-[#0F4C81] border border-blue-100 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
+                  <Phone className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] bg-blue-50 text-[#0F4C81] border border-blue-100 px-2.5 py-0.5 rounded-full font-bold">
+                  Voice Calling
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Citizen Helpline</span>
+                <h3 className="text-base font-black text-slate-900 mt-0.5">
                   {contactInfo?.phone ? (
-                    <a href={`tel:${contactInfo.phone}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] transition-colors notranslate" translate="no">
+                    <a href={`tel:${contactInfo.phone}`} className="hover:text-[#0F4C81] transition-colors">
                       {contactInfo.phone}
                     </a>
-                  ) : loading ? (
-                    <div className="h-4 w-32 bg-slate-100 rounded animate-pulse mt-0.5" />
                   ) : (
-                    <span className="font-medium text-xs text-slate-500">Contact Support Desk</span>
+                    'Direct Hotline'
                   )}
-                </div>
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Speak directly with our service coordinators for document guidance and complex applications.
+                </p>
               </div>
-
-              {/* WhatsApp */}
-              <div className="flex gap-3.5 items-center group/item p-2 rounded-2xl hover:bg-emerald-50/40 transition-colors">
-                <div className="w-11 h-11 bg-emerald-50 text-emerald-600 border border-emerald-100/80 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
-                  <MessageSquare className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-extrabold block uppercase">WhatsApp Helpdesk</span>
-                  <button 
-                    onClick={() => openGeneralWhatsApp()}
-                    className="font-black text-sm text-emerald-600 hover:underline text-left cursor-pointer p-0 bg-transparent border-0 flex items-center gap-1.5"
-                  >
-                    <span className="notranslate" translate="no">{contactInfo?.whatsapp ? `+${contactInfo.whatsapp}` : (loading ? 'Loading...' : 'Chat on WhatsApp')}</span>
-                    <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Chat Live</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Email */}
-              <div className="flex gap-3.5 items-center group/item p-2 rounded-2xl hover:bg-slate-50/80 transition-colors">
-                <div className="w-11 h-11 bg-purple-50 text-purple-600 border border-purple-100/80 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
-                  <Mail className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Official Email</span>
-                  {contactInfo?.email ? (
-                    <a href={`mailto:${contactInfo.email}`} className="font-black text-sm text-slate-900 hover:text-[#0F4C81] block transition-colors notranslate" translate="no">
-                      {contactInfo.email}
-                    </a>
-                  ) : loading ? (
-                    <div className="h-4 w-36 bg-slate-100 rounded animate-pulse mt-0.5" />
-                  ) : (
-                    <span className="font-medium text-xs text-slate-500">Official Helpdesk</span>
-                  )}
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="flex gap-3.5 items-start group/item p-2 rounded-2xl hover:bg-slate-50/80 transition-colors">
-                <div className="w-11 h-11 bg-amber-50 text-amber-600 border border-amber-100/80 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Office Location</span>
-                  {formatFullAddress(contactInfo) ? (
-                    <p className="font-medium text-xs text-slate-600 leading-relaxed m-0 mt-0.5 notranslate" translate="no">
-                      {formatFullAddress(contactInfo)}
-                    </p>
-                  ) : loading ? (
-                    <div className="h-4 w-52 bg-slate-100 rounded animate-pulse mt-0.5" />
-                  ) : (
-                    <p className="font-medium text-xs text-slate-400 leading-relaxed m-0 mt-0.5">
-                      Head Office
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Working Hours */}
-              <div className="flex gap-3.5 items-center group/item p-2 rounded-2xl hover:bg-slate-50/80 transition-colors">
-                <div className="w-11 h-11 bg-slate-100 text-slate-600 border border-slate-200/80 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
-                  <Clock className="w-4 h-4" />
-                </div>
-                <div>
-                  <span className="text-[10px] text-slate-500 font-extrabold block uppercase">Operating Schedule</span>
-                  <p className="font-semibold text-xs text-slate-700 m-0 mt-0.5">
-                    {contactInfo?.workingHours || (loading ? 'Loading schedule...' : 'Mon - Sat: 9:00 AM - 7:00 PM IST')}
-                  </p>
-                </div>
-              </div>
-
             </div>
 
-            {/* Security Alert Banner (Matching AboutUs Consultation Style) */}
-            <div className="bg-gradient-to-br from-[#0F4C81] to-[#0A3258] text-white rounded-3xl p-6 sm:p-7 shadow-xl border border-blue-900/50 space-y-3.5 text-xs hover-lift hover-glow-blue transition-all duration-300">
+            {contactInfo?.phone ? (
+              <a
+                href={`tel:${contactInfo.phone}`}
+                className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 text-center"
+              >
+                <Phone className="w-4 h-4 text-[#0F4C81]" />
+                <span>Call {contactInfo.phone}</span>
+              </a>
+            ) : (
+              <div className="text-xs text-slate-400 font-medium py-2 text-center bg-slate-50 rounded-xl">
+                Helpline Active During Business Hours
+              </div>
+            )}
+          </CivicCard>
+
+          {/* Card 3: Email Support */}
+          <CivicCard variant="interactive" className="p-6 flex flex-col justify-between space-y-4">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="w-11 h-11 bg-purple-50 text-purple-600 border border-purple-100 rounded-2xl flex items-center justify-center shrink-0 shadow-2xs">
+                  <Mail className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] bg-purple-50 text-purple-700 border border-purple-100 px-2.5 py-0.5 rounded-full font-bold">
+                  Formal Inquiry
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Official Email</span>
+                <h3 className="text-sm font-black text-slate-900 mt-0.5 truncate">
+                  {contactInfo?.email || 'help.myeasydesks@gmail.com'}
+                </h3>
+                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                  Send official documents, corporate requests, or formal grievance correspondence.
+                </p>
+              </div>
+            </div>
+
+            <a
+              href={`mailto:${contactInfo?.email || 'help.myeasydesks@gmail.com'}`}
+              className="w-full bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-xl text-xs transition-all flex items-center justify-center gap-2 text-center"
+            >
+              <Mail className="w-4 h-4 text-purple-600" />
+              <span>Send Official Email</span>
+            </a>
+          </CivicCard>
+
+        </div>
+
+        {/* Operating Schedule & Physical Desk Strip */}
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3.5">
+            <div className="w-10 h-10 bg-white border border-slate-200 text-slate-700 rounded-xl flex items-center justify-center shrink-0 shadow-2xs">
+              <Clock className="w-5 h-5 text-[#0F4C81]" />
+            </div>
+            <div>
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Operating Schedule</span>
+              <p className="text-xs font-bold text-slate-800 mt-0.5">
+                {contactInfo?.workingHours || 'Monday - Saturday: 9:00 AM - 7:00 PM IST'}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Closed on Sundays and statutory national gazetted holidays.</p>
+            </div>
+          </div>
+
+          <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3.5">
+            <div className="w-10 h-10 bg-white border border-slate-200 text-slate-700 rounded-xl flex items-center justify-center shrink-0 shadow-2xs">
+              <MapPin className="w-5 h-5 text-amber-600" />
+            </div>
+            <div className="flex-1">
+              <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Headquarters Office</span>
+              <p className="text-xs font-bold text-slate-800 mt-0.5">
+                {formatFullAddress(contactInfo) || 'A51, Vijay Nagar, Indore, Madhya Pradesh - 452010'}
+              </p>
+              {contactInfo?.googleMapsUrl && (
+                <a 
+                  href={contactInfo.googleMapsUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-[11px] text-[#0F4C81] hover:underline font-bold inline-flex items-center gap-1 mt-1"
+                >
+                  <span>View on Google Maps</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </SectionContainer>
+
+      {/* SECTION 3: SEND AN ONLINE INQUIRY */}
+      <SectionContainer id="contact-inquiry-section" variant="subtle" size="md" bottomDivider>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* Left Context Column */}
+          <div className="lg:col-span-4 space-y-6">
+            <SectionHeader
+              badge="Direct Message Queue"
+              icon={<Send className="w-4 h-4" />}
+              title="Submit an Online Inquiry"
+              subtitle="Our duty officers log each inquiry into our internal ticketing queue and respond with documented guidance."
+              align="left"
+            />
+
+            <CivicCard variant="default" className="p-5 space-y-3.5 border-l-4 border-l-[#0F4C81]">
+              <span className="text-xs font-black text-slate-900 block">How our inquiry desk works</span>
+              <ul className="space-y-2 text-xs text-slate-600 pl-4 list-disc font-normal leading-relaxed m-0">
+                <li>Desk officers review queries within 4 business hours.</li>
+                <li>You receive a direct reply via WhatsApp or phone.</li>
+                <li>Zero bot loops: every message is handled by a trained human desk assistant.</li>
+              </ul>
+            </CivicCard>
+
+            {/* Anti-Fraud Banner */}
+            <div className="bg-gradient-to-br from-[#0F4C81] to-[#0A3258] text-white rounded-3xl p-6 shadow-md border border-blue-900/50 space-y-3">
               <div className="flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-cyan-300 shrink-0" />
                 <span className="font-black text-sm text-white">Security & Anti-Fraud Notice</span>
               </div>
               <p className="text-xs text-blue-100/90 leading-relaxed m-0 font-normal">
-                EasyDesk personnel will <strong>NEVER</strong> request your private UPI PIN, internet banking passwords, or personal biometric credentials.
+                My EasyDesk personnel will <strong>NEVER</strong> request your private UPI PIN, internet banking passwords, or personal biometric credentials.
               </p>
               {setView && (
                 <button 
                   onClick={() => setView('privacy-security')}
-                  className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl text-xs transition-all cursor-pointer text-center block border border-white/20 hover-scale-sm"
+                  className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-2 rounded-xl text-xs transition-all cursor-pointer text-center block border border-white/20 hover-scale-sm mt-2"
                 >
                   Visit Privacy & Security Trust Center →
                 </button>
               )}
             </div>
-
           </div>
 
-          {/* Public Interactive Contact Form (Right column) */}
-          <div className="lg:col-span-7">
-            <div className="bg-white rounded-3xl border border-slate-200/80 shadow-xs p-6 sm:p-8 space-y-6 hover-lift hover-glow-blue transition-all duration-300">
+          {/* Right Form Column */}
+          <div className="lg:col-span-8">
+            <CivicCard variant="elevated" className="p-6 sm:p-8 space-y-6">
               <div>
-                <div className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#0F4C81] badge-soft-primary px-3 py-1 rounded-full mb-2">
-                  <Send className="w-3.5 h-3.5 text-[#0F4C81]" /> Direct Message Queue
-                </div>
-                <h2 className="font-black text-xl sm:text-2xl text-slate-900 m-0">Send an Online Inquiry</h2>
-                <p className="text-xs text-slate-500 mt-1 mb-0 font-normal">Our duty officers review all submissions and provide documented answers.</p>
+                <h3 className="font-black text-xl text-slate-900 m-0">Inquiry Submission Form</h3>
+                <p className="text-xs text-slate-500 mt-1 mb-0 font-normal">
+                  All fields marked with an asterisk (<span className="text-red-500">*</span>) are mandatory.
+                </p>
               </div>
 
               {successMsg && (
-                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 text-xs rounded-2xl p-4 m-0 shadow-2xs">
+                <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center gap-3 text-xs rounded-2xl p-4 shadow-2xs">
                   <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
                   <span className="font-medium">{successMsg}</span>
                 </div>
               )}
 
               {errorMsg && (
-                <div className="bg-red-50 border border-red-200 text-red-800 flex items-center gap-3 text-xs rounded-2xl p-4 m-0 shadow-2xs">
+                <div className="bg-red-50 border border-red-200 text-red-800 flex items-center gap-3 text-xs rounded-2xl p-4 shadow-2xs">
                   <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
                   <span className="font-medium">{errorMsg}</span>
                 </div>
@@ -400,7 +452,9 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
               <form onSubmit={handleSubmit} className="space-y-4 text-xs">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="contact-full-name" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">Your Full Name *</label>
+                    <label htmlFor="contact-full-name" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">
+                      Your Full Name <span className="text-red-500">*</span>
+                    </label>
                     <input
                       id="contact-full-name"
                       name="name"
@@ -409,13 +463,15 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="e.g. Ramesh Verma"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      className="w-full bg-slate-50/70 border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:bg-white input-focus-glow placeholder:text-slate-400 font-medium notranslate"
                       translate="no"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="contact-email-addr" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">Email Address *</label>
+                    <label htmlFor="contact-email-addr" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
                     <input
                       id="contact-email-addr"
                       name="email"
@@ -424,7 +480,7 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="name@domain.com"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      className="w-full bg-slate-50/70 border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:bg-white input-focus-glow placeholder:text-slate-400 font-medium notranslate"
                       translate="no"
                     />
                   </div>
@@ -432,7 +488,9 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="contact-mobile-num" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">Mobile Number *</label>
+                    <label htmlFor="contact-mobile-num" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">
+                      Mobile Number <span className="text-red-500">*</span>
+                    </label>
                     <input
                       id="contact-mobile-num"
                       name="phone"
@@ -441,13 +499,15 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="10-digit mobile number"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      className="w-full bg-slate-50/70 border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:bg-white input-focus-glow placeholder:text-slate-400 font-medium notranslate"
                       translate="no"
                     />
                   </div>
 
                   <div>
-                    <label htmlFor="contact-subject-topic" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">Subject / Service Topic *</label>
+                    <label htmlFor="contact-subject-topic" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">
+                      Subject / Service Topic <span className="text-red-500">*</span>
+                    </label>
                     <input
                       id="contact-subject-topic"
                       name="subject"
@@ -456,14 +516,16 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                       value={subject}
                       onChange={(e) => setSubject(e.target.value)}
                       placeholder="e.g. Passport application inquiry"
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      className="w-full bg-slate-50/70 border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:bg-white input-focus-glow placeholder:text-slate-400 font-medium notranslate"
                       translate="no"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="contact-inquiry-message" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">Your Message / Inquiry Details *</label>
+                  <label htmlFor="contact-inquiry-message" className="text-[10px] font-extrabold text-slate-600 uppercase block mb-1.5">
+                    Your Message / Inquiry Details <span className="text-red-500">*</span>
+                  </label>
                   <textarea
                     id="contact-inquiry-message"
                     name="message"
@@ -472,16 +534,16 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
                     placeholder="Describe your inquiry, specific document questions, or filing needs..."
-                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                    className="w-full bg-slate-50/70 border border-slate-200/90 rounded-xl px-4 py-2.5 text-xs text-slate-900 focus:outline-none focus:bg-white input-focus-glow placeholder:text-slate-400 font-medium notranslate resize-y"
                     translate="no"
                   />
                 </div>
 
-                <div className="pt-2 flex items-center justify-between gap-4">
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="bg-[#0F4C81] hover:bg-[#0b3b64] text-white btn-glow-primary rounded-xl px-7 py-3 text-xs font-bold transition-all cursor-pointer shadow-sm inline-flex items-center gap-2 hover-scale-sm disabled:opacity-50"
+                    className="bg-[#0F4C81] hover:bg-[#0b3b64] text-white btn-glow-primary rounded-xl px-7 py-3 text-xs font-bold transition-all cursor-pointer shadow-sm inline-flex items-center justify-center gap-2 hover-scale-sm disabled:opacity-50"
                   >
                     {submitting ? (
                       <>
@@ -491,23 +553,21 @@ export default function ContactView({ setView }: { setView?: (v: string) => void
                     ) : (
                       <>
                         <Send className="w-4 h-4" />
-                        <span>Submit Inquiry</span>
+                        <span>Submit Inquiry to Queue</span>
                       </>
                     )}
                   </button>
 
-                  <span className="text-[10px] text-slate-400 font-medium">
-                    🔒 SSL Encrypted Submission
+                  <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1.5">
+                    <span>🔒 SSL 256-Bit Encrypted & Privacy Protected</span>
                   </span>
                 </div>
               </form>
-            </div>
+            </CivicCard>
           </div>
 
         </div>
-      </div>
-
+      </SectionContainer>
     </div>
   );
 }
-

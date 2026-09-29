@@ -192,7 +192,7 @@ export default function BlogDetailView({
   };
 
   const rawBlogTitle = blog.seoTitle || blog.title;
-  const seoTitle = rawBlogTitle.includes('EasyDesk') ? rawBlogTitle : `${rawBlogTitle} | EasyDesk`;
+  const seoTitle = rawBlogTitle.includes('My EasyDesk') ? rawBlogTitle : (rawBlogTitle.includes('EasyDesk') ? rawBlogTitle.replace('EasyDesk', 'My EasyDesk') : `${rawBlogTitle} | My EasyDesk`);
   const seoDesc = blog.seoDescription || blog.shortDescription || blog.excerpt || blog.title;
 
   return (
@@ -208,7 +208,7 @@ export default function BlogDetailView({
         <meta property="og:url" content={canonicalUrl} />
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
-        <meta property="og:site_name" content="EasyDesk" />
+        <meta property="og:site_name" content="My EasyDesk" />
         {blog.image && <meta property="og:image" content={blog.image} />}
 
         {/* Twitter Card */}
@@ -324,7 +324,7 @@ export default function BlogDetailView({
                 {blog.author || 'Desk Verification Officer'}
               </span>
               <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
-                Official EasyDesk E-Governance Knowledge Desk
+                Official My EasyDesk E-Governance Knowledge Desk
               </span>
             </div>
           </div>
@@ -345,7 +345,7 @@ export default function BlogDetailView({
               <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center mb-3">
                 <FileText className="w-7 h-7 text-teal-300" />
               </div>
-              <span className="text-sm font-mono tracking-widest uppercase text-teal-200">EASYDESK OFFICIAL FILING GUIDE</span>
+              <span className="text-sm font-mono tracking-widest uppercase text-teal-200">MY EASYDESK OFFICIAL FILING GUIDE</span>
             </div>
           )}
         </div>
@@ -366,7 +366,7 @@ export default function BlogDetailView({
               </h4>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              EasyDesk assists citizens, entrepreneurs, and students with document audits, application corrections, and digital submission workflows. Always review the final submission acknowledgment copy for official transaction stamps.
+              My EasyDesk assists citizens, entrepreneurs, and students with document audits, application corrections, and digital submission workflows. Always review the final submission acknowledgment copy for official transaction stamps.
             </p>
           </div>
 
@@ -396,7 +396,7 @@ export default function BlogDetailView({
               </p>
             </div>
             <button
-              onClick={() => openGeneralWhatsApp(`Hello EasyDesk, I need assistance regarding the guide: "${blog.title}"`)}
+              onClick={() => openGeneralWhatsApp(`Hello My EasyDesk, I need assistance regarding the guide: "${blog.title}"`)}
               className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs px-5 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shrink-0 shadow-md active:scale-95"
             >
               <MessageSquare className="w-4 h-4" /> Connect on WhatsApp
@@ -411,7 +411,7 @@ export default function BlogDetailView({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-[#0F4C81] text-white shadow-2xs">
-                  <Sparkles className="w-3 h-3" /> Related EasyDesk Service
+                  <Sparkles className="w-3 h-3" /> Related My EasyDesk Service
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
                   Verified Commercial Assistance Desk
@@ -432,7 +432,7 @@ export default function BlogDetailView({
                 {matchedService.title}
               </h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-                {matchedService.shortDescription || matchedService.description || `Get end-to-end filing support, document audits, and error checks for ${matchedService.title} through EasyDesk.`}
+                {matchedService.shortDescription || matchedService.description || `Get end-to-end filing support, document audits, and error checks for ${matchedService.title} through My EasyDesk.`}
               </p>
             </div>
 
@@ -451,7 +451,7 @@ export default function BlogDetailView({
                 }}
                 className="px-5 py-2.5 rounded-xl bg-[#0F4C81] hover:bg-[#0b3b64] text-white text-xs font-bold transition shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                <span>Apply with EasyDesk Assistance</span>
+                <span>Apply with My EasyDesk Assistance</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>

@@ -128,7 +128,7 @@ export default function Header({
                 My EasyDesk
               </span>
               <span className="hidden sm:block text-[9px] text-slate-500 font-extrabold tracking-wider uppercase mt-0.5">
-                {t('nav.portalSubtitle', 'Digital Service Portal')}
+                {t('nav.tagline', 'Your Online Work, Done Easily')}
               </span>
             </div>
           </div>

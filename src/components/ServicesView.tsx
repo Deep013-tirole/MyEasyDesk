@@ -4,15 +4,17 @@ import {
   MessageSquare, FileText, ArrowRight, Sparkles,
   ShieldCheck, Clock, CheckCircle2, Bot, Layers,
   HelpCircle, Zap, ArrowUpDown, X, ChevronDown,
-  LayoutGrid, List as ListIcon
+  LayoutGrid, List as ListIcon, Shield
 } from 'lucide-react';
-import { motion } from 'motion/react';
 import { Service, ServiceCategory } from '../types.js';
 import { openWhatsAppForService, openGeneralWhatsApp } from '../lib/whatsapp.js';
 import { useScrollToTopOnChange } from '../lib/scrollUtils.js';
 import ContentUnavailable from './ContentUnavailable.js';
-import Breadcrumbs from './ui/Breadcrumbs.js';
-import TrustBadge from './ui/TrustBadge.js';
+import PageHeader from './ui/PageHeader.js';
+import SectionContainer from './ui/SectionContainer.js';
+import CivicCard from './ui/CivicCard.js';
+import StatusBadge from './ui/StatusBadge.js';
+import EmptyState from './ui/EmptyState.js';
 import { GridSkeleton } from './ui/SkeletonCard.js';
 
 interface ServicesViewProps {
@@ -87,133 +89,123 @@ export default function ServicesView({
   };
 
   return (
-    <div id="easydesk-services-view" className="font-sans text-slate-900 bg-slate-50 min-h-screen pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-services-view" className="font-sans text-slate-900 bg-[#F8FAFC] min-h-screen pb-20 w-full max-w-full overflow-x-hidden">
 
-      {/* 1. HEADER SECTION WITH CIVIC ACCENT */}
-      <section className="bg-white border-b border-slate-200/80 pt-6 pb-8 sm:pb-10">
-        <div className="portal-container space-y-4">
+      {/* ==================================================
+          SECTION 1: PAGE HEADER WITH BREADCRUMBS & BADGES
+          ================================================== */}
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Services', active: true }
+        ]}
+        badge={{
+          text: 'Verified Catalog & Filing Directory',
+          icon: <Shield className="w-3.5 h-3.5 text-[#0F4C81]" />
+        }}
+        title="Digital Services Directory"
+        description="Transparent statutory filings, certificates, and registrations. Connect directly with My EasyDesk document officers on WhatsApp for expedited pre-audit processing."
+        actions={
+          <div className="flex flex-wrap gap-2 text-xs text-slate-600">
+            <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3 py-1.5 rounded-xl font-bold shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#0F4C81]" />
+              <span>Pre-Audit Guarantee</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3 py-1.5 rounded-xl font-bold shadow-2xs">
+              <Zap className="w-3.5 h-3.5 text-amber-500" />
+              <span>Direct WhatsApp Desk</span>
+            </span>
+          </div>
+        }
+      />
 
-          {/* Breadcrumbs */}
-          <Breadcrumbs
-            items={[
-              { label: 'Services', active: true }
-            ]}
-          />
+      <div className="portal-container pt-8 sm:pt-10 space-y-8">
 
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pt-1">
-            <div className="max-w-2xl space-y-2">
-              <div className="flex items-center gap-2">
-                <TrustBadge title="Verified Catalog & Assistance Directory" variant="pill" />
+        {/* ==================================================
+            SECTION 2: SEARCH & CATEGORY FILTER TOOLBAR
+            ================================================== */}
+        <section aria-label="Search and Category Filters">
+          <CivicCard variant="default" className="p-4 sm:p-5 space-y-4 shadow-sm">
+            {/* Top Row: Search Input + Sort Dropdown */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+
+              {/* Search Input */}
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 shrink-0 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by service name, keyword, or document required..."
+                  className="w-full bg-slate-50 border border-slate-200/90 rounded-xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400 font-medium transition"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1 rounded-md hover:bg-slate-200 transition cursor-pointer"
+                    title="Clear search"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight">
-                Digital Services Directory
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
-                Transparent statutory filings, certificates, and registrations. Connect directly with EasyDesk document officers on WhatsApp for expedited pre-audit processing.
-              </p>
-            </div>
 
-            {/* Quick Micro Value Badges */}
-            <div className="flex flex-wrap gap-2 text-xs text-slate-600 shrink-0">
-              <span className="inline-flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 px-3 py-1.5 rounded-xl font-medium">
-                <ShieldCheck className="w-3.5 h-3.5 text-[#0F4C81]" />
-                <span>Pre-Audit Verification</span>
-              </span>
-              <span className="inline-flex items-center gap-1.5 bg-slate-100/80 border border-slate-200/60 px-3 py-1.5 rounded-xl font-medium">
-                <Zap className="w-3.5 h-3.5 text-amber-500" />
-                <span>Direct WhatsApp Filing</span>
-              </span>
-            </div>
-          </div>
-
-        </div>
-      </section>
-
-      <div className="portal-container pt-8 space-y-6">
-
-        {/* 2. SEARCH & FILTER CONTROLS BAR */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl shadow-2xs p-4 space-y-4">
-
-          {/* Top Row: Search input + Sort Dropdown */}
-          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
-
-            {/* Search Input */}
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 shrink-0 pointer-events-none" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by service name, keyword, or document required..."
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-[#0F4C81] focus:ring-1 focus:ring-[#0F4C81] placeholder:text-slate-400 font-medium transition"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-0.5 rounded-md hover:bg-slate-200 transition"
-                  title="Clear search"
+              {/* Sort Dropdown */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-slate-500 font-bold whitespace-nowrap flex items-center gap-1">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" /> Sort by:
+                </span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0F4C81] cursor-pointer"
                 >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
+                  <option value="recommended">Recommended</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                  <option value="fastest">Fastest Turnaround</option>
+                </select>
+              </div>
+
             </div>
 
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-xs text-slate-500 font-semibold whitespace-nowrap flex items-center gap-1">
-                <ArrowUpDown className="w-3 h-3 text-slate-400" /> Sort by:
-              </span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-semibold text-slate-800 focus:outline-none focus:border-[#0F4C81] cursor-pointer"
+            {/* Bottom Row: Category Filter Pills */}
+            <div className="pt-3 border-t border-slate-100 flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('all')}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 focus-civic ${
+                  selectedCategory === 'all'
+                    ? 'bg-[#0F4C81] text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                }`}
               >
-                <option value="recommended">Recommended</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="fastest">Fastest Turnaround</option>
-              </select>
-            </div>
-
-          </div>
-
-          {/* Bottom Row: Category Pills */}
-          <div className="pt-2 border-t border-slate-100 flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
-                selectedCategory === 'all'
-                  ? 'bg-[#0F4C81] text-white shadow-2xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              All Services ({services.length})
-            </button>
-            {activeCategories.map(cat => {
-              const count = services.filter(s => s.categoryId === cat.id).length;
-              return (
+                All Services
+              </button>
+              {activeCategories.map(cat => (
                 <button
                   key={cat.id}
+                  type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 ${
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 focus-civic ${
                     selectedCategory === cat.id
-                      ? 'bg-[#0F4C81] text-white shadow-2xs'
+                      ? 'bg-[#0F4C81] text-white shadow-xs'
                       : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                   }`}
                 >
-                  {cat.name} {count > 0 && <span className="opacity-75 font-normal ml-1">({count})</span>}
+                  {cat.name}
                 </button>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          </CivicCard>
+        </section>
 
-        </div>
-
-        {/* 3. ACTIVE RESULTS METRICS & VIEW SWITCHER (Requirement 3) */}
+        {/* ==================================================
+            SECTION 3: ACTIVE RESULTS CONTROLS
+            ================================================== */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 font-medium px-1">
           <div className="flex items-center gap-2">
             <span>
-              Showing <strong className="text-slate-900 tabular-nums">{filteredServices.length}</strong> of <span className="tabular-nums">{services.length}</span> services
+              Showing <strong className="text-slate-900 tabular-nums font-black">{filteredServices.length}</strong> of <span className="tabular-nums">{services.length}</span> services
               {selectedCategory !== 'all' && (
                 <span> in <strong className="text-[#0F4C81]">{categories.find(c => c.id === selectedCategory)?.name}</strong></span>
               )}
@@ -233,87 +225,224 @@ export default function ServicesView({
           </div>
 
           {/* Grid vs List View Toggle */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+          <div className="flex items-center bg-white p-0.5 rounded-xl border border-slate-200 shadow-2xs">
             <button
               type="button"
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
-                viewMode === 'grid' ? 'bg-white text-[#0F4C81] shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                viewMode === 'grid' ? 'bg-blue-50 text-[#0F4C81]' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Grid View"
+              aria-label="Grid View"
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
+              <LayoutGrid className="w-4 h-4" />
             </button>
             <button
               type="button"
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
-                viewMode === 'list' ? 'bg-white text-[#0F4C81] shadow-2xs' : 'text-slate-500 hover:text-slate-900'
+                viewMode === 'list' ? 'bg-blue-50 text-[#0F4C81]' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="List View"
+              aria-label="List View"
             >
-              <ListIcon className="w-3.5 h-3.5" />
+              <ListIcon className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* 4. SERVICES GRID / LIST / SKELETON / EMPTY STATE */}
-        {isLoading ? (
-          <GridSkeleton count={6} type="service" />
-        ) : services.length === 0 && !searchQuery ? (
-          <ContentUnavailable
-            id="services-catalog-unavailable"
-            statusCode={404}
-            title="Services Directory Unavailable"
-            message="We were unable to load the services catalog at this moment. You can still reach our team directly on WhatsApp for filing assistance."
-            primaryActionText="Return to Home"
-            onPrimaryAction={() => setView('home')}
-            secondaryActionText="Chat on WhatsApp"
-            onSecondaryAction={() => openGeneralWhatsApp('Hello EasyDesk, I need help with government certificate services.')}
-          />
-        ) : filteredServices.length === 0 ? (
-          <div className="bg-white border border-slate-200 rounded-3xl p-10 text-center shadow-2xs space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-blue-50 text-[#0F4C81] border border-blue-100 flex items-center justify-center mx-auto">
-              <ShieldAlert className="w-7 h-7" />
-            </div>
-            <h3 className="font-black text-base text-slate-900 m-0">No Matching Services Found</h3>
-            <p className="text-xs text-slate-600 max-w-md mx-auto font-normal">
-              We couldn't find any services matching "{searchQuery}". Try modifying your search term or talk to our desk team for custom documentation assistance.
-            </p>
-            <div className="pt-2 flex justify-center gap-3">
-              <button
-                onClick={() => { setSelectedCategory('all'); setSearchQuery(''); setSortBy('recommended'); }}
-                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl transition cursor-pointer"
-              >
-                Clear Search & Filters
-              </button>
-              <button
-                onClick={() => openGeneralWhatsApp(`Inquiry regarding service search: ${searchQuery}`)}
-                className="px-5 py-2.5 bg-[#059669] hover:bg-[#047857] text-white text-xs font-bold rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs"
-              >
-                <MessageSquare className="w-4 h-4" /> Ask Desk on WhatsApp
-              </button>
-            </div>
-          </div>
-        ) : viewMode === 'grid' ? (
-          /* GRID VIEW WITH CLEAN BANNER IMAGES */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredServices.map(service => {
-              const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
-              const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
-              const bannerImg = service.bannerImage || service.imageUrl || service.image;
+        {/* ==================================================
+            SECTION 4: MAIN SERVICES LISTING (GRID OR LIST)
+            ================================================== */}
+        <section aria-label="Services List">
+          {isLoading ? (
+            <GridSkeleton count={6} type="service" />
+          ) : services.length === 0 && !searchQuery ? (
+            <ContentUnavailable
+              id="services-catalog-unavailable"
+              statusCode={404}
+              title="Services Directory Unavailable"
+              message="We were unable to load the services catalog at this moment. You can still reach our team directly on WhatsApp for filing assistance."
+              primaryActionText="Return to Home"
+              onPrimaryAction={() => setView('home')}
+              secondaryActionText="Chat on WhatsApp"
+              onSecondaryAction={() => openGeneralWhatsApp('Hello My EasyDesk, I need help with government certificate services.')}
+            />
+          ) : filteredServices.length === 0 ? (
+            <EmptyState
+              title="No Matching Services Found"
+              description={`We couldn't find any services matching "${searchQuery}". Try modifying your search term or talk to our desk team for custom documentation assistance.`}
+              actionText="Reset Filters"
+              onAction={() => { setSelectedCategory('all'); setSearchQuery(''); setSortBy('recommended'); }}
+              secondaryActionText="Ask Desk on WhatsApp"
+              onSecondaryAction={() => openGeneralWhatsApp(`Inquiry regarding service search: ${searchQuery}`)}
+            />
+          ) : viewMode === 'grid' ? (
+            /* GRID VIEW WITH DISTINCT VISUAL HIERARCHY */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredServices.map(service => {
+                const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
+                const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
+                const bannerImg = service.bannerImage || service.imageUrl || service.image;
 
-              return (
-                <div
-                  key={service.id}
-                  className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col justify-between group"
-                >
-                  <div>
-                    {/* Banner Image with Clean Fallback */}
+                return (
+                  <CivicCard
+                    key={service.id}
+                    variant="default"
+                    hoverEffect
+                    className="flex flex-col justify-between group"
+                  >
+                    <div>
+                      {/* Banner Image with Clean Fallback */}
+                      {bannerImg ? (
+                        <div 
+                          onClick={() => handleOpenDetails(service.id)}
+                          className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-slate-100"
+                        >
+                          <img
+                            src={bannerImg}
+                            alt={service.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                            {service.featured && (
+                              <span className="bg-blue-600/95 backdrop-blur-xs text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md shadow-xs">
+                                Featured
+                              </span>
+                            )}
+                            {service.popular && (
+                              <span className="bg-amber-500/95 backdrop-blur-xs text-white text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md shadow-xs">
+                                Popular
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div 
+                          onClick={() => handleOpenDetails(service.id)}
+                          className="w-full h-24 bg-gradient-to-r from-blue-900 via-[#0F4C81] to-slate-900 flex items-center justify-between px-4 text-white cursor-pointer border-b border-slate-100"
+                        >
+                          <div className="flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-cyan-300" />
+                            <span className="text-[11px] font-bold text-slate-100">Official Desk Service</span>
+                          </div>
+                          {service.featured && (
+                            <span className="bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded">
+                              Featured
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="p-5 sm:p-6 space-y-3">
+                        {/* Badge Row */}
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                            {catName}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{service.processingTime || '3–5 Working Days'}</span>
+                          </span>
+                        </div>
+
+                        {/* Title */}
+                        <h3
+                          onClick={() => handleOpenDetails(service.id)}
+                          className="font-black text-base text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug m-0"
+                          title={service.title}
+                        >
+                          {service.title}
+                        </h3>
+
+                        {/* Short Description */}
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal m-0">
+                          {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
+                        </p>
+
+                        {/* Document Checklist Preview */}
+                        <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                          <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                            Required Documents:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {(service.requiredDocuments || []).slice(0, 2).map((doc, dIdx) => (
+                              <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
+                                ✓ {doc}
+                              </span>
+                            ))}
+                            {(service.requiredDocuments || []).length > 2 && (
+                              <span className="text-[10px] text-slate-500 px-1 py-0.5 font-bold">
+                                +{(service.requiredDocuments || []).length - 2} more
+                              </span>
+                            )}
+                            {(!service.requiredDocuments || service.requiredDocuments.length === 0) && (
+                              <span className="text-[10px] text-slate-400 italic">Pre-requisites guided on desk</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pricing & Actions Footer */}
+                    <div className="px-5 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-3">
+                      <div>
+                        <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
+                          Starting Fee
+                        </span>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums notranslate" translate="no">
+                            ₹{totalFee}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetails(service.id)}
+                          className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs px-3 py-1.5 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
+                        >
+                          Details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openWhatsAppForService(service, catName)}
+                          className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 btn-glow-emerald focus-civic"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" /> Apply
+                        </button>
+                      </div>
+                    </div>
+
+                  </CivicCard>
+                );
+              })}
+            </div>
+          ) : (
+            /* LIST VIEW WITH HORIZONTAL RESPONSIVE ROWS */
+            <div className="space-y-4">
+              {filteredServices.map(service => {
+                const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
+                const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
+                const bannerImg = service.bannerImage || service.imageUrl || service.image;
+
+                return (
+                  <CivicCard
+                    key={service.id}
+                    variant="default"
+                    hoverEffect
+                    className="flex flex-col sm:flex-row group"
+                  >
+                    {/* Left Banner Thumbnail */}
                     {bannerImg ? (
-                      <div 
+                      <div
                         onClick={() => handleOpenDetails(service.id)}
-                        className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-slate-100"
+                        className="sm:w-60 h-48 sm:h-auto min-h-[140px] relative overflow-hidden bg-slate-100 cursor-pointer shrink-0"
                       >
                         <img
                           src={bannerImg}
@@ -323,7 +452,7 @@ export default function ServicesView({
                             (e.currentTarget as HTMLElement).style.display = 'none';
                           }}
                         />
-                        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+                        <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                           {service.featured && (
                             <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
                               Featured
@@ -337,254 +466,120 @@ export default function ServicesView({
                         </div>
                       </div>
                     ) : (
-                      <div 
+                      <div
                         onClick={() => handleOpenDetails(service.id)}
-                        className="w-full h-24 bg-gradient-to-r from-blue-900 via-[#0F4C81] to-slate-900 flex items-center justify-between px-4 text-white cursor-pointer border-b border-slate-100"
+                        className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-blue-900 via-[#0F4C81] to-slate-900 p-4 flex flex-col justify-between text-white shrink-0 cursor-pointer"
                       >
-                        <div className="flex items-center gap-2">
-                          <Layers className="w-5 h-5 text-cyan-300" />
-                          <span className="text-[11px] font-bold text-slate-100">Official Desk Service</span>
-                        </div>
-                        {service.featured && (
-                          <span className="bg-white/20 text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded">
-                            Featured
-                          </span>
-                        )}
+                        <Layers className="w-6 h-6 text-cyan-300" />
+                        <span className="text-[10px] font-bold text-slate-200">Official Service Desk</span>
                       </div>
                     )}
 
-                    <div className="p-5 space-y-3">
-                      {/* Badge Row */}
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
-                          {catName}
-                        </span>
-                        <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
-                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{service.processingTime || '3–5 Working Days'}</span>
-                        </span>
-                      </div>
+                    {/* Middle Content */}
+                    <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                            {catName}
+                          </span>
+                          <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
+                            <Clock className="w-3 h-3 text-slate-400 shrink-0" />
+                            <span>{service.processingTime || '3–5 Working Days'}</span>
+                          </span>
+                        </div>
 
-                      {/* Title */}
-                      <h3
-                        onClick={() => handleOpenDetails(service.id)}
-                        className="font-bold text-base text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug"
-                        title={service.title}
-                      >
-                        {service.title}
-                      </h3>
+                        <h3
+                          onClick={() => handleOpenDetails(service.id)}
+                          className="font-black text-base sm:text-lg text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug m-0"
+                        >
+                          {service.title}
+                        </h3>
 
-                      {/* Short Description */}
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
-                        {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
-                      </p>
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed m-0 font-normal">
+                          {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
+                        </p>
 
-                      {/* Document Checklist Preview */}
-                      <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                        <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                          Required Documents:
-                        </span>
-                        <div className="flex flex-wrap gap-1">
-                          {(service.requiredDocuments || []).slice(0, 2).map((doc, dIdx) => (
+                        {/* Required Documents Checklist */}
+                        <div className="flex flex-wrap items-center gap-1 pt-1">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Docs:</span>
+                          {(service.requiredDocuments || []).slice(0, 3).map((doc, dIdx) => (
                             <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
                               ✓ {doc}
                             </span>
                           ))}
-                          {(service.requiredDocuments || []).length > 2 && (
-                            <span className="text-[10px] text-slate-500 px-1 py-0.5 font-bold">
-                              +{(service.requiredDocuments || []).length - 2} more
+                          {(service.requiredDocuments || []).length > 3 && (
+                            <span className="text-[10px] text-slate-500 font-bold">
+                              +{(service.requiredDocuments || []).length - 3} more
                             </span>
                           )}
-                          {(!service.requiredDocuments || service.requiredDocuments.length === 0) && (
-                            <span className="text-[10px] text-slate-400 italic">Pre-requisites guided on desk</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Pricing & Actions Footer */}
-                  <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3">
-                    <div>
-                      <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
-                        Starting Fee
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-base font-black text-slate-900 tabular-nums notranslate" translate="no">
-                          ₹{totalFee}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => handleOpenDetails(service.id)}
-                        className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs px-3 py-1.5 rounded-xl transition cursor-pointer shadow-2xs"
-                      >
-                        Details
-                      </button>
-                      <button
-                        onClick={() => openWhatsAppForService(service, catName)}
-                        className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" /> Apply
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          /* LIST VIEW WITH HORIZONTAL RESPONSIVE ROWS (Requirement 3) */
-          <div className="space-y-4">
-            {filteredServices.map(service => {
-              const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
-              const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
-              const bannerImg = service.bannerImage || service.imageUrl || service.image;
-
-              return (
-                <div
-                  key={service.id}
-                  className="bg-white border border-slate-200/90 rounded-2xl overflow-hidden shadow-2xs hover:shadow-md hover:border-blue-200 transition-all duration-200 flex flex-col sm:flex-row group"
-                >
-                  {/* Left Banner Thumbnail */}
-                  {bannerImg ? (
-                    <div
-                      onClick={() => handleOpenDetails(service.id)}
-                      className="sm:w-60 h-48 sm:h-auto min-h-[140px] relative overflow-hidden bg-slate-100 cursor-pointer shrink-0"
-                    >
-                      <img
-                        src={bannerImg}
-                        alt={service.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                        onError={(e) => {
-                          (e.currentTarget as HTMLElement).style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
-                        {service.featured && (
-                          <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
-                            Featured
-                          </span>
-                        )}
-                        {service.popular && (
-                          <span className="bg-amber-500/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
-                            Popular
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      onClick={() => handleOpenDetails(service.id)}
-                      className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-blue-900 via-[#0F4C81] to-slate-900 p-4 flex flex-col justify-between text-white shrink-0 cursor-pointer"
-                    >
-                      <Layers className="w-6 h-6 text-cyan-300" />
-                      <span className="text-[10px] font-bold text-slate-200">Official Service Desk</span>
-                    </div>
-                  )}
-
-                  {/* Middle Content */}
-                  <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
-                    <div className="space-y-2">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
-                          {catName}
-                        </span>
-                        <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
-                          <Clock className="w-3 h-3 text-slate-400 shrink-0" />
-                          <span>{service.processingTime || '3–5 Working Days'}</span>
-                        </span>
-                      </div>
-
-                      <h3
-                        onClick={() => handleOpenDetails(service.id)}
-                        className="font-bold text-base sm:text-lg text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug"
-                      >
-                        {service.title}
-                      </h3>
-
-                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                        {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
-                      </p>
-
-                      {/* Required Documents Checklist */}
-                      <div className="flex flex-wrap items-center gap-1 pt-1">
-                        <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Docs:</span>
-                        {(service.requiredDocuments || []).slice(0, 3).map((doc, dIdx) => (
-                          <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
-                            ✓ {doc}
-                          </span>
-                        ))}
-                        {(service.requiredDocuments || []).length > 3 && (
-                          <span className="text-[10px] text-slate-500 font-bold">
-                            +{(service.requiredDocuments || []).length - 3} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Bottom Pricing & Actions */}
-                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                      <div>
-                        <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Starting Fee</span>
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-lg font-black text-slate-900 tabular-nums">₹{totalFee}</span>
-                          <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenDetails(service.id)}
-                          className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-2xs"
-                        >
-                          View Details
-                        </button>
-                        <button
-                          onClick={() => openWhatsAppForService(service, catName)}
-                          className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95"
-                        >
-                          <MessageSquare className="w-3.5 h-3.5" /> Apply on WhatsApp
-                        </button>
+                      {/* Bottom Pricing & Actions */}
+                      <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Starting Fee</span>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-lg font-black text-slate-900 tabular-nums">₹{totalFee}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenDetails(service.id)}
+                            className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
+                          >
+                            View Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openWhatsAppForService(service, catName)}
+                            className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95 btn-glow-emerald focus-civic"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5" /> Apply on WhatsApp
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  </CivicCard>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-        {/* 5. BOTTOM HELP & AI BANNER */}
-        <div className="mt-12 bg-gradient-to-br from-[#0A2540] via-[#0F4C81] to-[#0A2540] text-white rounded-3xl p-6 sm:p-8 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 border border-blue-900/40">
+        {/* ==================================================
+            SECTION 5: BOTTOM HELP & AI BANNER
+            ================================================== */}
+        <div className="mt-12 bg-gradient-to-br from-[#0A2540] via-[#0F4C81] to-[#0A2540] text-white rounded-3xl p-6 sm:p-8 shadow-md flex flex-col md:flex-row items-center justify-between gap-6 border border-blue-900/40">
           <div className="space-y-2 text-center md:text-left">
             <div className="inline-flex items-center gap-1.5 bg-white/10 text-cyan-300 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-white/15">
               <Sparkles className="w-3.5 h-3.5 text-cyan-300" /> Custom Certificate Inquiry
             </div>
             <h3 className="text-xl sm:text-2xl font-black text-white m-0">Can't Find the Service You Need?</h3>
-            <p className="text-xs text-blue-100/90 max-w-xl m-0 font-normal">
+            <p className="text-xs sm:text-sm text-blue-100/90 max-w-xl m-0 font-normal leading-relaxed">
               Our officers handle hundreds of specialized municipal, state, and central government filings. Connect directly with our desk team for instant personalized guidance.
             </p>
           </div>
-          <div className="flex flex-wrap gap-3 shrink-0">
+          <div className="flex flex-wrap items-center justify-center gap-3 shrink-0">
             <button
-              onClick={() => openGeneralWhatsApp('Hello EasyDesk, I need help with a custom digital service that is not in the catalog.')}
-              className="bg-[#059669] hover:bg-[#047857] text-white font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-sm"
+              type="button"
+              onClick={() => openGeneralWhatsApp('Hello My EasyDesk, I need help with a custom digital service that is not in the catalog.')}
+              className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 shadow-xs active:scale-95 btn-glow-emerald focus-civic"
             >
               <MessageSquare className="w-4 h-4" /> WhatsApp Officer
             </button>
             <button
+              type="button"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('easydesk-ai-contextual-help', {
                   detail: { customPrompt: "Hello! I need guidance on finding a specific certificate service.", autoSend: true }
                 }));
               }}
-              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2"
+              className="bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl transition cursor-pointer flex items-center gap-2 focus-civic"
             >
               <Bot className="w-4 h-4 text-cyan-300" /> Consult AI Desk
             </button>
