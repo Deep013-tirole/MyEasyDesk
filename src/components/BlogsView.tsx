@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Search, BookOpen, Layers, MessageSquare, ArrowRight,
   ShieldCheck, HelpCircle, X, Sparkles, Filter, Newspaper,
@@ -48,17 +48,24 @@ export default function BlogsView({
     return blogs.find(b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId) || null;
   });
 
-  // Revalidate authoritative blogs on mount
+  // Revalidate authoritative blogs once on mount
   useEffect(() => {
     refetchBlogs?.();
-  }, [refetchBlogs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const selectedBlogRef = useRef(selectedBlog);
+  useEffect(() => {
+    selectedBlogRef.current = selectedBlog;
+  }, [selectedBlog]);
 
   // Real-time synchronization for blog updates / deletions
   useEffect(() => {
     const handleUpdate = (e: any) => {
       refetchBlogs?.();
-      if (e.detail?.action === 'delete' && selectedBlog) {
-        if (selectedBlog.id === e.detail.id || selectedBlog.slug === e.detail.id) {
+      if (e.detail?.action === 'delete') {
+        const current = selectedBlogRef.current;
+        if (current && (current.id === e.detail.id || current.slug === e.detail.id)) {
           setSelectedBlog(null);
           onCloseBlog?.();
         }
@@ -66,12 +73,12 @@ export default function BlogsView({
     };
     window.addEventListener('easydesk_blogs_updated', handleUpdate);
     return () => window.removeEventListener('easydesk_blogs_updated', handleUpdate);
-  }, [selectedBlog, onCloseBlog, refetchBlogs]);
+  }, [onCloseBlog, refetchBlogs]);
 
   // Re-sync if selectedBlogId changes from outside (e.g. popstate / Back button or initial async load)
   useEffect(() => {
     if (!selectedBlogId) {
-      setSelectedBlog(null);
+      setSelectedBlog(prev => (prev !== null ? null : prev));
       return;
     }
 
@@ -82,37 +89,55 @@ export default function BlogsView({
     if (localMatch) {
       const st = String(localMatch.status || 'published').toLowerCase().trim();
       if (st === 'published' || st === 'active') {
-        setSelectedBlog(localMatch);
+        setSelectedBlog(prev => {
+          if (
+            prev &&
+            prev.id === localMatch.id &&
+            prev.slug === localMatch.slug &&
+            (prev as any).updatedAt === (localMatch as any).updatedAt
+          ) {
+            return prev;
+          }
+          return localMatch;
+        });
       } else {
-        setSelectedBlog(null);
+        setSelectedBlog(prev => (prev !== null ? null : prev));
       }
     } else {
       // If not yet in local blogs, query live API to ensure fresh routing
       let isMounted = true;
       fetch(`/api/blogs/${encodeURIComponent(selectedBlogId)}?_t=${Date.now()}`)
-        .then(res => res.ok ? res.json() : null)
+        .then(res => (res.ok ? res.json() : null))
         .then(liveBlog => {
           if (!isMounted) return;
           if (liveBlog && liveBlog.id) {
             const st = String(liveBlog.status || 'published').toLowerCase().trim();
             if (st === 'published' || st === 'active') {
-              setSelectedBlog(liveBlog);
-              if (updateBlogs) {
-                updateBlogs([liveBlog, ...blogs.filter(b => b.id !== liveBlog.id)]);
-              }
+              setSelectedBlog(prev => {
+                if (
+                  prev &&
+                  prev.id === liveBlog.id &&
+                  (prev as any).updatedAt === (liveBlog as any).updatedAt
+                ) {
+                  return prev;
+                }
+                return liveBlog;
+              });
             } else {
-              setSelectedBlog(null);
+              setSelectedBlog(prev => (prev !== null ? null : prev));
             }
           } else {
-            setSelectedBlog(null);
+            setSelectedBlog(prev => (prev !== null ? null : prev));
           }
         })
         .catch(() => {
-          if (isMounted) setSelectedBlog(null);
+          if (isMounted) setSelectedBlog(prev => (prev !== null ? null : prev));
         });
-      return () => { isMounted = false; };
+      return () => {
+        isMounted = false;
+      };
     }
-  }, [selectedBlogId, blogs, updateBlogs]);
+  }, [selectedBlogId, blogs]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -225,17 +250,10 @@ export default function BlogsView({
   }, [filteredAndSortedBlogs, featuredBlog]);
 
   const handleSelectBlog = (blog: Blog) => {
-    // Increment view count locally
-    const updatedBlog = { ...blog, views: (blog.views || 0) + 1 };
-    setSelectedBlog(updatedBlog);
+    setSelectedBlog(blog);
     const identifier = blog.slug || blog.id;
     if (onSelectBlogId) {
       onSelectBlogId(identifier);
-    }
-
-    if (updateBlogs) {
-      const updatedBlogs = blogs.map(b => b.id === blog.id ? updatedBlog : b);
-      updateBlogs(updatedBlogs);
     }
   };
 

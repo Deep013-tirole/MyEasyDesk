@@ -643,6 +643,7 @@ export interface Blog {
   focusKeywords?: string;
   commentsEnabled?: boolean;
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Review {

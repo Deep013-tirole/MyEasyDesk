@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ServiceCategory, BlogCategory, Service, Blog, Review } from '../types';
 import {
   CATALOG_CACHE_KEYS,
@@ -514,13 +514,39 @@ export function useCatalog(): UseCatalogReturn {
     });
   }, []);
 
+function areBlogsEqual(a: Blog[], b: Blog[]): boolean {
+  if (a === b) return true;
+  if (!a || !b || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    const itemA = a[i];
+    const itemB = b[i];
+    if (
+      itemA.id !== itemB.id ||
+      itemA.slug !== itemB.slug ||
+      itemA.title !== itemB.title ||
+      itemA.status !== itemB.status ||
+      (itemA as any).updatedAt !== (itemB as any).updatedAt ||
+      itemA.views !== itemB.views ||
+      itemA.comments?.length !== itemB.comments?.length
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+  const blogCategoriesRef = useRef(blogCategories);
+  useEffect(() => {
+    blogCategoriesRef.current = blogCategories;
+  }, [blogCategories]);
+
   const updateBlogs = useCallback((bList: Blog[]) => {
-    setBlogCategoriesState(currentBlogCats => {
-      const validatedBlogs = validateAndNormalizeBlogs(bList, currentBlogCats);
-      setBlogsState(validatedBlogs);
-      setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, validatedBlogs);
-      return currentBlogCats;
+    const validatedBlogs = validateAndNormalizeBlogs(bList, blogCategoriesRef.current);
+    setBlogsState(prev => {
+      if (areBlogsEqual(prev, validatedBlogs)) return prev;
+      return validatedBlogs;
     });
+    setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, validatedBlogs);
   }, []);
 
   const updateReviews = useCallback((rList: Review[]) => {
@@ -546,15 +572,18 @@ export function useCatalog(): UseCatalogReturn {
   const refetchBlogs = useCallback(async (): Promise<Blog[]> => {
     try {
       const liveBlogs = await fetchAuthoritativeBlogs();
-      const validated = validateAndNormalizeBlogs(liveBlogs, blogCategories);
-      setBlogsState(validated);
+      const validated = validateAndNormalizeBlogs(liveBlogs, blogCategoriesRef.current);
+      setBlogsState(prev => {
+        if (areBlogsEqual(prev, validated)) return prev;
+        return validated;
+      });
       setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, validated);
       return validated;
     } catch (err) {
       console.warn('[useCatalog] Failed to refetch blogs:', err);
       return getCachedCatalog<Blog[]>(CATALOG_CACHE_KEYS.BLOGS, []);
     }
-  }, [blogCategories]);
+  }, []);
 
   // Real-time synchronization across components and browser tabs
   useEffect(() => {
@@ -566,14 +595,16 @@ export function useCatalog(): UseCatalogReturn {
           const updated = exists
             ? prev.map(b => (b.id === incoming.id || (b.slug && incoming.slug && b.slug === incoming.slug)) ? incoming : b)
             : [incoming, ...prev];
-          const valid = validateAndNormalizeBlogs(updated, blogCategories);
+          const valid = validateAndNormalizeBlogs(updated, blogCategoriesRef.current);
+          if (areBlogsEqual(prev, valid)) return prev;
           setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, valid);
           return valid;
         });
       } else if (e.detail?.action === 'delete' && e.detail?.id) {
         setBlogsState(prev => {
           const filtered = prev.filter(b => b.id !== e.detail.id && b.slug !== e.detail.id);
-          const valid = validateAndNormalizeBlogs(filtered, blogCategories);
+          const valid = validateAndNormalizeBlogs(filtered, blogCategoriesRef.current);
+          if (areBlogsEqual(prev, valid)) return prev;
           setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, valid);
           return valid;
         });
@@ -590,7 +621,11 @@ export function useCatalog(): UseCatalogReturn {
           try {
             const parsed = JSON.parse(e.newValue);
             if (Array.isArray(parsed)) {
-              setBlogsState(validateAndNormalizeBlogs(parsed, blogCategories));
+              const valid = validateAndNormalizeBlogs(parsed, blogCategoriesRef.current);
+              setBlogsState(prev => {
+                if (areBlogsEqual(prev, valid)) return prev;
+                return valid;
+              });
             } else {
               refetchBlogs();
             }
@@ -608,7 +643,7 @@ export function useCatalog(): UseCatalogReturn {
       window.removeEventListener('easydesk_blogs_updated', handleBlogUpdate);
       window.removeEventListener('storage', handleStorage);
     };
-  }, [blogCategories, refetchBlogs]);
+  }, [refetchBlogs]);
 
   useEffect(() => {
     refetchAll();

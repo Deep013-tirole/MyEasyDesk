@@ -48,18 +48,23 @@ export default function BlogDetailView({
 
   // Synchronize if prop blog changes
   useEffect(() => {
-    setCurrentBlog(blog);
+    setCurrentBlog(prev => {
+      if (prev.id === blog.id && prev.slug === blog.slug && prev.updatedAt === blog.updatedAt) {
+        return prev;
+      }
+      return blog;
+    });
     setImageError(false);
     setIsDeletedOrUnavailable(false);
   }, [blog]);
 
   // Authoritative API live verification on mount / change to prevent displaying stale deleted articles
+  const blogIdentifier = blog.slug || blog.id;
   useEffect(() => {
     let isMounted = true;
-    const identifier = blog.slug || blog.id;
-    if (!identifier) return;
+    if (!blogIdentifier) return;
 
-    fetch(`/api/blogs/${encodeURIComponent(identifier)}?_t=${Date.now()}`, {
+    fetch(`/api/blogs/${encodeURIComponent(blogIdentifier)}?_t=${Date.now()}`, {
       cache: 'no-store',
       headers: { 'Cache-Control': 'no-cache, no-store' }
     })
@@ -75,10 +80,18 @@ export default function BlogDetailView({
         if (!isMounted || !liveData) return;
         const st = String(liveData.status || 'published').toLowerCase().trim();
         if (st === 'published' || st === 'active') {
-          setCurrentBlog(liveData);
-          if (updateBlogs) {
-            updateBlogs(blogs.map(b => b.id === liveData.id ? liveData : b));
-          }
+          setCurrentBlog(prev => {
+            if (
+              prev.id === liveData.id &&
+              prev.slug === liveData.slug &&
+              prev.title === liveData.title &&
+              prev.content === liveData.content &&
+              prev.updatedAt === liveData.updatedAt
+            ) {
+              return prev;
+            }
+            return liveData;
+          });
         } else {
           setIsDeletedOrUnavailable(true);
         }
@@ -90,7 +103,7 @@ export default function BlogDetailView({
     return () => {
       isMounted = false;
     };
-  }, [blog.id, blog.slug, updateBlogs, blogs]);
+  }, [blogIdentifier]);
 
   // Category resolution
   const matchedCat = blogCategories.find(
@@ -250,7 +263,7 @@ export default function BlogDetailView({
   const seoDesc = currentBlog.seoDescription || currentBlog.shortDescription || currentBlog.excerpt || currentBlog.title;
 
   return (
-    <article id="blog-detail-view" className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-slate-900 animate-in fade-in duration-150 w-full max-w-full overflow-x-hidden selection:bg-blue-100 selection:text-[#0F4C81]">
+    <article id="blog-detail-view" className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-slate-900 w-full max-w-full overflow-x-hidden selection:bg-blue-100 selection:text-[#0F4C81]">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
