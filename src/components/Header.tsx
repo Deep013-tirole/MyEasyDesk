@@ -98,7 +98,7 @@ export default function Header({
   ];
 
   return (
-    <header id="easydesk-header" className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 font-sans text-slate-900 w-full max-w-full">
+    <header id="easydesk-header" className="sticky top-0 z-40 bg-[#F4F8FC]/95 backdrop-blur-md border-b border-[#D8E6F5] font-sans text-[#0B192C] w-full max-w-full shadow-[0_1px_4px_rgba(11,25,44,0.04)]">
       <div className="portal-container w-full max-w-full">
         <div className="flex justify-between items-center h-16 w-full min-w-0 gap-2 sm:gap-3">
 
@@ -126,8 +126,8 @@ export default function Header({
                   onClick={link.action}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer focus-civic ${
                     isActive
-                      ? 'bg-blue-50 text-[#0F4C81] border border-blue-200/60 shadow-2xs'
-                      : 'text-slate-600 hover:text-slate-950 hover:bg-slate-50'
+                      ? 'bg-[#0062FF] text-white shadow-xs'
+                      : 'text-[#334E68] hover:text-[#0062FF] hover:bg-blue-100/60'
                   }`}
                   aria-current={isActive ? 'page' : undefined}
                 >
@@ -142,8 +142,8 @@ export default function Header({
                 onClick={() => setView('admin')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer focus-civic ${
                   currentView === 'admin'
-                    ? 'bg-blue-100 text-[#0F4C81]'
-                    : 'text-[#0F4C81] hover:bg-blue-50'
+                    ? 'bg-[#0062FF] text-white shadow-xs'
+                    : 'text-[#0062FF] hover:bg-blue-100/60'
                 }`}
               >
                 {t('nav.admin', 'Admin')}
@@ -165,13 +165,13 @@ export default function Header({
               type="button"
               id="btn-header-search"
               onClick={handleTriggerSearch}
-              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-500 text-xs transition cursor-pointer focus-civic"
+              className="flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 rounded-xl border border-[#D8E6F5] bg-white hover:bg-blue-50/70 text-slate-600 text-xs transition cursor-pointer focus-civic shadow-2xs"
               title="Search services and guides (Ctrl + K)"
               aria-label="Search"
             >
               <Search className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden lg:inline text-[11px] font-medium text-slate-600">Search</span>
-              <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-white border border-slate-200 text-slate-400">⌘K</kbd>
+              <span className="hidden lg:inline text-[11px] font-semibold text-[#334E68]">Search</span>
+              <kbd className="hidden lg:inline text-[10px] font-mono px-1 py-0.5 rounded bg-slate-50 border border-slate-200 text-slate-400">⌘K</kbd>
             </button>
 
             {/* Language Switcher Dropdown */}
@@ -216,9 +216,9 @@ export default function Header({
 
       {/* Mobile Drawer Navigation (Extended Menu) */}
       {mobileMenuOpen && (
-        <div className="xl:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-1 animate-in slide-in-from-top duration-150">
-          <div className="pb-2 border-b border-slate-100 mb-2">
-            <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
+        <div className="xl:hidden bg-[#F4F8FC] border-b border-[#D8E6F5] px-4 pt-3 pb-6 space-y-1 animate-in slide-in-from-top duration-150 shadow-lg">
+          <div className="pb-2 border-b border-[#D8E6F5] mb-2">
+            <span className="text-[10px] font-extrabold uppercase text-[#627D98] tracking-wider">
               Navigation
             </span>
           </div>
@@ -232,8 +232,8 @@ export default function Header({
                   link.action();
                   setMobileMenuOpen(false);
                 }}
-                className={`w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold transition ${
-                  isActive ? 'bg-blue-50 text-[#0F4C81] border border-blue-200/60' : 'text-slate-700 hover:bg-slate-50'
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold transition ${
+                  isActive ? 'bg-[#0062FF] text-white shadow-xs' : 'text-[#334E68] hover:bg-blue-100/60'
                 }`}
               >
                 {link.label}
@@ -241,13 +241,13 @@ export default function Header({
             );
           })}
 
-          <div className="pt-3 border-t border-slate-100 mt-2 space-y-2">
+          <div className="pt-3 border-t border-[#D8E6F5] mt-2 space-y-2">
             <button
               onClick={() => {
                 openGeneralWhatsApp('Hello My EasyDesk, I need help with an application.');
                 setMobileMenuOpen(false);
               }}
-              className="w-full flex items-center justify-center gap-2 bg-[#10B981] text-white py-2.5 rounded-xl text-xs font-bold shadow-xs"
+              className="w-full flex items-center justify-center gap-2 bg-[#10B981] hover:bg-[#0e9f6e] text-white py-2.5 rounded-xl text-xs font-bold shadow-xs transition active:scale-95"
             >
               <MessageSquare className="w-4 h-4" />
               <span>Connect on WhatsApp Desk</span>
@@ -256,14 +256,14 @@ export default function Header({
             {['ADMIN', 'SUPER_ADMIN', 'STAFF', 'OPERATOR'].includes(currentUser?.role as string) ? (
               <button
                 onClick={() => { setView('admin'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3.5 py-2 rounded-xl text-xs font-bold bg-blue-50 text-[#0F4C81]"
+                className="w-full text-left px-3.5 py-2.5 rounded-xl text-xs font-bold bg-blue-100/80 text-[#0062FF]"
               >
                 Admin Control Dashboard
               </button>
             ) : (
               <button
                 onClick={() => { setView('admin-login'); setMobileMenuOpen(false); }}
-                className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-500"
+                className="w-full text-left px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-slate-800"
               >
                 Officer / Admin Access
               </button>

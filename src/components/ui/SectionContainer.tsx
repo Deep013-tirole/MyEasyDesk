@@ -19,11 +19,11 @@ export interface SectionContainerProps {
 }
 
 const variantStyles: Record<SectionBackgroundVariant, string> = {
-  default: 'bg-white dark:bg-[#151E2E] text-slate-900 dark:text-slate-100',
-  subtle: 'bg-slate-50/90 dark:bg-[#0E1524] text-slate-900 dark:text-slate-100 border-y border-slate-200/80 dark:border-slate-800',
-  muted: 'bg-slate-100/80 dark:bg-[#131B2E] text-slate-900 dark:text-slate-100 border-y border-slate-200/90 dark:border-slate-800',
-  'brand-tint': 'bg-gradient-to-b from-blue-50/60 via-slate-50/40 to-white dark:from-[#0c1a2f]/60 dark:to-[#0B0F19] text-slate-900 dark:text-slate-100 border-y border-blue-100/70 dark:border-slate-800/60',
-  dark: 'bg-[#0A2540] text-white border-y border-slate-800'
+  default: 'bg-[#F4F8FC] dark:bg-[#151E2E] text-slate-900 dark:text-slate-100',
+  subtle: 'bg-[#EBF3FC]/60 dark:bg-[#0E1524] text-slate-900 dark:text-slate-100 border-y border-[#D8E6F5] dark:border-slate-800',
+  muted: 'bg-[#EBF2FA] dark:bg-[#131B2E] text-slate-900 dark:text-slate-100 border-y border-[#D8E6F5] dark:border-slate-800',
+  'brand-tint': 'bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] dark:from-[#0c1a2f]/60 dark:to-[#0B0F19] text-slate-900 dark:text-slate-100 border-y border-[#D3E3F5] dark:border-slate-800/60',
+  dark: 'bg-[#0B192C] text-white border-y border-slate-800'
 };
 
 const sizeStyles: Record<SectionSize, string> = {

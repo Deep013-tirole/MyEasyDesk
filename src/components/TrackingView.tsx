@@ -380,17 +380,17 @@ export default function TrackingView() {
         <div>
           <TrustBadge title="Live Order Tracking & Status Check" variant="pill" />
         </div>
-        <h1 className="text-2xl sm:text-3xl font-black mt-2 text-slate-900">Track Digital Certificate File Status</h1>
-        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-xl font-normal">
+        <h1 className="text-2xl sm:text-3xl font-black mt-2 text-[#0B192C]">Track Digital Certificate File Status</h1>
+        <p className="text-xs text-[#334E68] mt-1.5 leading-relaxed max-w-xl font-normal">
           Enter your unique Order Reference ID (e.g. ORD-10021) and registered mobile number to verify document verification logs, government clearance schedules, rate completed services, and download receipts.
         </p>
       </div>
 
       {/* Tracking Form card */}
-      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm mb-8 print:hidden">
+      <div className="bg-gradient-to-r from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] rounded-3xl p-6 shadow-xs mb-8 print:hidden">
         <form onSubmit={handleTrack} className="grid sm:grid-cols-3 gap-4 items-end">
           <div>
-            <label htmlFor="track-order-id" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Order ID *</label>
+            <label htmlFor="track-order-id" className="text-[10px] font-bold text-[#627D98] uppercase tracking-wider">Order ID *</label>
             <input
               id="track-order-id"
               name="orderId"
@@ -399,13 +399,13 @@ export default function TrackingView() {
               placeholder="e.g. ORD-10021"
               value={orderId}
               onChange={(e) => setOrderId(e.target.value)}
-              className="mt-1.5 w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 font-mono notranslate"
+              className="mt-1.5 w-full border border-[#CBDFF7] rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#0062FF] focus:ring-2 focus:ring-blue-100 bg-white font-mono notranslate shadow-2xs"
               translate="no"
             />
           </div>
 
           <div>
-            <label htmlFor="track-mobile-number" className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Registered Mobile Number *</label>
+            <label htmlFor="track-mobile-number" className="text-[10px] font-bold text-[#627D98] uppercase tracking-wider">Registered Mobile Number *</label>
             <input
               id="track-mobile-number"
               name="mobile"
@@ -414,7 +414,7 @@ export default function TrackingView() {
               placeholder="10-digit mobile number"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              className="mt-1.5 w-full border border-slate-200 rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 notranslate"
+              className="mt-1.5 w-full border border-[#CBDFF7] rounded-2xl px-4 py-2.5 text-xs focus:outline-none focus:border-[#0062FF] focus:ring-2 focus:ring-blue-100 bg-white notranslate shadow-2xs"
               translate="no"
             />
           </div>
@@ -423,7 +423,7 @@ export default function TrackingView() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-2xl transition cursor-pointer shadow-md shadow-blue-500/10 flex items-center justify-center gap-2"
+              className="w-full bg-[#0062FF] hover:bg-blue-700 text-white font-bold text-xs py-3 rounded-2xl transition cursor-pointer shadow-md shadow-blue-500/10 flex items-center justify-center gap-2"
             >
               {loading ? (
                 <span className="flex items-center gap-1.5">

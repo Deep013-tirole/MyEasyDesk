@@ -88,8 +88,52 @@ export default function ServicesView({
     setSelectedServiceId(id);
   };
 
+  const getCategoryVisuals = (categoryName: string) => {
+    const name = (categoryName || '').toLowerCase();
+    if (name.includes('government') || name.includes('gov') || name.includes('pan') || name.includes('aadhaar')) {
+      return {
+        stripe: 'bg-blue-600',
+        badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+        bannerFallback: 'from-blue-900 via-[#0B2545] to-slate-900',
+      };
+    }
+    if (name.includes('education') || name.includes('scholarship') || name.includes('student') || name.includes('admission')) {
+      return {
+        stripe: 'bg-indigo-600',
+        badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        bannerFallback: 'from-indigo-900 via-blue-900 to-slate-900',
+      };
+    }
+    if (name.includes('business') || name.includes('gst') || name.includes('tax') || name.includes('msme') || name.includes('company')) {
+      return {
+        stripe: 'bg-teal-600',
+        badgeBg: 'bg-teal-50 text-teal-700 border-teal-200',
+        bannerFallback: 'from-teal-900 via-emerald-950 to-slate-900',
+      };
+    }
+    if (name.includes('typing') || name.includes('affidavit') || name.includes('notary') || name.includes('legal')) {
+      return {
+        stripe: 'bg-amber-600',
+        badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
+        bannerFallback: 'from-amber-950 via-slate-900 to-blue-950',
+      };
+    }
+    if (name.includes('transport') || name.includes('license') || name.includes('vehicle') || name.includes('rc') || name.includes('driving')) {
+      return {
+        stripe: 'bg-emerald-600',
+        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        bannerFallback: 'from-emerald-900 via-teal-900 to-slate-900',
+      };
+    }
+    return {
+      stripe: 'bg-[#0062FF]',
+      badgeBg: 'bg-blue-50 text-[#0062FF] border-blue-200',
+      bannerFallback: 'from-blue-900 via-[#0B2545] to-slate-900',
+    };
+  };
+
   return (
-    <div id="easydesk-services-view" className="font-sans text-slate-900 bg-[#F8FAFC] min-h-screen pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-services-view" className="font-sans text-[#0B192C] bg-[#F4F8FC] min-h-screen pb-20 w-full max-w-full overflow-x-hidden">
 
       {/* ==================================================
           SECTION 1: PAGE HEADER WITH BREADCRUMBS & BADGES
@@ -100,17 +144,17 @@ export default function ServicesView({
         ]}
         badge={{
           text: 'Verified Catalog & Filing Directory',
-          icon: <Shield className="w-3.5 h-3.5 text-[#0F4C81]" />
+          icon: <Shield className="w-3.5 h-3.5 text-[#0062FF]" />
         }}
         title="Digital Services Directory"
         description="Transparent statutory filings, certificates, and registrations. Connect directly with My EasyDesk document officers on WhatsApp for expedited pre-audit processing."
         actions={
-          <div className="flex flex-wrap gap-2 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3 py-1.5 rounded-xl font-bold shadow-2xs">
-              <ShieldCheck className="w-3.5 h-3.5 text-[#0F4C81]" />
+          <div className="flex flex-wrap gap-2 text-xs text-[#334E68]">
+            <span className="inline-flex items-center gap-1.5 bg-white border border-[#CBDFF7] px-3 py-1.5 rounded-xl font-bold shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-[#0062FF]" />
               <span>Pre-Audit Guarantee</span>
             </span>
-            <span className="inline-flex items-center gap-1.5 bg-white border border-slate-200/80 px-3 py-1.5 rounded-xl font-bold shadow-2xs">
+            <span className="inline-flex items-center gap-1.5 bg-white border border-[#CBDFF7] px-3 py-1.5 rounded-xl font-bold shadow-2xs">
               <Zap className="w-3.5 h-3.5 text-amber-500" />
               <span>Direct WhatsApp Desk</span>
             </span>
@@ -124,7 +168,7 @@ export default function ServicesView({
             SECTION 2: SEARCH & CATEGORY FILTER TOOLBAR
             ================================================== */}
         <section aria-label="Search and Category Filters">
-          <CivicCard variant="default" className="p-4 sm:p-5 space-y-4 shadow-sm">
+          <div className="bg-gradient-to-r from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs">
             {/* Top Row: Search Input + Sort Dropdown */}
             <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
 
@@ -136,7 +180,7 @@ export default function ServicesView({
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Search by service name, keyword, or document required..."
-                  className="w-full bg-slate-50 border border-slate-200/90 rounded-xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-[#0F4C81] focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400 font-medium transition"
+                  className="w-full bg-white border border-[#CBDFF7] rounded-xl pl-10 pr-9 py-2.5 text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-[#0062FF] focus:ring-2 focus:ring-blue-100 placeholder:text-slate-400 font-medium transition shadow-2xs"
                 />
                 {searchQuery && (
                   <button
@@ -151,13 +195,13 @@ export default function ServicesView({
 
               {/* Sort Dropdown */}
               <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-slate-500 font-bold whitespace-nowrap flex items-center gap-1">
+                <span className="text-xs text-[#334E68] font-bold whitespace-nowrap flex items-center gap-1">
                   <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" /> Sort by:
                 </span>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as any)}
-                  className="bg-slate-50 border border-slate-200/90 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0F4C81] cursor-pointer"
+                  className="bg-white border border-[#CBDFF7] rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-[#0062FF] cursor-pointer shadow-2xs"
                 >
                   <option value="recommended">Recommended</option>
                   <option value="price-asc">Price: Low to High</option>
@@ -169,14 +213,14 @@ export default function ServicesView({
             </div>
 
             {/* Bottom Row: Category Filter Pills */}
-            <div className="pt-3 border-t border-slate-100 flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+            <div className="pt-3 border-t border-[#D8E6F5] flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
               <button
                 type="button"
                 onClick={() => setSelectedCategory('all')}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 focus-civic ${
+                className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 focus-civic ${
                   selectedCategory === 'all'
-                    ? 'bg-[#0F4C81] text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                    ? 'bg-[#0062FF] text-white shadow-xs'
+                    : 'bg-white text-slate-700 hover:bg-blue-100/70 hover:text-[#0062FF] border border-[#CBDFF7]'
                 }`}
               >
                 All Services
@@ -186,28 +230,28 @@ export default function ServicesView({
                   key={cat.id}
                   type="button"
                   onClick={() => setSelectedCategory(cat.id)}
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 focus-civic ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap shrink-0 focus-civic ${
                     selectedCategory === cat.id
-                      ? 'bg-[#0F4C81] text-white shadow-xs'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                      ? 'bg-[#0062FF] text-white shadow-xs'
+                      : 'bg-white text-slate-700 hover:bg-blue-100/70 hover:text-[#0062FF] border border-[#CBDFF7]'
                   }`}
                 >
                   {cat.name}
                 </button>
               ))}
             </div>
-          </CivicCard>
+          </div>
         </section>
 
         {/* ==================================================
             SECTION 3: ACTIVE RESULTS CONTROLS
             ================================================== */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 font-medium px-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#334E68] font-medium px-1">
           <div className="flex items-center gap-2">
             <span>
-              Showing <strong className="text-slate-900 tabular-nums font-black">{filteredServices.length}</strong> of <span className="tabular-nums">{services.length}</span> services
+              Showing <strong className="text-[#0B192C] tabular-nums font-black">{filteredServices.length}</strong> of <span className="tabular-nums">{services.length}</span> services
               {selectedCategory !== 'all' && (
-                <span> in <strong className="text-[#0F4C81]">{categories.find(c => c.id === selectedCategory)?.name}</strong></span>
+                <span> in <strong className="text-[#0062FF]">{categories.find(c => c.id === selectedCategory)?.name}</strong></span>
               )}
             </span>
             {(searchQuery || selectedCategory !== 'all' || sortBy !== 'recommended') && (
@@ -217,7 +261,7 @@ export default function ServicesView({
                   setSelectedCategory('all');
                   setSortBy('recommended');
                 }}
-                className="text-[#0F4C81] hover:underline font-bold cursor-pointer ml-2"
+                className="text-[#0062FF] hover:underline font-bold cursor-pointer ml-2"
               >
                 Reset Filters
               </button>
@@ -225,12 +269,12 @@ export default function ServicesView({
           </div>
 
           {/* Grid vs List View Toggle */}
-          <div className="flex items-center bg-white p-0.5 rounded-xl border border-slate-200 shadow-2xs">
+          <div className="flex items-center bg-white p-0.5 rounded-xl border border-[#CBDFF7] shadow-2xs">
             <button
               type="button"
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
-                viewMode === 'grid' ? 'bg-blue-50 text-[#0F4C81]' : 'text-slate-500 hover:text-slate-900'
+                viewMode === 'grid' ? 'bg-blue-100/80 text-[#0062FF]' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="Grid View"
               aria-label="Grid View"
@@ -241,7 +285,7 @@ export default function ServicesView({
               type="button"
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-lg font-bold transition flex items-center gap-1 cursor-pointer ${
-                viewMode === 'list' ? 'bg-blue-50 text-[#0F4C81]' : 'text-slate-500 hover:text-slate-900'
+                viewMode === 'list' ? 'bg-blue-100/80 text-[#0062FF]' : 'text-slate-500 hover:text-slate-900'
               }`}
               title="List View"
               aria-label="List View"
@@ -284,20 +328,24 @@ export default function ServicesView({
                 const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
                 const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
                 const bannerImg = service.bannerImage || service.imageUrl || service.image;
+                const visuals = getCategoryVisuals(catName);
 
                 return (
                   <CivicCard
                     key={service.id}
                     variant="default"
                     hoverEffect
-                    className="flex flex-col justify-between group"
+                    className="flex flex-col justify-between group bg-white border border-[#DCE8F5] hover:border-blue-300 hover:shadow-xl hover:shadow-blue-950/8 transition-all duration-300 relative overflow-hidden"
                   >
+                    {/* Top Category Accent Line */}
+                    <div className={`h-1 w-full ${visuals.stripe}`} />
+
                     <div>
                       {/* Banner Image with Clean Fallback */}
                       {bannerImg ? (
                         <div 
                           onClick={() => handleOpenDetails(service.id)}
-                          className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-slate-100"
+                          className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-[#E8EFF7]"
                         >
                           <img
                             src={bannerImg}
@@ -323,7 +371,7 @@ export default function ServicesView({
                       ) : (
                         <div 
                           onClick={() => handleOpenDetails(service.id)}
-                          className="w-full h-24 bg-gradient-to-r from-blue-900 via-[#0F4C81] to-slate-900 flex items-center justify-between px-4 text-white cursor-pointer border-b border-slate-100"
+                          className={`w-full h-24 bg-gradient-to-r ${visuals.bannerFallback} flex items-center justify-between px-4 text-white cursor-pointer border-b border-[#E8EFF7]`}
                         >
                           <div className="flex items-center gap-2">
                             <Layers className="w-5 h-5 text-cyan-300" />
@@ -340,10 +388,10 @@ export default function ServicesView({
                       <div className="p-5 sm:p-6 space-y-3">
                         {/* Badge Row */}
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${visuals.badgeBg} px-2.5 py-0.5 rounded-full border shadow-2xs`}>
                             {catName}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] text-[#334E68] font-medium flex items-center gap-1 bg-[#F4F8FC] border border-[#D8E6F5] px-2.5 py-0.5 rounded-md">
                             <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>{service.processingTime || '3–5 Working Days'}</span>
                           </span>
@@ -352,30 +400,30 @@ export default function ServicesView({
                         {/* Title */}
                         <h3
                           onClick={() => handleOpenDetails(service.id)}
-                          className="font-black text-base text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug m-0"
+                          className="font-black text-base text-[#0B192C] hover:text-[#0062FF] cursor-pointer transition line-clamp-1 leading-snug m-0"
                           title={service.title}
                         >
                           {service.title}
                         </h3>
 
                         {/* Short Description */}
-                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal m-0">
+                        <p className="text-xs text-[#334E68] line-clamp-2 leading-relaxed font-normal m-0">
                           {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
                         </p>
 
                         {/* Document Checklist Preview */}
-                        <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                          <span className="block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                        <div className="pt-2 border-t border-[#E8EFF7] space-y-1.5">
+                          <span className="block text-[10px] text-[#627D98] font-bold uppercase tracking-wider">
                             Required Documents:
                           </span>
                           <div className="flex flex-wrap gap-1">
                             {(service.requiredDocuments || []).slice(0, 2).map((doc, dIdx) => (
-                              <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
+                              <span key={dIdx} className="text-[10px] bg-[#F4F8FC] text-[#334E68] px-2 py-0.5 rounded-md border border-[#D8E6F5] font-medium">
                                 ✓ {doc}
                               </span>
                             ))}
                             {(service.requiredDocuments || []).length > 2 && (
-                              <span className="text-[10px] text-slate-500 px-1 py-0.5 font-bold">
+                              <span className="text-[10px] text-[#0062FF] px-1 py-0.5 font-bold">
                                 +{(service.requiredDocuments || []).length - 2} more
                               </span>
                             )}
@@ -388,16 +436,16 @@ export default function ServicesView({
                     </div>
 
                     {/* Pricing & Actions Footer */}
-                    <div className="px-5 py-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-3">
+                    <div className="px-5 py-3.5 bg-gradient-to-r from-[#F8FAFC] to-[#F1F6FD] border-t border-[#E8EFF7] flex items-center justify-between gap-3">
                       <div>
-                        <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider leading-tight">
+                        <span className="block text-[9px] text-[#627D98] font-bold uppercase tracking-wider leading-tight">
                           Starting Fee
                         </span>
                         <div className="flex items-baseline gap-1">
-                          <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums notranslate" translate="no">
+                          <span className="text-base sm:text-lg font-black text-[#0B192C] tabular-nums notranslate" translate="no">
                             ₹{totalFee}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
+                          <span className="text-[10px] text-[#627D98] font-normal">all-incl.</span>
                         </div>
                       </div>
 
@@ -405,14 +453,14 @@ export default function ServicesView({
                         <button
                           type="button"
                           onClick={() => handleOpenDetails(service.id)}
-                          className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs px-3 py-1.5 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
+                          className="bg-white hover:bg-blue-50/80 text-slate-800 hover:text-[#0062FF] border border-[#CBDFF7] font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
                         >
                           Details
                         </button>
                         <button
                           type="button"
                           onClick={() => openWhatsAppForService(service, catName)}
-                          className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1 shadow-2xs active:scale-95 btn-glow-emerald focus-civic"
+                          className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs px-3.5 py-1.5 rounded-xl transition cursor-pointer flex items-center gap-1.5 shadow-2xs active:scale-95 btn-glow-emerald focus-civic"
                         >
                           <MessageSquare className="w-3.5 h-3.5" /> Apply
                         </button>
@@ -430,19 +478,23 @@ export default function ServicesView({
                 const catName = categories.find(c => c.id === service.categoryId)?.name || 'Service';
                 const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
                 const bannerImg = service.bannerImage || service.imageUrl || service.image;
+                const visuals = getCategoryVisuals(catName);
 
                 return (
                   <CivicCard
                     key={service.id}
                     variant="default"
                     hoverEffect
-                    className="flex flex-col sm:flex-row group"
+                    className="flex flex-col sm:flex-row group bg-white border border-[#DCE8F5] hover:border-blue-300 hover:shadow-xl hover:shadow-blue-950/8 transition-all duration-300 relative overflow-hidden"
                   >
+                    {/* Category Accent Line */}
+                    <div className={`h-1 sm:h-auto sm:w-1.5 sm:self-stretch shrink-0 ${visuals.stripe}`} />
+
                     {/* Left Banner Thumbnail */}
                     {bannerImg ? (
                       <div
                         onClick={() => handleOpenDetails(service.id)}
-                        className="sm:w-60 h-48 sm:h-auto min-h-[140px] relative overflow-hidden bg-slate-100 cursor-pointer shrink-0"
+                        className="sm:w-60 h-48 sm:h-auto min-h-[140px] relative overflow-hidden bg-slate-100 cursor-pointer shrink-0 border-b sm:border-b-0 sm:border-r border-[#E8EFF7]"
                       >
                         <img
                           src={bannerImg}
@@ -454,12 +506,12 @@ export default function ServicesView({
                         />
                         <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
                           {service.featured && (
-                            <span className="bg-blue-600/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                            <span className="bg-blue-600/95 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
                               Featured
                             </span>
                           )}
                           {service.popular && (
-                            <span className="bg-amber-500/90 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
+                            <span className="bg-amber-500/95 backdrop-blur-xs text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-md shadow-xs">
                               Popular
                             </span>
                           )}
@@ -468,7 +520,7 @@ export default function ServicesView({
                     ) : (
                       <div
                         onClick={() => handleOpenDetails(service.id)}
-                        className="sm:w-48 h-32 sm:h-auto bg-gradient-to-br from-blue-900 via-[#0F4C81] to-slate-900 p-4 flex flex-col justify-between text-white shrink-0 cursor-pointer"
+                        className={`sm:w-48 h-32 sm:h-auto bg-gradient-to-br ${visuals.bannerFallback} p-4 flex flex-col justify-between text-white shrink-0 cursor-pointer sm:border-r border-[#E8EFF7]`}
                       >
                         <Layers className="w-6 h-6 text-cyan-300" />
                         <span className="text-[10px] font-bold text-slate-200">Official Service Desk</span>
@@ -479,10 +531,10 @@ export default function ServicesView({
                     <div className="p-5 sm:p-6 flex-1 flex flex-col justify-between space-y-3">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[10px] font-black uppercase tracking-wider bg-blue-50 text-[#0F4C81] px-2.5 py-0.5 rounded-full border border-blue-100/80">
+                          <span className={`text-[10px] font-black uppercase tracking-wider ${visuals.badgeBg} px-2.5 py-0.5 rounded-full border shadow-2xs`}>
                             {catName}
                           </span>
-                          <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1 bg-slate-50 border border-slate-200/60 px-2 py-0.5 rounded-md">
+                          <span className="text-[11px] text-[#334E68] font-medium flex items-center gap-1 bg-[#F4F8FC] border border-[#D8E6F5] px-2.5 py-0.5 rounded-md">
                             <Clock className="w-3 h-3 text-slate-400 shrink-0" />
                             <span>{service.processingTime || '3–5 Working Days'}</span>
                           </span>
@@ -490,25 +542,25 @@ export default function ServicesView({
 
                         <h3
                           onClick={() => handleOpenDetails(service.id)}
-                          className="font-black text-base sm:text-lg text-slate-900 hover:text-[#0F4C81] cursor-pointer transition line-clamp-1 leading-snug m-0"
+                          className="font-black text-base sm:text-lg text-[#0B192C] hover:text-[#0062FF] cursor-pointer transition line-clamp-1 leading-snug m-0"
                         >
                           {service.title}
                         </h3>
 
-                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed m-0 font-normal">
+                        <p className="text-xs text-[#334E68] line-clamp-2 leading-relaxed m-0 font-normal">
                           {service.shortDescription || service.description || 'Assisted document processing and government filing support.'}
                         </p>
 
                         {/* Required Documents Checklist */}
                         <div className="flex flex-wrap items-center gap-1 pt-1">
-                          <span className="text-[10px] text-slate-400 font-bold uppercase mr-1">Docs:</span>
+                          <span className="text-[10px] text-[#627D98] font-bold uppercase mr-1">Docs:</span>
                           {(service.requiredDocuments || []).slice(0, 3).map((doc, dIdx) => (
-                            <span key={dIdx} className="text-[10px] bg-slate-50 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/60 font-medium">
+                            <span key={dIdx} className="text-[10px] bg-[#F4F8FC] text-[#334E68] px-2 py-0.5 rounded-md border border-[#D8E6F5] font-medium">
                               ✓ {doc}
                             </span>
                           ))}
                           {(service.requiredDocuments || []).length > 3 && (
-                            <span className="text-[10px] text-slate-500 font-bold">
+                            <span className="text-[10px] text-[#0062FF] font-bold">
                               +{(service.requiredDocuments || []).length - 3} more
                             </span>
                           )}
@@ -516,12 +568,12 @@ export default function ServicesView({
                       </div>
 
                       {/* Bottom Pricing & Actions */}
-                      <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                      <div className="pt-3 border-t border-[#E8EFF7] flex flex-wrap items-center justify-between gap-3">
                         <div>
-                          <span className="block text-[9px] text-slate-400 font-bold uppercase tracking-wider">Starting Fee</span>
+                          <span className="block text-[9px] text-[#627D98] font-bold uppercase tracking-wider">Starting Fee</span>
                           <div className="flex items-baseline gap-1">
-                            <span className="text-lg font-black text-slate-900 tabular-nums">₹{totalFee}</span>
-                            <span className="text-[10px] text-slate-400 font-normal">all-incl.</span>
+                            <span className="text-lg font-black text-[#0B192C] tabular-nums">₹{totalFee}</span>
+                            <span className="text-[10px] text-[#627D98] font-normal">all-incl.</span>
                           </div>
                         </div>
 
@@ -529,7 +581,7 @@ export default function ServicesView({
                           <button
                             type="button"
                             onClick={() => handleOpenDetails(service.id)}
-                            className="bg-white hover:bg-slate-50 text-slate-800 border border-slate-200 font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
+                            className="bg-white hover:bg-blue-50/80 text-slate-800 hover:text-[#0062FF] border border-[#CBDFF7] font-bold text-xs px-4 py-2 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
                           >
                             View Details
                           </button>

@@ -428,7 +428,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
   };
 
   return (
-    <div id="easydesk-privacy-view" className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-privacy-view" className="min-h-screen bg-[#F4F8FC] font-sans text-[#0B192C] pb-20 w-full max-w-full overflow-x-hidden">
       <Helmet>
         <title>Privacy & Security Trust Center | My EasyDesk — Your Online Work, Done Easily</title>
         <meta name="description" content="Learn how My EasyDesk protects your personal data, SSL 256-bit encryption, DPDP Act compliance, and strict anti-fraud guarantees." />
@@ -455,8 +455,8 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
         </div>
       </div>
 
-      {/* 2. HERO SECTION (Matching AboutUs Gradient Banner & Pulse Badge) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white py-14 sm:py-16 border-b border-slate-200/60 mb-10">
+      {/* 2. HERO SECTION (Matching Brand Gradient Banner & Pulse Badge) */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-14 sm:py-16 border-b border-[#D3E3F5] mb-10">
         
         {/* Subtle Decorative Background Blur */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
@@ -477,11 +477,11 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
               <TrustBadge title={data.hero.badgeText || "Privacy & Security Notice"} variant="pill" />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0B192C] tracking-tight leading-tight">
               {data.hero.heading}
             </h1>
 
-            <p className="text-xs sm:text-sm text-slate-600 max-w-2xl mx-auto leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-[#334E68] max-w-2xl mx-auto leading-relaxed font-normal">
               {data.hero.subtitle}
             </p>
 
@@ -495,21 +495,21 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
               </button>
               <button 
                 onClick={() => setShowDeletionModal(true)}
-                className="border border-slate-300 hover:border-slate-400 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold px-5 py-3 rounded-xl shadow-2xs transition-all flex items-center gap-2 cursor-pointer hover-scale-sm"
+                className="border border-[#CBDFF7] hover:border-blue-300 bg-white hover:bg-blue-50/50 text-[#0B192C] text-xs font-bold px-5 py-3 rounded-xl shadow-2xs transition-all flex items-center gap-2 cursor-pointer hover-scale-sm"
               >
-                <FileSpreadsheet className="w-4 h-4 text-[#0F4C81]" /> Request Data Deletion / Purge
+                <FileSpreadsheet className="w-4 h-4 text-[#0062FF]" /> Request Data Deletion / Purge
               </button>
             </div>
 
             {/* Trust Badges Bar */}
             <div className="pt-8 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 text-start">
               {data.hero.trustCards.map((tc) => (
-                <div key={tc.id} className="bg-white border border-slate-200/80 p-4 rounded-2xl flex flex-col gap-2 shadow-2xs hover-lift hover-glow-blue transition-all duration-300">
-                  <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-[#0F4C81] flex items-center justify-center shrink-0">
+                <div key={tc.id} className="bg-white border border-[#CBDFF7] p-4 rounded-2xl flex flex-col gap-2 shadow-2xs hover-lift hover-glow-blue transition-all duration-300">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-100 text-[#0062FF] flex items-center justify-center shrink-0">
                     {getIcon(tc.icon, "w-4 h-4")}
                   </div>
                   <div>
-                    <h4 className="text-xs font-black text-slate-900 leading-tight m-0">{tc.title}</h4>
+                    <h4 className="text-xs font-black text-[#0B192C] leading-tight m-0">{tc.title}</h4>
                     <p className="text-[10px] text-slate-500 mt-1 mb-0 leading-snug font-medium">{tc.description}</p>
                   </div>
                 </div>

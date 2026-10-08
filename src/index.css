@@ -9,21 +9,21 @@
 /* Global Theme CSS Variables (Civic-Tech Design System) */
 :root {
   color-scheme: light;
-  --theme-bg-app: #f8fafc;        /* Canvas: slate-50 */
-  --theme-bg-card: #ffffff;       /* Card: white */
-  --theme-bg-muted: #f1f5f9;      /* slate-100 */
+  --theme-bg-app: #F4F8FC;        /* Canvas: soft cool blue-gray */
+  --theme-bg-card: #ffffff;       /* Card: crisp white */
+  --theme-bg-muted: #EBF2FA;      /* Tinted secondary: cool soft blue */
   --theme-bg-elevated: #ffffff;
-  --theme-text-main: #0f172a;     /* Primary Text: slate-900 */
-  --theme-text-secondary: #475569;/* Secondary Text: slate-600 */
-  --theme-text-muted: #64748b;    /* Muted Text: slate-500 */
-  --theme-border: #e2e8f0;        /* Border: slate-200 */
-  --theme-border-subtle: #f1f5f9; /* slate-100 */
-  --theme-header-bg: rgba(255, 255, 255, 0.95);
+  --theme-text-main: #0B192C;     /* Primary Text: deep navy slate */
+  --theme-text-secondary: #334E68;/* Secondary Text: balanced slate */
+  --theme-text-muted: #627D98;    /* Muted Text: cool slate */
+  --theme-border: #D8E6F5;        /* Soft blue-gray border */
+  --theme-border-subtle: #E8EFF7; /* Subtle border */
+  --theme-header-bg: rgba(244, 248, 252, 0.96);
 
   /* EasyDesk Civic-Tech Brand Palette */
-  --civic-deep-navy: #0A2540;
-  --civic-blue: #0F4C81;
-  --civic-interactive: #2563EB;
+  --civic-deep-navy: #0B192C;
+  --civic-blue: #0062FF;
+  --civic-interactive: #0062FF;
   --civic-sky: #38BDF8;
   --civic-success: #059669;
   --civic-emerald: #10B981;

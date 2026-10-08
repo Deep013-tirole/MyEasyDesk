@@ -94,6 +94,50 @@ export default function HomeView({
     setSelectedServiceId(id);
   };
 
+  const getCategoryVisuals = (title: string, categoryId?: string) => {
+    const text = `${title} ${categoryId || ''}`.toLowerCase();
+    if (text.includes('government') || text.includes('gov') || text.includes('pan') || text.includes('aadhaar') || text.includes('voter')) {
+      return {
+        stripe: 'bg-blue-600',
+        badgeBg: 'bg-blue-50 text-blue-700 border-blue-200',
+        bannerFallback: 'from-blue-900 via-[#0B2545] to-slate-900',
+      };
+    }
+    if (text.includes('education') || text.includes('scholarship') || text.includes('student') || text.includes('admission')) {
+      return {
+        stripe: 'bg-indigo-600',
+        badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+        bannerFallback: 'from-indigo-900 via-blue-900 to-slate-900',
+      };
+    }
+    if (text.includes('business') || text.includes('gst') || text.includes('tax') || text.includes('msme') || text.includes('company')) {
+      return {
+        stripe: 'bg-teal-600',
+        badgeBg: 'bg-teal-50 text-teal-700 border-teal-200',
+        bannerFallback: 'from-teal-900 via-emerald-950 to-slate-900',
+      };
+    }
+    if (text.includes('typing') || text.includes('affidavit') || text.includes('notary') || text.includes('legal')) {
+      return {
+        stripe: 'bg-amber-600',
+        badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
+        bannerFallback: 'from-amber-950 via-slate-900 to-blue-950',
+      };
+    }
+    if (text.includes('transport') || text.includes('license') || text.includes('vehicle') || text.includes('rc') || text.includes('driving')) {
+      return {
+        stripe: 'bg-emerald-600',
+        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        bannerFallback: 'from-emerald-900 via-teal-900 to-slate-900',
+      };
+    }
+    return {
+      stripe: 'bg-[#0062FF]',
+      badgeBg: 'bg-blue-50 text-[#0062FF] border-blue-200',
+      bannerFallback: 'from-blue-900 via-[#0B2545] to-slate-900',
+    };
+  };
+
   return (
     <div id="easydesk-home-view" className="font-sans text-slate-900 w-full max-w-full overflow-x-hidden">
 
@@ -114,21 +158,21 @@ export default function HomeView({
           </div>
 
           {/* Eyebrow Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black bg-blue-50 text-[#0F4C81] border border-blue-200/80 shadow-2xs">
-            <Shield className="w-3.5 h-3.5 text-[#0F4C81]" />
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black bg-blue-100/90 text-[#0062FF] border border-blue-200/90 shadow-2xs">
+            <Shield className="w-3.5 h-3.5 text-[#0062FF]" />
             <span>Government • Education • Business • Personal Documents</span>
           </div>
 
           {/* Main Headline */}
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.12]">
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0B192C] tracking-tight leading-[1.12]">
             Your Online Work,<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0062FF] via-blue-600 to-teal-600">
               Done Easily & Securely
             </span>
           </h1>
 
           {/* Supporting Description */}
-          <p className="text-sm sm:text-base md:text-lg text-slate-600 leading-relaxed font-normal max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base md:text-lg text-[#334E68] leading-relaxed font-normal max-w-2xl mx-auto">
             India-focused digital assistance for government certificates, PAN cards, licenses, GST filings, and scholarship paperwork. Verified desk officers pre-audit every document before submission to eliminate rejections.
           </p>
 
@@ -146,7 +190,7 @@ export default function HomeView({
             <button
               type="button"
               onClick={() => setView('services')}
-              className="inline-flex items-center gap-2 bg-[#0F4C81] hover:bg-[#0b3b64] text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-xl transition cursor-pointer shadow-sm hover:shadow-md active:scale-95"
+              className="inline-flex items-center gap-2 bg-[#0062FF] hover:bg-blue-700 text-white font-bold text-xs sm:text-sm px-6 py-3.5 rounded-xl transition cursor-pointer shadow-sm hover:shadow-md active:scale-95"
             >
               <Layers className="w-4 h-4" />
               <span>Browse Services</span>
@@ -155,16 +199,16 @@ export default function HomeView({
             <button
               type="button"
               onClick={handleAskAI}
-              className="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-800 border border-slate-200/90 font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition cursor-pointer shadow-2xs hover:shadow-sm active:scale-95"
+              className="inline-flex items-center gap-2 bg-white hover:bg-blue-50/80 text-slate-800 hover:text-[#0062FF] border border-[#CBDFF7] font-bold text-xs sm:text-sm px-5 py-3.5 rounded-xl transition cursor-pointer shadow-2xs hover:shadow-sm active:scale-95"
             >
-              <Bot className="w-4 h-4 text-[#0F4C81]" />
+              <Bot className="w-4 h-4 text-[#0062FF]" />
               <span>Ask My EasyDesk AI</span>
             </button>
           </div>
 
           {/* In-Hero Search Input */}
           <div className="pt-4 max-w-xl mx-auto">
-            <div className="relative bg-white rounded-2xl shadow-sm border border-slate-200/90 p-1.5 flex items-center hover:border-blue-400 focus-within:border-[#0F4C81] focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+            <div className="relative bg-white rounded-2xl shadow-sm border border-[#CBDFF7] p-1.5 flex items-center hover:border-blue-400 focus-within:border-[#0062FF] focus-within:ring-2 focus-within:ring-blue-100 transition-all">
               <Search className="w-4 h-4 text-slate-400 ml-3.5 shrink-0" />
               <input
                 type="text"
@@ -185,7 +229,7 @@ export default function HomeView({
               <button
                 type="button"
                 onClick={() => setView('services')}
-                className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl transition shrink-0 cursor-pointer"
+                className="bg-blue-50 hover:bg-blue-100 text-[#0062FF] font-bold text-xs px-4 py-2 rounded-xl transition shrink-0 cursor-pointer"
               >
                 Explore
               </button>
@@ -207,21 +251,21 @@ export default function HomeView({
         ariaLabel="Key Trust Guarantees"
       >
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 text-center">
-          <div className="flex items-center justify-center gap-2.5 p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 shadow-2xs">
-            <Lock className="w-4 h-4 text-[#0F4C81] shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-slate-800">Secure Document Vault</span>
+          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-2xl bg-gradient-to-b from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] shadow-2xs">
+            <Lock className="w-4 h-4 text-[#0062FF] shrink-0" />
+            <span className="text-xs sm:text-sm font-bold text-[#0B192C]">Secure Document Vault</span>
           </div>
-          <div className="flex items-center justify-center gap-2.5 p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 shadow-2xs">
+          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-2xl bg-gradient-to-b from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] shadow-2xs">
             <Zap className="w-4 h-4 text-amber-500 shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-slate-800">Fast-Track Filing</span>
+            <span className="text-xs sm:text-sm font-bold text-[#0B192C]">Fast-Track Filing</span>
           </div>
-          <div className="flex items-center justify-center gap-2.5 p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 shadow-2xs">
+          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-2xl bg-gradient-to-b from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] shadow-2xs">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-slate-800">100% Transparent Fees</span>
+            <span className="text-xs sm:text-sm font-bold text-[#0B192C]">100% Transparent Fees</span>
           </div>
-          <div className="flex items-center justify-center gap-2.5 p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 shadow-2xs">
+          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-2xl bg-gradient-to-b from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] shadow-2xs">
             <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0" />
-            <span className="text-xs sm:text-sm font-bold text-slate-800">Pre-Audit Guarantee</span>
+            <span className="text-xs sm:text-sm font-bold text-[#0B192C]">Pre-Audit Guarantee</span>
           </div>
         </div>
       </SectionContainer>
@@ -238,7 +282,7 @@ export default function HomeView({
         <SectionHeader
           badge={{
             text: 'Civic Services Directory',
-            icon: <Sparkles className="w-3.5 h-3.5 text-[#0F4C81]" />
+            icon: <Sparkles className="w-3.5 h-3.5 text-[#0062FF]" />
           }}
           title={
             catalogSection === 'popular' ? 'Most Popular Services' :
@@ -250,7 +294,7 @@ export default function HomeView({
             <button
               type="button"
               onClick={() => setView('services')}
-              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#0F4C81] hover:text-[#0A2540] transition cursor-pointer shrink-0 focus-civic rounded-lg px-2 py-1"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-[#0062FF] hover:text-[#0B192C] transition cursor-pointer shrink-0 focus-civic rounded-lg px-2 py-1"
             >
               <span>View All Services</span>
               <ArrowRight className="w-4 h-4" />
@@ -265,8 +309,8 @@ export default function HomeView({
             onClick={() => setCatalogSection('popular')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 focus-civic ${
               catalogSection === 'popular'
-                ? 'bg-[#0F4C81] text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-[#0062FF] text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-[#CBDFF7] hover:bg-blue-50/80 hover:text-[#0062FF]'
             }`}
           >
             <Sparkles className={`w-3.5 h-3.5 ${catalogSection === 'popular' ? 'text-amber-300' : 'text-amber-500'}`} />
@@ -278,8 +322,8 @@ export default function HomeView({
             onClick={() => setCatalogSection('trending')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 focus-civic ${
               catalogSection === 'trending'
-                ? 'bg-[#0F4C81] text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-[#0062FF] text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-[#CBDFF7] hover:bg-blue-50/80 hover:text-[#0062FF]'
             }`}
           >
             <Zap className={`w-3.5 h-3.5 ${catalogSection === 'trending' ? 'text-amber-300' : 'text-amber-500'}`} />
@@ -291,8 +335,8 @@ export default function HomeView({
             onClick={() => setCatalogSection('featured')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 focus-civic ${
               catalogSection === 'featured'
-                ? 'bg-[#0F4C81] text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-[#0062FF] text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-[#CBDFF7] hover:bg-blue-50/80 hover:text-[#0062FF]'
             }`}
           >
             <CheckCircle2 className={`w-3.5 h-3.5 ${catalogSection === 'featured' ? 'text-emerald-300' : 'text-emerald-600'}`} />
@@ -304,8 +348,8 @@ export default function HomeView({
             onClick={() => setCatalogSection('all')}
             className={`px-4 py-2 rounded-full text-xs font-bold transition cursor-pointer focus-civic ${
               catalogSection === 'all'
-                ? 'bg-[#0F4C81] text-white shadow-xs'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+                ? 'bg-[#0062FF] text-white shadow-xs'
+                : 'bg-white text-slate-700 border border-[#CBDFF7] hover:bg-blue-50/80 hover:text-[#0062FF]'
             }`}
           >
             All Services
@@ -331,20 +375,24 @@ export default function HomeView({
               const totalFee = (service.govFees || 0) + (service.serviceCharge || 0);
               const hasTimeline = Boolean(service?.timeline?.enabled && service.timeline?.startDate && service.timeline?.endDate);
               const bannerImg = service.bannerImage || service.imageUrl || service.image;
+              const visuals = getCategoryVisuals(service.title, service.categoryId);
 
               return (
                 <CivicCard
                   key={service.id}
                   variant="default"
                   hoverEffect
-                  className="flex flex-col justify-between group"
+                  className="flex flex-col justify-between group bg-white border border-[#DCE8F5] hover:border-blue-300 hover:shadow-xl hover:shadow-blue-950/8 transition-all duration-300 relative overflow-hidden"
                 >
+                  {/* Top Category Accent Line */}
+                  <div className={`h-1 w-full ${visuals.stripe}`} />
+
                   <div>
                     {/* Banner Image with Clean Fallback */}
                     {bannerImg ? (
                       <div 
                         onClick={() => handleServiceSelect(service.id)}
-                        className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-slate-100"
+                        className="relative w-full h-44 overflow-hidden bg-slate-100 cursor-pointer border-b border-[#E8EFF7]"
                       >
                         <img
                           src={bannerImg}
@@ -370,7 +418,7 @@ export default function HomeView({
                     ) : (
                       <div 
                         onClick={() => handleServiceSelect(service.id)}
-                        className="w-full h-28 bg-gradient-to-r from-blue-900 via-[#0F4C81] to-slate-900 flex items-center justify-between px-5 text-white cursor-pointer border-b border-slate-100"
+                        className={`w-full h-28 bg-gradient-to-r ${visuals.bannerFallback} flex items-center justify-between px-5 text-white cursor-pointer border-b border-[#E8EFF7]`}
                       >
                         <div className="flex items-center gap-2">
                           <Layers className="w-5 h-5 text-cyan-300" />
@@ -386,12 +434,12 @@ export default function HomeView({
 
                     <div className="p-5 sm:p-6 space-y-3">
                       {/* Badge & Turnaround */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-                        <span className="bg-blue-50 text-[#0F4C81] border border-blue-100 px-2.5 py-0.5 rounded-full font-bold">
+                      <div className="flex items-center justify-between text-[11px] text-[#334E68] font-semibold">
+                        <span className={`${visuals.badgeBg} border px-2.5 py-0.5 rounded-full font-bold shadow-2xs`}>
                           {service.processingTime || '3–5 Days'}
                         </span>
                         {hasTimeline && (
-                          <span className="text-emerald-700 font-bold flex items-center gap-1">
+                          <span className="text-emerald-700 font-bold flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                             <Clock className="w-3.5 h-3.5 text-emerald-600" /> Active Timeline
                           </span>
                         )}
@@ -400,22 +448,22 @@ export default function HomeView({
                       {/* Service Name */}
                       <h3
                         onClick={() => handleServiceSelect(service.id)}
-                        className="text-base sm:text-lg font-black text-slate-900 leading-snug hover:text-[#0F4C81] cursor-pointer transition-colors m-0"
+                        className="text-base sm:text-lg font-black text-[#0B192C] leading-snug hover:text-[#0062FF] cursor-pointer transition-colors m-0"
                       >
                         {service.title}
                       </h3>
 
                       {/* Short Description */}
                       {(service.shortDescription || service.description) ? (
-                        <p className="text-xs text-slate-600 leading-relaxed line-clamp-2 font-normal m-0">
+                        <p className="text-xs text-[#334E68] leading-relaxed line-clamp-2 font-normal m-0">
                           {service.shortDescription || service.description}
                         </p>
                       ) : null}
 
                       {/* Timeline dates if configured */}
                       {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
-                        <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-100/90 text-xs text-slate-700 space-y-0.5">
-                          <span className="block text-[10px] uppercase font-extrabold text-[#0F4C81]">Application Window</span>
+                        <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-100/90 text-xs text-[#334E68] space-y-0.5">
+                          <span className="block text-[10px] uppercase font-extrabold text-[#0062FF]">Application Window</span>
                           <span className="font-semibold text-slate-700">
                             {service.timeline.startDate} to {service.timeline.endDate}
                           </span>
@@ -425,10 +473,10 @@ export default function HomeView({
                   </div>
 
                   {/* Card Footer: Price & Apply */}
-                  <div className="p-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-3 bg-slate-50/60">
+                  <div className="p-5 pt-3.5 border-t border-[#E8EFF7] flex items-center justify-between gap-3 bg-gradient-to-r from-[#F8FAFC] to-[#F1F6FD]">
                     <div>
-                      <span className="block text-[10px] text-slate-400 font-extrabold uppercase">Starting from</span>
-                      <span className="text-base sm:text-lg font-black text-slate-900 tabular-nums">
+                      <span className="block text-[10px] text-[#627D98] font-extrabold uppercase">Starting from</span>
+                      <span className="text-base sm:text-lg font-black text-[#0B192C] tabular-nums">
                         {totalFee > 0 ? `₹${totalFee}` : 'Guided on Desk'}
                       </span>
                     </div>
@@ -437,7 +485,7 @@ export default function HomeView({
                       <button
                         type="button"
                         onClick={() => handleServiceSelect(service.id)}
-                        className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-800 font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
+                        className="bg-white border border-[#CBDFF7] hover:bg-blue-50/80 text-slate-800 hover:text-[#0062FF] font-bold text-xs px-3.5 py-2 rounded-xl transition cursor-pointer shadow-2xs focus-civic"
                       >
                         Details
                       </button>

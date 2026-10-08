@@ -211,10 +211,10 @@ export default function PaymentView({
   }
 
   return (
-    <div id="easydesk-payment-view" className="font-sans text-slate-900 bg-[#F8FAFC] pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-payment-view" className="font-sans text-[#0B192C] bg-[#F4F8FC] pb-20 w-full max-w-full overflow-x-hidden">
       
-      {/* 1. HERO HEADER (Matching AboutUs Gradient Banner & Pulse Badge) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white py-12 sm:py-16 border-b border-slate-200/60 mb-10">
+      {/* 1. HERO HEADER (Matching Brand Gradient Banner & Pulse Badge) */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-12 sm:py-16 border-b border-[#D3E3F5] mb-10">
         
         {/* Subtle Decorative Background Blur */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
@@ -235,25 +235,25 @@ export default function PaymentView({
               <TrustBadge title="Official Payment Portal & Verification" variant="pill" />
             </div>
 
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
-              Manual Payment & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">Proof Verification</span>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-[#0B192C] tracking-tight leading-tight">
+              Manual Payment & <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0062FF] via-blue-600 to-teal-600">Proof Verification</span>
             </h1>
 
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+            <p className="text-xs sm:text-sm text-[#334E68] leading-relaxed font-normal">
               Transfer your order fees directly using UPI, Dynamic QR Code, or Direct Bank NEFT/RTGS. After transferring, submit your 12-digit UTR / Reference ID below for verified desk clearance.
             </p>
 
             {/* Quick Metrics */}
             <div className="pt-2 flex flex-wrap gap-3 text-xs font-bold text-slate-700">
-              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-[#CBDFF7] shadow-2xs">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                 <span>Zero Gateway Surcharge</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                <Lock className="w-4 h-4 text-[#0F4C81]" />
+              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-[#CBDFF7] shadow-2xs">
+                <Lock className="w-4 h-4 text-[#0062FF]" />
                 <span>100% Direct Banking</span>
               </div>
-              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-slate-200/80 shadow-2xs">
+              <div className="flex items-center gap-1.5 bg-white/90 px-3 py-1.5 rounded-xl border border-[#CBDFF7] shadow-2xs">
                 <Zap className="w-4 h-4 text-amber-500" />
                 <span>Instant UTR Validation</span>
               </div>
@@ -268,11 +268,11 @@ export default function PaymentView({
           
           {/* Left Column: Payment Details Tabs */}
           <div className="lg:col-span-6 space-y-6">
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-xs space-y-5 hover-lift hover-glow-blue transition-all duration-300">
+            <div className="bg-white rounded-3xl border border-[#CBDFF7] p-6 sm:p-7 shadow-xs space-y-5 hover-lift hover-glow-blue transition-all duration-300">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase text-[#0F4C81] tracking-wider block">Step 1</span>
-                  <h2 className="font-black text-base text-slate-900 m-0">Select Payment Method</h2>
+                  <span className="text-[10px] font-extrabold uppercase text-[#0062FF] tracking-wider block">Step 1</span>
+                  <h2 className="font-black text-base text-[#0B192C] m-0">Select Payment Method</h2>
                 </div>
                 <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-[10px] font-bold px-3 py-1 flex items-center gap-1">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Direct Bank Verified
@@ -286,8 +286,8 @@ export default function PaymentView({
                   onClick={() => setMethod(PaymentMethod.UPI)}
                   className={`p-3.5 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center gap-2 cursor-pointer hover-scale-sm ${
                     method === PaymentMethod.UPI 
-                      ? 'bg-[#0F4C81] text-white border-[#0F4C81] shadow-sm btn-glow-primary' 
-                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-blue-50/70 hover:text-[#0F4C81]'
+                      ? 'bg-[#0062FF] text-white border-[#0062FF] shadow-xs btn-glow-primary' 
+                      : 'bg-slate-50 text-slate-700 border-[#CBDFF7] hover:bg-blue-50/70 hover:text-[#0062FF]'
                   }`}
                 >
                   <CreditCard className="w-5 h-5" />
@@ -299,8 +299,8 @@ export default function PaymentView({
                   onClick={() => setMethod(PaymentMethod.QR)}
                   className={`p-3.5 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center gap-2 cursor-pointer hover-scale-sm ${
                     method === PaymentMethod.QR 
-                      ? 'bg-[#0F4C81] text-white border-[#0F4C81] shadow-sm btn-glow-primary' 
-                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-blue-50/70 hover:text-[#0F4C81]'
+                      ? 'bg-[#0062FF] text-white border-[#0062FF] shadow-xs btn-glow-primary' 
+                      : 'bg-slate-50 text-slate-700 border-[#CBDFF7] hover:bg-blue-50/70 hover:text-[#0062FF]'
                   }`}
                 >
                   <QrCode className="w-5 h-5" />
@@ -312,8 +312,8 @@ export default function PaymentView({
                   onClick={() => setMethod(PaymentMethod.BANK_TRANSFER)}
                   className={`p-3.5 rounded-2xl border text-xs font-bold transition-all flex flex-col items-center gap-2 cursor-pointer hover-scale-sm ${
                     method === PaymentMethod.BANK_TRANSFER 
-                      ? 'bg-[#0F4C81] text-white border-[#0F4C81] shadow-sm btn-glow-primary' 
-                      : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-blue-50/70 hover:text-[#0F4C81]'
+                      ? 'bg-[#0062FF] text-white border-[#0062FF] shadow-xs btn-glow-primary' 
+                      : 'bg-slate-50 text-slate-700 border-[#CBDFF7] hover:bg-blue-50/70 hover:text-[#0062FF]'
                   }`}
                 >
                   <Building className="w-5 h-5" />
@@ -330,20 +330,20 @@ export default function PaymentView({
                 <>
                   {/* Tab 1: UPI */}
                   {method === PaymentMethod.UPI && (
-                    <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-4 text-xs">
+                    <div className="bg-slate-50/80 border border-[#CBDFF7] p-5 rounded-2xl space-y-4 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official My EasyDesk UPI VPA</span>
                         {copiedText === 'upi' && <span className="text-emerald-600 font-bold text-[10px]">✓ Copied to Clipboard</span>}
                       </div>
 
-                      <div className="flex items-center justify-between bg-white border border-slate-200/80 p-4 rounded-xl shadow-2xs">
+                      <div className="flex items-center justify-between bg-white border border-[#CBDFF7] p-4 rounded-xl shadow-2xs">
                         <div>
-                          <p className="font-mono text-sm sm:text-base font-black text-[#0F4C81] m-0 notranslate" translate="no">{paymentConfig?.upiId || 'Pending Verification'}</p>
+                          <p className="font-mono text-sm sm:text-base font-black text-[#0062FF] m-0 notranslate" translate="no">{paymentConfig?.upiId || 'Pending Verification'}</p>
                           <p className="text-[10px] text-slate-400 font-medium m-0 mt-0.5 notranslate" translate="no">{paymentConfig?.upiName || 'My EasyDesk Digital Services'}</p>
                         </div>
                         <button
                           onClick={() => copyToClipboard(paymentConfig?.upiId || '', 'upi')}
-                          className="border border-[#0F4C81] text-[#0F4C81] hover:bg-blue-50 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 hover-scale-sm shadow-2xs"
+                          className="border border-[#0062FF] text-[#0062FF] hover:bg-blue-50 px-3.5 py-1.5 rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 hover-scale-sm shadow-2xs"
                         >
                           <Copy className="w-3.5 h-3.5" /> Copy ID
                         </button>
@@ -357,11 +357,11 @@ export default function PaymentView({
 
                   {/* Tab 2: QR Code */}
                   {method === PaymentMethod.QR && (
-                    <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl text-center space-y-4 text-xs">
+                    <div className="bg-slate-50/80 border border-[#CBDFF7] p-5 rounded-2xl text-center space-y-4 text-xs">
                       <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider block">Scan & Pay with Any UPI App</span>
 
                       {paymentConfig?.qrCodeUrl ? (
-                        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 inline-block shadow-sm hover-scale transition-transform">
+                        <div className="bg-white p-4 rounded-2xl border border-[#CBDFF7] inline-block shadow-sm hover-scale transition-transform">
                           <img
                             src={paymentConfig.qrCodeUrl}
                             alt="My EasyDesk Official Payment QR"
@@ -373,7 +373,7 @@ export default function PaymentView({
                           <p className="text-[10px] text-slate-600 font-bold mt-2.5 mb-0 notranslate" translate="no">{paymentConfig.upiName}</p>
                         </div>
                       ) : (
-                        <div className="p-8 bg-white rounded-2xl border border-slate-200 text-slate-400">
+                        <div className="p-8 bg-white rounded-2xl border border-[#CBDFF7] text-slate-400">
                           QR Code Image Unavailable
                         </div>
                       )}
@@ -386,38 +386,38 @@ export default function PaymentView({
 
                   {/* Tab 3: Bank Transfer */}
                   {method === PaymentMethod.BANK_TRANSFER && (
-                    <div className="bg-slate-50/80 border border-slate-200/80 p-5 rounded-2xl space-y-3.5 text-xs">
+                    <div className="bg-slate-50/80 border border-[#CBDFF7] p-5 rounded-2xl space-y-3.5 text-xs">
                       <div className="flex justify-between items-center border-b border-slate-200/80 pb-2">
                         <span className="font-extrabold text-slate-500 uppercase text-[10px] tracking-wider">Official Bank Account Details</span>
                         {copiedText === 'bank' && <span className="text-emerald-600 font-bold text-[10px]">✓ Account Details Copied</span>}
                       </div>
 
-                      <div className="space-y-2.5 text-slate-700 bg-white p-4 rounded-xl border border-slate-200/80 notranslate" translate="no">
+                      <div className="space-y-2.5 text-slate-700 bg-white p-4 rounded-xl border border-[#CBDFF7] notranslate" translate="no">
                         <div className="flex justify-between">
                           <span className="text-slate-400">Bank Name:</span>
-                          <span className="font-bold text-slate-900">{paymentConfig?.bankName || 'Verified Corporate Account'}</span>
+                          <span className="font-bold text-[#0B192C]">{paymentConfig?.bankName || 'Verified Corporate Account'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Account Name:</span>
-                          <span className="font-bold text-slate-900">{paymentConfig?.bankAccountName || 'My EasyDesk Digital Services'}</span>
+                          <span className="font-bold text-[#0B192C]">{paymentConfig?.bankAccountName || 'My EasyDesk Digital Services'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Account Number:</span>
-                          <span className="font-mono font-bold text-[#0F4C81]">{paymentConfig?.accountNumber || 'Contact Desk for Transfer'}</span>
+                          <span className="font-mono font-bold text-[#0062FF]">{paymentConfig?.accountNumber || 'Contact Desk for Transfer'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">IFSC Code:</span>
-                          <span className="font-mono font-bold text-slate-900">{paymentConfig?.ifsc || 'Available via Desk'}</span>
+                          <span className="font-mono font-bold text-[#0B192C]">{paymentConfig?.ifsc || 'Available via Desk'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Branch:</span>
-                          <span className="font-bold text-slate-900">{paymentConfig?.branch || 'Head Office'}</span>
+                          <span className="font-bold text-[#0B192C]">{paymentConfig?.branch || 'Head Office'}</span>
                         </div>
                       </div>
 
                       <button
                         onClick={() => copyToClipboard(`${paymentConfig?.accountNumber} / ${paymentConfig?.ifsc}`, 'bank')}
-                        className="w-full bg-white hover:bg-slate-50 border border-slate-300 text-slate-800 rounded-xl font-bold text-xs py-2.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 hover-scale-sm shadow-2xs"
+                        className="w-full bg-white hover:bg-slate-50 border border-[#CBDFF7] text-slate-800 rounded-xl font-bold text-xs py-2.5 transition-all cursor-pointer flex items-center justify-center gap-1.5 hover-scale-sm shadow-2xs"
                       >
                         <Copy className="w-3.5 h-3.5" /> Copy Account & IFSC Code
                       </button>
@@ -428,7 +428,7 @@ export default function PaymentView({
 
               {/* Payment Instructions Note */}
               <div className="bg-blue-50/70 border border-blue-100 p-4 rounded-2xl text-[11px] text-blue-900 leading-relaxed space-y-1">
-                <span className="font-bold block flex items-center gap-1.5 text-[#0F4C81]">
+                <span className="font-bold block flex items-center gap-1.5 text-[#0062FF]">
                   <Sparkles className="w-3.5 h-3.5" /> Filing Instructions:
                 </span>
                 <p className="m-0 text-slate-700 font-normal">{paymentConfig?.paymentInstructions}</p>
@@ -439,13 +439,13 @@ export default function PaymentView({
 
           {/* Right Column: Submit Payment Proof Form */}
           <div className="lg:col-span-6">
-            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 sm:p-7 shadow-xs space-y-5 hover-lift hover-glow-blue transition-all duration-300">
+            <div className="bg-white rounded-3xl border border-[#CBDFF7] p-6 sm:p-7 shadow-xs space-y-5 hover-lift hover-glow-blue transition-all duration-300">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div>
-                  <span className="text-[10px] font-extrabold uppercase text-[#0F4C81] tracking-wider block">Step 2</span>
-                  <h2 className="font-black text-base text-slate-900 m-0">Submit Payment Proof</h2>
+                  <span className="text-[10px] font-extrabold uppercase text-[#0062FF] tracking-wider block">Step 2</span>
+                  <h2 className="font-black text-base text-[#0B192C] m-0">Submit Payment Proof</h2>
                 </div>
-                <span className="bg-blue-50 text-[#0F4C81] border border-blue-200 rounded-full text-[10px] font-bold px-3 py-1">
+                <span className="bg-blue-50 text-[#0062FF] border border-blue-200 rounded-full text-[10px] font-bold px-3 py-1">
                   Verification Desk
                 </span>
               </div>
@@ -486,7 +486,7 @@ export default function PaymentView({
                     value={orderId}
                     onChange={(e) => setOrderId(e.target.value.toUpperCase())}
                     placeholder="e.g. ORD-10026"
-                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 font-mono font-bold text-slate-900 uppercase focus:outline-none input-focus-glow placeholder:text-slate-400 notranslate"
+                    className="w-full bg-white border border-[#CBDFF7] rounded-xl px-4 py-2.5 font-mono font-bold text-[#0B192C] uppercase focus:outline-none focus:border-[#0062FF] input-focus-glow placeholder:text-slate-400 notranslate"
                     translate="no"
                   />
                   <span className="text-[10px] text-slate-400 mt-1 block font-normal">Enter the Order ID provided during your booking.</span>
@@ -502,7 +502,7 @@ export default function PaymentView({
                     value={utr}
                     onChange={(e) => setUtr(e.target.value)}
                     placeholder="e.g. 12-digit UTR 981273981273 or Bank Ref No"
-                    className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 font-mono font-bold text-[#0F4C81] focus:outline-none input-focus-glow placeholder:text-slate-400 notranslate"
+                    className="w-full bg-white border border-[#CBDFF7] rounded-xl px-4 py-2.5 font-mono font-bold text-[#0062FF] focus:outline-none focus:border-[#0062FF] input-focus-glow placeholder:text-slate-400 notranslate"
                     translate="no"
                   />
                 </div>
@@ -517,7 +517,7 @@ export default function PaymentView({
                       required
                       value={paymentDate}
                       onChange={(e) => setPaymentDate(e.target.value)}
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none input-focus-glow font-medium notranslate"
+                      className="w-full bg-white border border-[#CBDFF7] rounded-xl px-4 py-2.5 text-[#0B192C] focus:outline-none focus:border-[#0062FF] input-focus-glow font-medium notranslate"
                       translate="no"
                     />
                   </div>
@@ -531,7 +531,7 @@ export default function PaymentView({
                       value={screenshotUrl}
                       onChange={(e) => setScreenshotUrl(e.target.value)}
                       placeholder="https://..."
-                      className="w-full bg-slate-50/60 border border-slate-200/80 rounded-xl px-4 py-2.5 text-slate-900 focus:outline-none input-focus-glow placeholder:text-slate-400 font-medium notranslate"
+                      className="w-full bg-white border border-[#CBDFF7] rounded-xl px-4 py-2.5 text-[#0B192C] focus:outline-none focus:border-[#0062FF] input-focus-glow placeholder:text-slate-400 font-medium notranslate"
                       translate="no"
                     />
                   </div>
@@ -540,7 +540,7 @@ export default function PaymentView({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="bg-[#0F4C81] hover:bg-[#0b3b64] text-white btn-glow-primary w-full py-3.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 hover-scale-sm disabled:opacity-50"
+                  className="bg-[#0062FF] hover:bg-blue-700 text-white btn-glow-primary w-full py-3.5 rounded-xl font-bold text-xs transition-all cursor-pointer shadow-sm flex items-center justify-center gap-2 hover-scale-sm disabled:opacity-50"
                 >
                   {submitting ? (
                     <>
@@ -560,7 +560,7 @@ export default function PaymentView({
               <div className="border-t border-slate-100 pt-3 text-center">
                 <button
                   onClick={() => setView('track')}
-                  className="text-xs text-[#0F4C81] hover:underline font-bold inline-flex items-center gap-1.5 cursor-pointer bg-transparent border-0"
+                  className="text-xs text-[#0062FF] hover:underline font-bold inline-flex items-center gap-1.5 cursor-pointer bg-transparent border-0"
                 >
                   Already submitted proof? Check payment verification status <ArrowRight className="w-3.5 h-3.5" />
                 </button>
@@ -571,41 +571,41 @@ export default function PaymentView({
         </div>
 
         {/* 3. IMPORTANT PAYMENT SECURITY & ANTI-FRAUD NOTICE */}
-        <div className="mt-10 bg-slate-50 border border-slate-200/90 rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xs">
-          <div className="flex items-center gap-2.5 border-b border-slate-200/80 pb-3">
-            <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-[#0F4C81] flex items-center justify-center font-bold">
-              <ShieldCheck className="w-4 h-4 text-[#0F4C81]" />
+        <div className="mt-10 bg-gradient-to-r from-[#EBF3FC] to-[#F1F6FD] border border-[#CBDFF7] rounded-3xl p-6 sm:p-8 space-y-4 shadow-2xs">
+          <div className="flex items-center gap-2.5 border-b border-[#CBDFF7]/60 pb-3">
+            <div className="w-8 h-8 rounded-xl bg-blue-100/70 text-[#0062FF] flex items-center justify-center font-bold">
+              <ShieldCheck className="w-4 h-4 text-[#0062FF]" />
             </div>
             <div>
-              <h3 className="text-sm sm:text-base font-black text-slate-900 m-0">Important Security & Charge Guidelines</h3>
-              <p className="text-[11px] text-slate-500 m-0">Read before making statutory or consultation fee transfers</p>
+              <h3 className="text-sm sm:text-base font-black text-[#0B192C] m-0">Important Security & Charge Guidelines</h3>
+              <p className="text-[11px] text-[#334E68] m-0">Read before making statutory or consultation fee transfers</p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-600">
-            <div className="bg-white border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
-              <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+            <div className="bg-white border border-[#CBDFF7] p-4 rounded-2xl space-y-1.5 shadow-2xs">
+              <span className="font-bold text-[#0B192C] block flex items-center gap-1.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Verify Recipient
               </span>
-              <p className="text-[11px] text-slate-500 leading-relaxed m-0">
+              <p className="text-[11px] text-[#334E68] leading-relaxed m-0">
                 Always confirm the recipient name matches <strong>"{paymentConfig?.upiName || 'My EasyDesk'}"</strong> before confirming the transfer in your UPI or banking application.
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
-              <span className="font-bold text-slate-900 block flex items-center gap-1.5">
-                <Lock className="w-3.5 h-3.5 text-[#0F4C81]" /> Zero Hidden Surcharges
+            <div className="bg-white border border-[#CBDFF7] p-4 rounded-2xl space-y-1.5 shadow-2xs">
+              <span className="font-bold text-[#0B192C] block flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-[#0062FF]" /> Zero Hidden Surcharges
               </span>
-              <p className="text-[11px] text-slate-500 leading-relaxed m-0">
+              <p className="text-[11px] text-[#334E68] leading-relaxed m-0">
                 All fees quoted in your order summary are all-inclusive (official portal statutory fee + My EasyDesk documentation charge). Zero additional gateway fees.
               </p>
             </div>
 
-            <div className="bg-white border border-slate-200/80 p-4 rounded-2xl space-y-1.5">
-              <span className="font-bold text-slate-900 block flex items-center gap-1.5">
+            <div className="bg-white border border-[#CBDFF7] p-4 rounded-2xl space-y-1.5 shadow-2xs">
+              <span className="font-bold text-[#0B192C] block flex items-center gap-1.5">
                 <AlertCircle className="w-3.5 h-3.5 text-amber-600" /> No Cash Transactions
               </span>
-              <p className="text-[11px] text-slate-500 leading-relaxed m-0">
+              <p className="text-[11px] text-[#334E68] leading-relaxed m-0">
                 My EasyDesk does not accept cash. Never pay personal UPI IDs or unverified numbers. If suspicious, verify immediately with our helpline.
               </p>
             </div>

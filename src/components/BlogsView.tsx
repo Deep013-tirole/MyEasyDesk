@@ -327,10 +327,10 @@ export default function BlogsView({
   // MAIN BLOGS & KNOWLEDGE HUB DIRECTORY
   // -----------------------------------------------------------------
   return (
-    <div id="easydesk-blogs-view" className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-slate-900 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-blogs-view" className="min-h-screen bg-[#F4F8FC] pb-24 font-sans text-slate-900 w-full max-w-full overflow-x-hidden">
 
       {/* 1. HERO SECTION (Matching AboutUs Gradient Banner & Micro Metrics) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white py-12 sm:py-16 border-b border-slate-200/60">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-12 sm:py-16 border-b border-[#D3E3F5]">
 
         {/* Subtle Decorative Background Blur */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
@@ -354,18 +354,18 @@ export default function BlogsView({
             </div>
 
             {/* Title */}
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-              My EasyDesk <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">Knowledge Hub</span> & Guides
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-[#0B192C] leading-tight">
+              My EasyDesk <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0062FF] via-blue-600 to-teal-600">Knowledge Hub</span> & Guides
             </h1>
 
             {/* Description */}
-            <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal max-w-2xl">
+            <p className="text-xs sm:text-sm text-[#334E68] leading-relaxed font-normal max-w-2xl">
               Your trusted source for government schemes, document prerequisites, filing procedures, and important compliance deadline updates.
             </p>
 
             {/* Search Article Input */}
             <div className="pt-2 max-w-xl">
-              <div className="relative bg-white rounded-2xl shadow-md border border-slate-200/80 p-1.5 flex items-center hover-glow-blue transition-all duration-300">
+              <div className="relative bg-white rounded-2xl shadow-md border border-[#CBDFF7] p-1.5 flex items-center hover-glow-blue transition-all duration-300">
                 <Search className="w-4 h-4 text-slate-400 ml-3 shrink-0" />
                 <input
                   type="text"
@@ -389,44 +389,44 @@ export default function BlogsView({
           </motion.div>
 
           {/* 4 Trust Highlights Cards (Matching AboutUs Trust Cards) */}
-          <div className="pt-4 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
-              <div className="w-9 h-9 rounded-2xl bg-blue-50 text-[#0F4C81] border border-blue-100 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+          <div className="pt-4 border-t border-[#D8E6F5] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4">
+            <div className="bg-white border border-[#CBDFF7] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
+              <div className="w-9 h-9 rounded-2xl bg-blue-100/90 text-[#0062FF] border border-blue-200/90 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 <Lock className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-xs font-black text-slate-900 m-0">Verified Information</h4>
-                <p className="text-[11px] text-slate-500 leading-snug m-0 font-normal">Fact-checked against official department circulars.</p>
+                <h4 className="text-xs font-black text-[#0B192C] m-0">Verified Information</h4>
+                <p className="text-[11px] text-[#334E68] leading-snug m-0 font-normal">Fact-checked against official department circulars.</p>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
+            <div className="bg-white border border-[#CBDFF7] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
               <div className="w-9 h-9 rounded-2xl bg-emerald-50 text-emerald-600 border border-emerald-100 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 <Headphones className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-xs font-black text-slate-900 m-0">Desk Support</h4>
-                <p className="text-[11px] text-slate-500 leading-snug m-0 font-normal">Get practical assistance when filing documents.</p>
+                <h4 className="text-xs font-black text-[#0B192C] m-0">Desk Support</h4>
+                <p className="text-[11px] text-[#334E68] leading-snug m-0 font-normal">Get practical assistance when filing documents.</p>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
+            <div className="bg-white border border-[#CBDFF7] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
               <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 <Zap className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-xs font-black text-slate-900 m-0">Simplified Steps</h4>
-                <p className="text-[11px] text-slate-500 leading-snug m-0 font-normal">Step-by-step checklist with zero confusing jargon.</p>
+                <h4 className="text-xs font-black text-[#0B192C] m-0">Simplified Steps</h4>
+                <p className="text-[11px] text-[#334E68] leading-snug m-0 font-normal">Step-by-step checklist with zero confusing jargon.</p>
               </div>
             </div>
 
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
+            <div className="bg-white border border-[#CBDFF7] rounded-2xl p-4 flex items-start gap-3.5 shadow-xs hover-lift-sm hover-glow-blue transition-all">
               <div className="w-9 h-9 rounded-2xl bg-amber-50 text-amber-600 border border-amber-100 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
                 <CheckCircle className="w-4 h-4" />
               </div>
               <div className="space-y-0.5">
-                <h4 className="text-xs font-black text-slate-900 m-0">Zero Queue</h4>
-                <p className="text-[11px] text-slate-500 leading-snug m-0 font-normal">Fast-track processing directly on WhatsApp.</p>
+                <h4 className="text-xs font-black text-[#0B192C] m-0">Zero Queue</h4>
+                <p className="text-[11px] text-[#334E68] leading-snug m-0 font-normal">Fast-track processing directly on WhatsApp.</p>
               </div>
             </div>
           </div>
@@ -435,7 +435,7 @@ export default function BlogsView({
       </section>
 
       {/* 2. DYNAMIC CATEGORY NAVIGATION BAR (STICKY, WITHOUT COUNTS) */}
-      <section className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-16 z-30 shadow-2xs">
+      <section className="bg-[#F4F8FC]/95 backdrop-blur-md border-b border-[#D8E6F5] sticky top-16 z-30 shadow-[0_1px_3px_rgba(11,25,44,0.04)]">
         <div className="portal-container py-3 flex flex-wrap items-center justify-between gap-3">
           {/* Category Pills Bar (No Numbers) */}
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0 flex-1">
@@ -447,8 +447,8 @@ export default function BlogsView({
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer whitespace-nowrap shrink-0 hover-scale-sm ${
                     isSelected
-                      ? 'bg-[#0F4C81] text-white shadow-sm btn-glow-primary'
-                      : 'bg-slate-100/80 text-slate-700 hover:bg-blue-50/70 hover:text-[#0F4C81]'
+                      ? 'bg-[#0062FF] text-white shadow-xs'
+                      : 'bg-white text-slate-700 hover:bg-blue-100/70 hover:text-[#0062FF] border border-[#CBDFF7]'
                   }`}
                 >
                   {cat.name}

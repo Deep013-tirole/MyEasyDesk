@@ -333,7 +333,7 @@ export default function ServiceDetailsView({
   const seoDesc = service.seoDescription || service.shortDescription || service.description || `Apply online for ${service.title} with verified desk assistance, full document verification, transparent fees, and real-time tracking on WhatsApp.`;
 
   return (
-    <div id="easydesk-service-details-page" className="w-full max-w-full overflow-x-hidden min-h-screen bg-slate-50/60 font-sans text-slate-900 pb-20">
+    <div id="easydesk-service-details-page" className="w-full max-w-full overflow-x-hidden min-h-screen bg-[#F4F8FC] font-sans text-slate-900 pb-20">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
@@ -378,13 +378,13 @@ export default function ServiceDetailsView({
       </Helmet>
 
       {/* 1. BREADCRUMBS BAR */}
-      <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-xs w-full max-w-full">
+      <div className="bg-[#F4F8FC]/95 backdrop-blur-md border-b border-[#D8E6F5] sticky top-16 z-30 shadow-[0_1px_3px_rgba(11,25,44,0.04)] w-full max-w-full">
         <div className="portal-container py-3">
           <div className="flex items-center justify-between gap-2 sm:gap-4 text-xs font-medium min-w-0">
             <nav className="flex items-center gap-1.5 text-slate-500 overflow-x-auto whitespace-nowrap scrollbar-none min-w-0 flex-1 py-0.5">
               <button
                 onClick={() => setView('home')}
-                className="hover:text-[#0F4C81] transition cursor-pointer shrink-0"
+                className="hover:text-[#0062FF] transition cursor-pointer shrink-0"
               >
                 Home
               </button>
@@ -394,7 +394,7 @@ export default function ServiceDetailsView({
                   setSelectedServiceId(null);
                   setView('services');
                 }}
-                className="hover:text-[#0F4C81] transition cursor-pointer shrink-0"
+                className="hover:text-[#0062FF] transition cursor-pointer shrink-0"
               >
                 Services
               </button>
@@ -404,12 +404,12 @@ export default function ServiceDetailsView({
                   setSelectedServiceId(null);
                   setView('services');
                 }}
-                className="hover:text-[#0F4C81] transition cursor-pointer shrink-0"
+                className="hover:text-[#0062FF] transition cursor-pointer shrink-0"
               >
                 {categoryName}
               </button>
               <span className="text-slate-300 shrink-0">/</span>
-              <span className="font-bold text-slate-900 truncate max-w-[120px] sm:max-w-[200px] md:max-w-md">
+              <span className="font-bold text-[#0B192C] truncate max-w-[120px] sm:max-w-[200px] md:max-w-md">
                 {service.title}
               </span>
             </nav>
@@ -417,7 +417,7 @@ export default function ServiceDetailsView({
             <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
               <button
                 onClick={handleCopyLink}
-                className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition cursor-pointer"
+                className="hidden sm:flex items-center gap-1.5 text-[11px] font-bold text-slate-600 bg-white hover:bg-slate-100 border border-[#D8E6F5] px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs"
                 title="Share link"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
@@ -428,7 +428,7 @@ export default function ServiceDetailsView({
                   setSelectedServiceId(null);
                   setView('services');
                 }}
-                className="flex items-center gap-1 text-[11px] font-bold text-[#0F4C81] hover:bg-blue-50 px-2 sm:px-2.5 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap"
+                className="flex items-center gap-1 text-[11px] font-bold text-[#0062FF] hover:bg-blue-50 px-2 sm:px-2.5 py-1.5 rounded-lg transition cursor-pointer whitespace-nowrap"
               >
                 <ArrowLeft className="w-3.5 h-3.5" /> <span className="hidden xs:inline">Back to Catalog</span><span className="xs:hidden">Back</span>
               </button>
@@ -446,7 +446,7 @@ export default function ServiceDetailsView({
       )}
 
       {/* 2. SERVICE HERO SECTION */}
-      <section className="bg-white border-b border-slate-200/80 pt-6 sm:pt-8 pb-8 sm:pb-10 w-full max-w-full">
+      <section className="bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] border-b border-[#D3E3F5] pt-6 sm:pt-8 pb-8 sm:pb-10 w-full max-w-full">
         <div className="portal-container">
           <div className="grid lg:grid-cols-12 gap-6 sm:gap-8 items-start w-full min-w-0">
 
@@ -455,19 +455,19 @@ export default function ServiceDetailsView({
 
               {/* Category & Badge Info Row */}
               <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
-                <span className="text-[10px] font-extrabold tracking-wider uppercase bg-blue-50 text-[#0F4C81] border border-blue-100 px-2.5 sm:px-3 py-1 rounded-full shadow-2xs">
+                <span className="text-[10px] font-extrabold tracking-wider uppercase bg-blue-100/90 text-[#0062FF] border border-blue-200/90 px-2.5 sm:px-3 py-1 rounded-full shadow-2xs">
                   {categoryName}
                 </span>
-                <span className="text-[10px] font-bold text-slate-500 bg-slate-100 border border-slate-200/60 px-2.5 py-1 rounded-full flex items-center gap-1">
+                <span className="text-[10px] font-bold text-[#334E68] bg-white border border-[#CBDFF7] px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                   <Clock className="w-3 h-3 text-slate-500" />
                   <span>Processing: {service.processingTime || '3–5 Working Days'}</span>
                 </span>
-                <span className="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 border border-slate-200 px-2.5 py-1 rounded-full notranslate" translate="no">
+                <span className="text-[10px] font-mono font-bold text-[#334E68] bg-white border border-[#CBDFF7] px-2.5 py-1 rounded-full notranslate shadow-2xs" translate="no">
                   ID: {service.id}
                 </span>
                 {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
-                  <span className="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
-                    <Calendar className="w-3 h-3 text-[#0F4C81]" />
+                  <span className="text-[10px] font-bold text-[#0062FF] bg-blue-50 border border-blue-200/80 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
+                    <Calendar className="w-3 h-3 text-[#0062FF]" />
                     <span>Timeline: {formatDateDisplay(service.timeline.startDate)} – {formatDateDisplay(service.timeline.endDate)}</span>
                   </span>
                 )}
@@ -485,12 +485,12 @@ export default function ServiceDetailsView({
               </div>
 
               {/* Service Title */}
-              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-slate-900 tracking-tight leading-tight break-words">
+              <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-black text-[#0B192C] tracking-tight leading-tight break-words">
                 {service.title}
               </h1>
 
               {/* Short Description */}
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal max-w-3xl">
+              <p className="text-xs sm:text-sm text-[#334E68] leading-relaxed font-normal max-w-3xl">
                 {service.shortDescription || service.description || 'Assisted citizen and business documentation support with guaranteed portal verification and zero rejection guidance.'}
               </p>
 

@@ -291,12 +291,12 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
   };
 
   return (
-    <div className="font-sans pb-12 text-slate-900 w-full max-w-full overflow-x-hidden">
+    <div className="font-sans pb-12 text-[#0B192C] bg-[#F4F8FC] w-full max-w-full overflow-x-hidden">
       
       {/* =========================================================================
           1. HERO HEADER SECTION (Bootstrap Jumbotron + Motion Animation)
           ========================================================================= */}
-      <section className="relative py-12 lg:py-16 overflow-hidden bg-gradient-to-b from-blue-50/70 via-slate-50 to-white border-b border-slate-200/60">
+      <section className="relative py-12 lg:py-16 overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] border-b border-[#D3E3F5]">
         {/* Subtle Decorative Background Blobs */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
           <div className="absolute -top-24 -left-20 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl" />
@@ -318,10 +318,10 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="text-3xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.15]"
+              className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0B192C] tracking-tight leading-[1.15]"
             >
               Empowering Citizens with <br className="hidden sm:inline" />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0F4C81] via-blue-600 to-teal-600">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#0062FF] via-blue-600 to-teal-600">
                 Fast, Transparent & Verified
               </span> Services
             </motion.h1>
@@ -331,7 +331,7 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
               initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-base sm:text-lg text-slate-600 max-w-2xl mx-auto leading-relaxed"
+              className="text-base sm:text-lg text-[#334E68] max-w-2xl mx-auto leading-relaxed"
             >
               {aboutData?.aboutText || 
                 'My EasyDesk revolutionizes government applications, legal affidavits, and corporate documentation across India through streamlined online workflows, automated audit checks, and verified expert desk personnel.'}
@@ -344,32 +344,32 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
               transition={{ duration: 0.5, delay: 0.3 }}
               className="pt-4 flex flex-wrap justify-center items-center gap-3 text-xs"
             >
-              <div className="hover-lift-sm bg-white/90 backdrop-blur-xs border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
+              <div className="hover-lift-sm bg-white/90 backdrop-blur-xs border border-[#CBDFF7] rounded-2xl px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
                   <CheckCircle2 className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <span className="block font-black text-slate-900">Pre-Audit Filing</span>
+                  <span className="block font-black text-[#0B192C]">Pre-Audit Filing</span>
                   <span className="text-[11px] text-slate-500 font-medium">Rejection-Proof Verification</span>
                 </div>
               </div>
 
-              <div className="hover-lift-sm bg-white/90 backdrop-blur-xs border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+              <div className="hover-lift-sm bg-white/90 backdrop-blur-xs border border-[#CBDFF7] rounded-2xl px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-xl bg-blue-50 text-[#0062FF] flex items-center justify-center font-bold">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <span className="block font-black text-slate-900">Pan-India Reach</span>
+                  <span className="block font-black text-[#0B192C]">Pan-India Reach</span>
                   <span className="text-[11px] text-slate-500 font-medium">State & Central Coverage</span>
                 </div>
               </div>
 
-              <div className="hover-lift-sm bg-white/90 backdrop-blur-xs border border-slate-200 rounded-2xl px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
+              <div className="hover-lift-sm bg-white/90 backdrop-blur-xs border border-[#CBDFF7] rounded-2xl px-4 py-2.5 shadow-2xs flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
                   <Clock className="w-4 h-4" />
                 </div>
                 <div className="text-left">
-                  <span className="block font-black text-slate-900">WhatsApp Desk</span>
+                  <span className="block font-black text-[#0B192C]">WhatsApp Desk</span>
                   <span className="text-[11px] text-slate-500 font-medium">Direct Officer Guidance</span>
                 </div>
               </div>
