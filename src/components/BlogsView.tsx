@@ -22,41 +22,97 @@ interface BlogsViewProps {
   blogs: Blog[];
   blogCategories?: BlogCategory[];
   updateBlogs?: (blogs: Blog[]) => void;
+  refetchBlogs?: () => Promise<Blog[]>;
   selectedBlogId?: string | null;
   onSelectBlogId?: (id: string | null) => void;
   onCloseBlog?: () => void;
   services?: Service[];
   onSelectService?: (serviceId: string) => void;
+  setView?: (view: string) => void;
 }
 
 export default function BlogsView({
   blogs,
   blogCategories = [],
   updateBlogs,
+  refetchBlogs,
   selectedBlogId,
   onSelectBlogId,
   onCloseBlog,
   services = [],
-  onSelectService
+  onSelectService,
+  setView
 }: BlogsViewProps) {
   const [selectedBlog, setSelectedBlog] = useState<Blog | null>(() => {
     if (!selectedBlogId) return null;
     return blogs.find(b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId) || null;
   });
 
+  // Revalidate authoritative blogs on mount
+  useEffect(() => {
+    refetchBlogs?.();
+  }, [refetchBlogs]);
+
+  // Real-time synchronization for blog updates / deletions
+  useEffect(() => {
+    const handleUpdate = (e: any) => {
+      refetchBlogs?.();
+      if (e.detail?.action === 'delete' && selectedBlog) {
+        if (selectedBlog.id === e.detail.id || selectedBlog.slug === e.detail.id) {
+          setSelectedBlog(null);
+          onCloseBlog?.();
+        }
+      }
+    };
+    window.addEventListener('easydesk_blogs_updated', handleUpdate);
+    return () => window.removeEventListener('easydesk_blogs_updated', handleUpdate);
+  }, [selectedBlog, onCloseBlog, refetchBlogs]);
+
   // Re-sync if selectedBlogId changes from outside (e.g. popstate / Back button or initial async load)
   useEffect(() => {
-    if (selectedBlogId) {
-      const match = blogs.find(b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId);
-      if (match) {
-        setSelectedBlog(match);
+    if (!selectedBlogId) {
+      setSelectedBlog(null);
+      return;
+    }
+
+    const localMatch = blogs.find(
+      b => (b.slug && b.slug.toLowerCase() === selectedBlogId.toLowerCase()) || b.id === selectedBlogId
+    );
+
+    if (localMatch) {
+      const st = String(localMatch.status || 'published').toLowerCase().trim();
+      if (st === 'published' || st === 'active') {
+        setSelectedBlog(localMatch);
       } else {
         setSelectedBlog(null);
       }
     } else {
-      setSelectedBlog(null);
+      // If not yet in local blogs, query live API to ensure fresh routing
+      let isMounted = true;
+      fetch(`/api/blogs/${encodeURIComponent(selectedBlogId)}?_t=${Date.now()}`)
+        .then(res => res.ok ? res.json() : null)
+        .then(liveBlog => {
+          if (!isMounted) return;
+          if (liveBlog && liveBlog.id) {
+            const st = String(liveBlog.status || 'published').toLowerCase().trim();
+            if (st === 'published' || st === 'active') {
+              setSelectedBlog(liveBlog);
+              if (updateBlogs) {
+                updateBlogs([liveBlog, ...blogs.filter(b => b.id !== liveBlog.id)]);
+              }
+            } else {
+              setSelectedBlog(null);
+            }
+          } else {
+            setSelectedBlog(null);
+          }
+        })
+        .catch(() => {
+          if (isMounted) setSelectedBlog(null);
+        });
+      return () => { isMounted = false; };
     }
-  }, [selectedBlogId, blogs]);
+  }, [selectedBlogId, blogs, updateBlogs]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -74,8 +130,8 @@ export default function BlogsView({
   // Filter only published/active blogs for the public view
   const publicBlogs = useMemo(() => {
     return blogs.filter(b => {
-      const st = (b.status || 'active').toLowerCase();
-      return st !== 'inactive' && st !== 'draft' && st !== 'deleted';
+      const st = String(b.status || 'published').toLowerCase().trim();
+      return st === 'published' || st === 'active';
     });
   }, [blogs]);
 

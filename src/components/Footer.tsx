@@ -3,6 +3,7 @@ import { Phone, Mail, MapPin, Globe, ShieldCheck, Heart, ArrowUpRight, MessageSq
 import { openGeneralWhatsApp, normalizeWhatsAppNumber, onContactSettingsUpdated } from '../lib/whatsapp.js';
 import { formatFullAddress } from '../lib/apiDataService.js';
 import { SocialMediaLink, SupportedSocialPlatform } from '../types.js';
+import MyEasyDeskBrand from './ui/MyEasyDeskBrand.js';
 
 interface FooterProps {
   setView: (v: string) => void;
@@ -236,29 +237,14 @@ export default function Footer({ setView }: FooterProps) {
           {/* Column 1: Brand & Mission */}
           <div className="lg:col-span-2 space-y-4">
             <div
-              className="flex items-center gap-2.5 cursor-pointer"
+              className="cursor-pointer notranslate inline-block transition-opacity hover:opacity-95"
               onClick={() => setView('home')}
               role="button"
               tabIndex={0}
               onKeyDown={(e) => e.key === 'Enter' && setView('home')}
               aria-label="My EasyDesk Home"
             >
-              {logoUrl && !logoFailed ? (
-                <img
-                  src={logoUrl}
-                  alt="My EasyDesk Logo"
-                  className="w-8 h-8 rounded-xl object-contain shadow-md bg-white shrink-0"
-                  onError={() => setLogoFailed(true)}
-                />
-              ) : (
-                <div className="w-8 h-8 bg-white text-[#0F4C81] rounded-xl flex items-center justify-center font-black shadow-md">
-                  <Shield className="w-4 h-4 text-[#0F4C81]" />
-                </div>
-              )}
-              <div>
-                <span className="text-xl font-black text-white tracking-tight leading-none block notranslate" translate="no">My EasyDesk</span>
-                <span className="block text-[9px] text-cyan-300 font-extrabold tracking-wider uppercase mt-0.5">Your Online Work, Done Easily</span>
-              </div>
+              <MyEasyDeskBrand size="lg" showTagline={true} inverted={true} />
             </div>
 
             <p className="text-xs text-slate-300/80 leading-relaxed max-w-sm m-0">

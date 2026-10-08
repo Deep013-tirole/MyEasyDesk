@@ -8,4 +8,5 @@ export { default as TrustBadge } from './TrustBadge.js';
 export { default as Breadcrumbs } from './Breadcrumbs.js';
 export { default as EmptyState } from './EmptyState.js';
 export { default as ErrorState } from './ErrorState.js';
+export { default as MyEasyDeskBrand } from './MyEasyDeskBrand.js';
 export * from './SkeletonCard.js';

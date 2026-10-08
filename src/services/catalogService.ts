@@ -234,6 +234,44 @@ export async function fetchBlogsWithCache(fallback: Blog[] = []): Promise<FetchR
   );
 }
 
+/**
+ * Directly fetches authoritative blogs from the database API, bypassing cache.
+ * Updates local cache with the authoritative response.
+ */
+export async function fetchAuthoritativeBlogs(): Promise<Blog[]> {
+  try {
+    const res = await fetch(`/api/blogs?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: {
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache'
+      }
+    });
+    if (res.ok) {
+      const data = await safeParseJsonResponse<Blog[]>(res);
+      if (Array.isArray(data)) {
+        setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, data);
+        return data;
+      }
+    }
+  } catch (err: any) {
+    console.warn('[CatalogService] Direct blog fetch error, trying client fallback:', err?.message || err);
+  }
+
+  // Secondary fallback to apiDataService
+  try {
+    const clientData = await getClientBlogs();
+    if (Array.isArray(clientData)) {
+      setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, clientData);
+      return clientData;
+    }
+  } catch {}
+
+  // Last resort: cached data
+  return getCachedCatalog<Blog[]>(CATALOG_CACHE_KEYS.BLOGS, []);
+}
+
 export async function fetchReviewsWithCache(fallback: Review[] = []): Promise<FetchResult<Review[]>> {
   return fetchWithCache<Review[]>(
     '/api/reviews', 

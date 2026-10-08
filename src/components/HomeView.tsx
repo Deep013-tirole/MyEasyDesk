@@ -12,6 +12,7 @@ import TrustBadge from './ui/TrustBadge.js';
 import SectionContainer from './ui/SectionContainer.js';
 import SectionHeader from './ui/SectionHeader.js';
 import CivicCard from './ui/CivicCard.js';
+import MyEasyDeskBrand from './ui/MyEasyDeskBrand.js';
 
 interface HomeViewProps {
   services: Service[];
@@ -107,10 +108,15 @@ export default function HomeView({
       >
         <div className="max-w-4xl mx-auto text-center space-y-6">
 
+          {/* Official Brand Identity Presentation */}
+          <div className="flex justify-center pb-1">
+            <MyEasyDeskBrand size="xl" showTagline={false} />
+          </div>
+
           {/* Eyebrow Badge */}
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-black bg-blue-50 text-[#0F4C81] border border-blue-200/80 shadow-2xs">
             <Shield className="w-3.5 h-3.5 text-[#0F4C81]" />
-            <span>My EasyDesk • Government • Education • Business • Personal Documents</span>
+            <span>Government • Education • Business • Personal Documents</span>
           </div>
 
           {/* Main Headline */}
@@ -474,27 +480,35 @@ export default function HomeView({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 relative">
           {[
-            { step: '01', title: 'Choose Service', desc: 'Browse verified catalog and inspect prerequisites and eligibility.' },
-            { step: '02', title: 'Submit Documents', desc: 'Share required paperwork securely to our designated desk.' },
-            { step: '03', title: 'Desk Verification', desc: 'Officers pre-audit fields, spellings, and formats for 100% accuracy.' },
-            { step: '04', title: 'Portal Filing', desc: 'Fast-track submission to official department portals with receipt.' },
-            { step: '05', title: 'Track & Deliver', desc: 'Real-time status updates and direct document delivery to your phone.' }
-          ].map((item, idx) => (
-            <CivicCard
-              key={idx}
-              variant="subtle"
-              hoverEffect
-              className="p-5 flex flex-col justify-between"
-            >
-              <div className="space-y-2.5">
-                <span className="text-xs font-black font-mono text-[#0F4C81] bg-blue-50 px-2.5 py-1 rounded-lg border border-blue-100/70 inline-block shadow-2xs">
-                  STEP {item.step}
-                </span>
-                <h4 className="text-sm font-bold text-slate-900 leading-snug m-0">{item.title}</h4>
-                <p className="text-xs text-slate-500 leading-relaxed font-normal m-0">{item.desc}</p>
-              </div>
-            </CivicCard>
-          ))}
+            { step: '01', icon: Layers, title: 'Choose Service', desc: 'Browse verified catalog and inspect prerequisites and eligibility.' },
+            { step: '02', icon: FileText, title: 'Submit Documents', desc: 'Share required paperwork securely to our designated desk.' },
+            { step: '03', icon: ShieldCheck, title: 'Desk Verification', desc: 'Officers pre-audit fields, spellings, and formats for 100% accuracy.' },
+            { step: '04', icon: Zap, title: 'Portal Filing', desc: 'Fast-track submission to official department portals with receipt.' },
+            { step: '05', icon: CheckCircle2, title: 'Track & Deliver', desc: 'Real-time status updates and direct document delivery to your phone.' }
+          ].map((item, idx) => {
+            const StepIcon = item.icon;
+            return (
+              <CivicCard
+                key={idx}
+                variant="subtle"
+                hoverEffect
+                className="p-5 flex flex-col justify-between group transition-all duration-300 hover:-translate-y-1"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black font-mono text-[#0062FF] bg-blue-50 px-2.5 py-1 rounded-xl border border-blue-200/80 inline-block shadow-2xs">
+                      STEP {item.step}
+                    </span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-50 text-[#0F4C81] flex items-center justify-center group-hover:bg-[#0062FF] group-hover:text-white transition-colors shadow-2xs">
+                      <StepIcon className="w-4 h-4" />
+                    </div>
+                  </div>
+                  <h4 className="text-sm font-bold text-slate-900 leading-snug m-0">{item.title}</h4>
+                  <p className="text-xs text-slate-500 leading-relaxed font-normal m-0">{item.desc}</p>
+                </div>
+              </CivicCard>
+            );
+          })}
         </div>
       </SectionContainer>
 

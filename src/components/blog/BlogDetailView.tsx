@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { 
   ArrowLeft, Calendar, Clock, Tag, MessageSquare, Send, 
-  CheckCircle2, AlertTriangle, ShieldCheck, User as UserIcon, 
-  FileText, Share2, Check, Bookmark, ChevronRight, Sparkles,
-  HelpCircle, Info
+  CheckCircle2, ShieldCheck, User as UserIcon, 
+  FileText, Share2, Check, ChevronRight, Sparkles,
+  HelpCircle, Eye, RefreshCw
 } from 'lucide-react';
 import { Blog, BlogCategory, BlogComment, Service } from '../../types.js';
 import { openGeneralWhatsApp } from '../../lib/whatsapp.js';
@@ -36,19 +36,8 @@ export default function BlogDetailView({
   services = [],
   onSelectService
 }: BlogDetailViewProps) {
-  if (!blog) {
-    return (
-      <ContentUnavailable
-        id="blog-detail-not-found"
-        statusCode={404}
-        title="Article Unavailable"
-        message="The requested filing guide or article could not be found or may have been updated."
-        primaryActionText="Back to All Guides"
-        onPrimaryAction={onBack}
-      />
-    );
-  }
-
+  const [currentBlog, setCurrentBlog] = useState<Blog>(blog);
+  const [isDeletedOrUnavailable, setIsDeletedOrUnavailable] = useState(false);
   const [imageError, setImageError] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
@@ -57,22 +46,78 @@ export default function BlogDetailView({
   const [newCommentText, setNewCommentText] = useState('');
   const [commentSuccess, setCommentSuccess] = useState('');
 
+  // Synchronize if prop blog changes
+  useEffect(() => {
+    setCurrentBlog(blog);
+    setImageError(false);
+    setIsDeletedOrUnavailable(false);
+  }, [blog]);
+
+  // Authoritative API live verification on mount / change to prevent displaying stale deleted articles
+  useEffect(() => {
+    let isMounted = true;
+    const identifier = blog.slug || blog.id;
+    if (!identifier) return;
+
+    fetch(`/api/blogs/${encodeURIComponent(identifier)}?_t=${Date.now()}`, {
+      cache: 'no-store',
+      headers: { 'Cache-Control': 'no-cache, no-store' }
+    })
+      .then(res => {
+        if (!isMounted) return null;
+        if (res.status === 404) {
+          setIsDeletedOrUnavailable(true);
+          return null;
+        }
+        return res.ok ? res.json() : null;
+      })
+      .then(liveData => {
+        if (!isMounted || !liveData) return;
+        const st = String(liveData.status || 'published').toLowerCase().trim();
+        if (st === 'published' || st === 'active') {
+          setCurrentBlog(liveData);
+          if (updateBlogs) {
+            updateBlogs(blogs.map(b => b.id === liveData.id ? liveData : b));
+          }
+        } else {
+          setIsDeletedOrUnavailable(true);
+        }
+      })
+      .catch(() => {
+        // Network offline or error, maintain current state
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [blog.id, blog.slug, updateBlogs, blogs]);
+
   // Category resolution
   const matchedCat = blogCategories.find(
-    c => c.id === blog.categoryId || c.name.toLowerCase() === (blog.category || '').toLowerCase()
+    c => c.id === currentBlog.categoryId || c.name.toLowerCase() === (currentBlog.category || '').toLowerCase()
   );
-  const categoryName = matchedCat ? matchedCat.name : (blog.category || 'Government Services');
+  const categoryName = matchedCat ? matchedCat.name : (currentBlog.category || 'Government Services');
   const categoryId = matchedCat ? matchedCat.id : 'all';
 
-  // Reading time
-  const wordCount = (blog.content || '').trim().split(/\s+/).length;
-  const readingTime = Math.max(2, Math.ceil(wordCount / 180));
+  // Reading time calculation
+  const wordCount = (currentBlog.content || '').trim().split(/\s+/).filter(Boolean).length;
+  const readingTime = Math.max(2, Math.ceil(wordCount / 200));
 
   // Canonical Origin & URL
   const origin = getCanonicalOrigin();
-  const canonicalUrl = `${origin}/blogs/${blog.slug || blog.id}`;
+  const canonicalUrl = `${origin}/blogs/${currentBlog.slug || currentBlog.id}`;
 
-  // Find matching genuine service only if one truly exists (Strict White-Hat SEO)
+  // Formatted publication date
+  const formattedDate = currentBlog.date 
+    ? new Date(currentBlog.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : (currentBlog.createdAt ? new Date(currentBlog.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Guide');
+
+  // Formatted update date if available
+  const formattedUpdateDate = (currentBlog as any).updatedAt
+    ? new Date((currentBlog as any).updatedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
+    : null;
+
+  // Contextual matching service (genuine assistance mapping)
   const matchedService = useMemo(() => {
     if (!services || services.length === 0) return null;
     const activeServices = services.filter(s => {
@@ -81,8 +126,8 @@ export default function BlogDetailView({
     });
     if (activeServices.length === 0) return null;
 
-    const titleLower = (blog.title || '').toLowerCase();
-    const tagsLower = (blog.tags || []).map(t => t.toLowerCase());
+    const titleLower = (currentBlog.title || '').toLowerCase();
+    const tagsLower = (currentBlog.tags || []).map(t => t.toLowerCase());
     const catLower = (categoryName || '').toLowerCase();
 
     const matches = (keywords: string[]) => {
@@ -131,23 +176,18 @@ export default function BlogDetailView({
     }
 
     return null;
-  }, [blog, services, categoryName]);
-
-  // Date
-  const formattedDate = blog.date 
-    ? new Date(blog.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
-    : (blog.createdAt ? new Date(blog.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Recent Guide');
+  }, [currentBlog, services, categoryName]);
 
   // Related Guides: Same category first, excluding current article
   const sameCategoryBlogs = blogs.filter(
-    b => b.id !== blog.id && (b.categoryId === blog.categoryId || (b.category || '').toLowerCase() === (blog.category || '').toLowerCase())
+    b => b.id !== currentBlog.id && (b.categoryId === currentBlog.categoryId || (b.category || '').toLowerCase() === (currentBlog.category || '').toLowerCase())
   );
   const otherRecentBlogs = blogs.filter(
-    b => b.id !== blog.id && !sameCategoryBlogs.some(sc => sc.id === b.id)
+    b => b.id !== currentBlog.id && !sameCategoryBlogs.some(sc => sc.id === b.id)
   );
   const relatedBlogs = [...sameCategoryBlogs, ...otherRecentBlogs].slice(0, 3);
 
-  // Handle Add Reader Comment
+  // Add Reader Comment Handler
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommentName.trim() || !newCommentText.trim()) return;
@@ -160,12 +200,14 @@ export default function BlogDetailView({
     };
 
     const updatedBlog: Blog = {
-      ...blog,
-      comments: [...(blog.comments || []), newComment]
+      ...currentBlog,
+      comments: [...(currentBlog.comments || []), newComment]
     };
 
+    setCurrentBlog(updatedBlog);
+
     if (updateBlogs) {
-      const updatedBlogs = blogs.map(b => b.id === blog.id ? updatedBlog : b);
+      const updatedBlogs = blogs.map(b => b.id === currentBlog.id ? updatedBlog : b);
       updateBlogs(updatedBlogs);
     }
 
@@ -180,23 +222,35 @@ export default function BlogDetailView({
       navigator.clipboard.writeText(window.location.href);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
-    } catch (e) {
+    } catch {
       // Fallback
     }
   };
 
-  // Helper to render formatted article content blocks
-  const renderFormattedContent = (content: string) => {
-    if (!content) return null;
-    return renderRichText(content);
+  const handleShareWhatsApp = () => {
+    const text = encodeURIComponent(`*${currentBlog.title}*\nRead this comprehensive filing guide on My EasyDesk:\n${window.location.href}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
   };
 
-  const rawBlogTitle = blog.seoTitle || blog.title;
+  if (!blog || isDeletedOrUnavailable) {
+    return (
+      <ContentUnavailable
+        id="blog-detail-not-found"
+        statusCode={404}
+        title="Article Unavailable"
+        message="The requested filing guide or article has been removed, unpublished, or is no longer available."
+        primaryActionText="Back to Knowledge Hub"
+        onPrimaryAction={onBack}
+      />
+    );
+  }
+
+  const rawBlogTitle = currentBlog.seoTitle || currentBlog.title;
   const seoTitle = rawBlogTitle.includes('My EasyDesk') ? rawBlogTitle : (rawBlogTitle.includes('EasyDesk') ? rawBlogTitle.replace('EasyDesk', 'My EasyDesk') : `${rawBlogTitle} | My EasyDesk`);
-  const seoDesc = blog.seoDescription || blog.shortDescription || blog.excerpt || blog.title;
+  const seoDesc = currentBlog.seoDescription || currentBlog.shortDescription || currentBlog.excerpt || currentBlog.title;
 
   return (
-    <div id="blog-detail-view" className="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900 animate-in fade-in duration-150 w-full max-w-full overflow-x-hidden">
+    <article id="blog-detail-view" className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-slate-900 animate-in fade-in duration-150 w-full max-w-full overflow-x-hidden selection:bg-blue-100 selection:text-[#0F4C81]">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
@@ -209,64 +263,82 @@ export default function BlogDetailView({
         <meta property="og:title" content={seoTitle} />
         <meta property="og:description" content={seoDesc} />
         <meta property="og:site_name" content="My EasyDesk" />
-        {blog.image && <meta property="og:image" content={blog.image} />}
+        {currentBlog.image && <meta property="og:image" content={currentBlog.image} />}
 
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:url" content={canonicalUrl} />
         <meta name="twitter:title" content={seoTitle} />
         <meta name="twitter:description" content={seoDesc} />
-        {blog.image && <meta name="twitter:image" content={blog.image} />}
+        {currentBlog.image && <meta name="twitter:image" content={currentBlog.image} />}
 
         {/* JSON-LD Schemas */}
         <script type="application/ld+json">
-          {JSON.stringify(getBlogPostingJsonLd(blog))}
+          {JSON.stringify(getBlogPostingJsonLd(currentBlog))}
         </script>
         <script type="application/ld+json">
           {JSON.stringify(getBreadcrumbsJsonLd([
             { name: 'Home', path: '/' },
             { name: 'Knowledge Hub', path: '/blogs' },
             { name: categoryName, path: '/blogs' },
-            { name: blog.title, path: `/blogs/${blog.slug || blog.id}` }
+            { name: currentBlog.title, path: `/blogs/${currentBlog.slug || currentBlog.id}` }
           ]))}
         </script>
       </Helmet>
       
-      {/* 1. Header Navigation & Breadcrumbs Bar */}
-      <div className="bg-white border-b border-slate-200/80 sticky top-16 z-30 shadow-2xs">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4 text-xs">
+      {/* 1. Header Navigation & Breadcrumbs Bar (Clean Blogger Header) */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-16 z-30 shadow-2xs">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3 text-xs">
           
-          {/* Breadcrumbs */}
-          <nav className="flex items-center gap-1.5 text-slate-500 font-medium truncate">
+          {/* Breadcrumbs Navigation */}
+          <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-slate-500 font-medium truncate min-w-0">
             <button
+              type="button"
               onClick={onBack}
-              className="hover:text-slate-900 transition flex items-center gap-1 shrink-0 font-bold text-slate-700"
+              className="hover:text-slate-900 transition flex items-center gap-1 shrink-0 font-bold text-slate-700 cursor-pointer"
             >
-              <ArrowLeft className="w-3.5 h-3.5" /> All Guides
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>All Guides</span>
             </button>
             <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0" />
             <button
+              type="button"
               onClick={() => {
                 onSelectCategory(categoryId);
                 onBack();
               }}
-              className="hover:text-[#0F4C81] transition font-semibold text-slate-600 truncate"
+              className="hover:text-[#0F4C81] transition font-semibold text-slate-600 truncate cursor-pointer hidden xs:inline"
             >
               {categoryName}
             </button>
+            <ChevronRight className="w-3.5 h-3.5 text-slate-300 shrink-0 hidden xs:inline" />
+            <span className="text-slate-400 truncate max-w-[140px] sm:max-w-[240px] md:max-w-[340px]">
+              {currentBlog.title}
+            </span>
           </nav>
 
-          {/* Share Action */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Social Share & Copy Link Actions */}
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
+              type="button"
+              onClick={handleShareWhatsApp}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 hover:bg-emerald-100/80 text-emerald-800 font-bold text-xs transition cursor-pointer active:scale-95"
+              title="Share on WhatsApp"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </button>
+
+            <button
+              type="button"
               onClick={handleCopyLink}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-xs transition cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-slate-700 font-bold text-xs transition cursor-pointer active:scale-95 shadow-2xs"
               title="Copy Article Link"
             >
               {copiedLink ? (
                 <>
                   <Check className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="text-emerald-700">Link Copied!</span>
+                  <span className="text-emerald-700">Copied!</span>
                 </>
               ) : (
                 <>
@@ -280,106 +352,167 @@ export default function BlogDetailView({
         </div>
       </div>
 
-      {/* 2. Article Hero & Metadata Container */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-8 space-y-6">
+      {/* 2. Main Article Editorial Column (Optimal 720-780px Readable Width) */}
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 space-y-8">
         
-        <div className="space-y-4">
-          {/* Category Badge & Metadata */}
-          <div className="flex flex-wrap items-center gap-2.5">
+        {/* Article Metadata & Header */}
+        <header className="space-y-4">
+          
+          {/* Category Pill */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
+              type="button"
               onClick={() => {
                 onSelectCategory(categoryId);
                 onBack();
               }}
-              className="bg-blue-50 hover:bg-blue-100 text-[#0F4C81] font-black text-xs px-3 py-1 rounded-lg border border-blue-100 uppercase tracking-wider transition cursor-pointer"
+              className="bg-blue-50 hover:bg-blue-100 text-[#0F4C81] font-bold text-xs px-3.5 py-1 rounded-full border border-blue-200/80 uppercase tracking-wider transition cursor-pointer"
             >
               {categoryName}
             </button>
 
-            <span className="text-slate-300">•</span>
-
-            <span className="flex items-center gap-1 text-xs text-slate-500 font-medium notranslate" translate="no">
-              <Calendar className="w-3.5 h-3.5 text-slate-400" /> {formattedDate}
-            </span>
-
-            <span className="text-slate-300">•</span>
-
-            <span className="flex items-center gap-1 text-xs text-slate-500 font-medium">
-              <Clock className="w-3.5 h-3.5 text-slate-400" /> {readingTime} min read
-            </span>
+            {currentBlog.featured && (
+              <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 font-bold text-xs px-3 py-0.5 rounded-full uppercase tracking-wider">
+                <Sparkles className="w-3 h-3 text-amber-600" /> Featured Guide
+              </span>
+            )}
           </div>
 
-          {/* Article Title */}
-          <h1 className="text-2xl sm:text-4xl lg:text-4xl font-black text-slate-950 tracking-tight leading-tight">
-            {blog.title}
+          {/* Large Article Title */}
+          <h1 className="text-2xl sm:text-4xl lg:text-[42px] font-black text-slate-950 tracking-tight leading-[1.25] text-balance">
+            {currentBlog.title}
           </h1>
 
-          {/* Author Badge */}
-          <div className="flex items-center gap-3 pt-2 pb-1 border-b border-slate-200/80">
-            <div className="w-9 h-9 rounded-full bg-[#0F4C81] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-              {(blog.author || 'ED')[0]}
-            </div>
-            <div>
-              <span className="font-bold text-xs sm:text-sm text-slate-900 block leading-none notranslate" translate="no">
-                {blog.author || 'Desk Verification Officer'}
-              </span>
-              <span className="text-[11px] text-slate-500 font-medium mt-0.5 block">
-                Official My EasyDesk E-Governance Knowledge Desk
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Hero Cover Image */}
-        <div className="w-full aspect-[16/9] max-h-[460px] rounded-3xl bg-slate-100 overflow-hidden border border-slate-200/80 shadow-xs relative">
-          {blog.image && !imageError ? (
-            <img
-              src={blog.image}
-              alt={blog.title}
-              referrerPolicy="no-referrer"
-              onError={() => setImageError(true)}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#0B2545] to-[#0F4C81] text-white p-8 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center mb-3">
-                <FileText className="w-7 h-7 text-teal-300" />
-              </div>
-              <span className="text-sm font-mono tracking-widest uppercase text-teal-200">MY EASYDESK OFFICIAL FILING GUIDE</span>
-            </div>
+          {/* Short Excerpt / Lead Paragraph */}
+          {currentBlog.excerpt && (
+            <p className="text-base sm:text-lg text-slate-600 font-normal leading-relaxed border-l-2 border-blue-200 pl-3 italic">
+              {currentBlog.excerpt}
+            </p>
           )}
-        </div>
 
-        {/* 3. Core Article Content (Max-width 700-800px for comfortable reading) */}
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 sm:p-10 space-y-6">
-          
-          <div className="prose prose-slate max-w-none space-y-5 text-slate-800">
-            {renderFormattedContent(blog.content)}
+          {/* Author Byline & Publishing Metadata Strip */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 pb-4 border-y border-slate-200/80 text-xs text-slate-600">
+            
+            {/* Author Identification */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#0F4C81] to-[#0B2545] text-white flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
+                {(currentBlog.author || 'ED')[0]}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-slate-900 notranslate" translate="no">
+                    {currentBlog.author || 'Desk Verification Officer'}
+                  </span>
+                  <span className="inline-flex items-center text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded font-semibold border border-blue-100">
+                    Verified
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-medium block">
+                  My EasyDesk E-Governance Knowledge Desk
+                </span>
+              </div>
+            </div>
+
+            {/* Publication / Timing Details */}
+            <div className="flex flex-wrap items-center gap-3 text-slate-500 font-medium">
+              <span className="flex items-center gap-1 notranslate" translate="no" title="Published Date">
+                <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                <span>{formattedDate}</span>
+              </span>
+
+              {formattedUpdateDate && formattedUpdateDate !== formattedDate && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <span className="flex items-center gap-1 notranslate" translate="no" title="Last Updated">
+                    <RefreshCw className="w-3 h-3 text-emerald-600" />
+                    <span>Updated {formattedUpdateDate}</span>
+                  </span>
+                </>
+              )}
+
+              <span className="text-slate-300">•</span>
+
+              <span className="flex items-center gap-1" title="Estimated Reading Time">
+                <Clock className="w-3.5 h-3.5 text-slate-400" />
+                <span>{readingTime} min read</span>
+              </span>
+
+              {typeof currentBlog.views === 'number' && currentBlog.views > 0 && (
+                <>
+                  <span className="text-slate-300">•</span>
+                  <span className="flex items-center gap-1" title="Reader Views">
+                    <Eye className="w-3.5 h-3.5 text-slate-400" />
+                    <span>{currentBlog.views} views</span>
+                  </span>
+                </>
+              )}
+            </div>
+
           </div>
 
-          {/* Highlighted Official Verification Notice Box */}
-          <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 mt-8">
+        </header>
+
+        {/* 3. Featured Hero Image & Caption */}
+        <figure className="space-y-2">
+          <div className="w-full aspect-[16/9] sm:aspect-[21/9] max-h-[460px] rounded-2xl sm:rounded-3xl bg-slate-100 overflow-hidden border border-slate-200/80 shadow-xs relative">
+            {currentBlog.image && !imageError ? (
+              <img
+                src={currentBlog.image}
+                alt={currentBlog.title}
+                referrerPolicy="no-referrer"
+                onError={() => setImageError(true)}
+                className="w-full h-full object-cover transition-opacity duration-300"
+              />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#0B2545] to-[#0F4C81] text-white p-8 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center mb-3">
+                  <FileText className="w-7 h-7 text-teal-300" />
+                </div>
+                <span className="text-xs sm:text-sm font-mono tracking-widest uppercase text-teal-200 font-bold">
+                  MY EASYDESK OFFICIAL FILING GUIDE
+                </span>
+                <span className="text-xs text-slate-300 mt-1 max-w-sm">
+                  {currentBlog.title}
+                </span>
+              </div>
+            )}
+          </div>
+          <figcaption className="text-center text-[11px] sm:text-xs text-slate-400 italic font-medium">
+            Official procedural guidance and verified compliance roadmap curated by My EasyDesk.
+          </figcaption>
+        </figure>
+
+        {/* 4. Article Body — Clean, Distraction-Free Reading Container */}
+        <section className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 sm:p-10 md:p-12 space-y-8">
+          
+          {/* Formatted Article Content */}
+          <div className="easydesk-blog-article-body text-slate-800 text-[15px] sm:text-[17px] leading-[1.8] sm:leading-[1.85] font-normal">
+            {renderRichText(currentBlog.content, { className: 'space-y-6' })}
+          </div>
+
+          {/* Official Verification Stamp Card */}
+          <div className="p-5 rounded-2xl bg-slate-50/80 border border-slate-200 space-y-2">
             <div className="flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
-                Document Pre-Audit & Filing Assistance
+                Document Pre-Audit & Error Verification
               </h4>
             </div>
             <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              My EasyDesk assists citizens, entrepreneurs, and students with document audits, application corrections, and digital submission workflows. Always review the final submission acknowledgment copy for official transaction stamps.
+              My EasyDesk provides assistance with document verification, application corrections, and digital submission workflows. Always keep your official acknowledgment receipt and tracking code safely stored for verification.
             </p>
           </div>
 
-          {/* Article Tags */}
-          {blog.tags && blog.tags.length > 0 && (
+          {/* Topic Tags */}
+          {currentBlog.tags && currentBlog.tags.length > 0 && (
             <div className="pt-6 border-t border-slate-100 flex flex-wrap items-center gap-2">
               <span className="text-xs font-bold text-slate-500 flex items-center gap-1 mr-1">
-                <Tag className="w-3.5 h-3.5" /> Topic Tags:
+                <Tag className="w-3.5 h-3.5" /> Topics:
               </span>
-              {blog.tags.map((tag, idx) => (
+              {currentBlog.tags.map((tag, idx) => (
                 <span
                   key={idx}
-                  className="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-lg border border-slate-200/60"
+                  className="bg-slate-100 hover:bg-slate-200/80 text-slate-700 text-xs font-semibold px-3 py-1 rounded-lg border border-slate-200/60 transition cursor-default"
                 >
                   #{tag}
                 </span>
@@ -387,34 +520,55 @@ export default function BlogDetailView({
             </div>
           )}
 
-          {/* WhatsApp Direct Assistance Banner */}
-          <div className="p-6 rounded-2xl bg-gradient-to-br from-[#0B2545] to-[#0F4C81] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm mt-8">
+          {/* Author Bio Card */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-200 flex flex-col sm:flex-row items-center sm:items-start gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-[#0F4C81] text-white flex items-center justify-center font-black text-lg shrink-0 shadow-2xs">
+              {(currentBlog.author || 'ED')[0]}
+            </div>
             <div className="space-y-1 text-center sm:text-left">
-              <h4 className="font-extrabold text-sm sm:text-base text-white">Need Help Filing This Service?</h4>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                <h4 className="font-bold text-sm text-slate-900 notranslate" translate="no">
+                  {currentBlog.author || 'Desk Verification Officer'}
+                </h4>
+                <span className="text-[10px] bg-blue-100 text-[#0F4C81] px-2 py-0.5 rounded-full font-bold">
+                  Editorial Team
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                Part of the official My EasyDesk research desk. Focused on simplifying Indian government schemes, e-governance documentation, MSME registrations, and digital citizen services.
+              </p>
+            </div>
+          </div>
+
+          {/* Direct WhatsApp Guidance Banner */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-[#0B2545] to-[#0F4C81] text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+            <div className="space-y-1 text-center sm:text-left">
+              <h4 className="font-extrabold text-sm sm:text-base text-white">Have Questions About This Process?</h4>
               <p className="text-xs text-blue-100">
-                Connect directly with our desk officers on WhatsApp for personalized document assistance.
+                Connect directly with our desk officers on WhatsApp for personalized document verification and submission guidance.
               </p>
             </div>
             <button
-              onClick={() => openGeneralWhatsApp(`Hello My EasyDesk, I need assistance regarding the guide: "${blog.title}"`)}
+              type="button"
+              onClick={() => openGeneralWhatsApp(`Hello My EasyDesk, I need assistance regarding the guide: "${currentBlog.title}"`)}
               className="bg-[#10B981] hover:bg-[#0e9f6e] text-white font-bold text-xs px-5 py-3 rounded-xl transition cursor-pointer flex items-center gap-2 shrink-0 shadow-md active:scale-95"
             >
               <MessageSquare className="w-4 h-4" /> Connect on WhatsApp
             </button>
           </div>
 
-        </div>
+        </section>
 
-        {/* Contextual Related EasyDesk Service Recommendation (Organic Conversion) */}
+        {/* 5. Contextual Service Recommendation (If Genuine Match Exists) */}
         {matchedService && (
-          <div id="blog-related-service-card" className="bg-gradient-to-br from-blue-50/90 via-white to-slate-50 rounded-3xl border border-blue-200/90 p-6 sm:p-8 shadow-xs space-y-4">
+          <aside id="blog-related-service-card" className="bg-gradient-to-br from-blue-50/90 via-white to-slate-50 rounded-3xl border border-blue-200/90 p-6 sm:p-8 shadow-xs space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-[#0F4C81] text-white shadow-2xs">
-                  <Sparkles className="w-3 h-3" /> Related My EasyDesk Service
+                  <Sparkles className="w-3 h-3" /> Related EasyDesk Service
                 </span>
                 <span className="text-xs text-slate-500 font-medium">
-                  Verified Commercial Assistance Desk
+                  Verified Application Assistance
                 </span>
               </div>
               {((matchedService.govFees || 0) + (matchedService.serviceCharge || 0) > 0) && (
@@ -439,9 +593,10 @@ export default function BlogDetailView({
             <div className="pt-2 flex flex-wrap items-center justify-between gap-3 border-t border-blue-100">
               <div className="flex items-center gap-1.5 text-xs text-slate-600 font-medium">
                 <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Pre-submission verification & zero rejection guarantee</span>
+                <span>Pre-submission verification & zero rejection support</span>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   if (onSelectService) {
                     onSelectService(matchedService.slug || matchedService.id);
@@ -451,27 +606,28 @@ export default function BlogDetailView({
                 }}
                 className="px-5 py-2.5 rounded-xl bg-[#0F4C81] hover:bg-[#0b3b64] text-white text-xs font-bold transition shadow-xs flex items-center gap-2 cursor-pointer active:scale-95"
               >
-                <span>Apply with My EasyDesk Assistance</span>
+                <span>Apply with EasyDesk Assistance</span>
                 <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-          </div>
+          </aside>
         )}
 
-        {/* 4. Related Guides Section */}
+        {/* 6. Related Articles Grid */}
         {relatedBlogs.length > 0 && (
-          <div className="space-y-4 pt-6">
+          <section className="space-y-4 pt-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-black text-slate-950">Related Guides & Articles</h3>
+                <h3 className="text-lg sm:text-xl font-black text-slate-950">Related Guides & Articles</h3>
                 <p className="text-xs text-slate-500">More practical digital service guidance in {categoryName}</p>
               </div>
               <button
+                type="button"
                 onClick={() => {
                   onSelectCategory(categoryId);
                   onBack();
                 }}
-                className="text-xs font-bold text-[#0F4C81] hover:underline"
+                className="text-xs font-bold text-[#0F4C81] hover:underline cursor-pointer"
               >
                 View all in {categoryName} →
               </button>
@@ -491,27 +647,27 @@ export default function BlogDetailView({
                 />
               ))}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* 5. Reader Questions & Comments Section */}
-        <div className="space-y-6 pt-6">
+        {/* 7. Reader Questions & Comments Section */}
+        <section className="space-y-6 pt-4">
           <div className="flex items-center justify-between border-b border-slate-200/80 pb-3">
             <h3 className="text-lg font-black text-slate-950 flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-[#0F4C81]" />
-              Reader Questions & Discussion ({blog.comments?.length || 0})
+              Reader Inquiries & Discussion ({currentBlog.comments?.length || 0})
             </h3>
           </div>
 
           {/* Comments List */}
           <div className="space-y-3">
-            {(!blog.comments || blog.comments.length === 0) ? (
+            {(!currentBlog.comments || currentBlog.comments.length === 0) ? (
               <div className="bg-white rounded-2xl border border-slate-200/80 p-8 text-center text-xs text-slate-500">
                 <HelpCircle className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                No questions or comments yet. Have an inquiry about this service? Post below!
+                No questions yet. Have an inquiry about this service or document requirements? Post below!
               </div>
             ) : (
-              blog.comments.map((comment) => (
+              currentBlog.comments.map((comment) => (
                 <div key={comment.id} className="bg-white rounded-2xl border border-slate-200/80 p-5 space-y-2 shadow-2xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -534,7 +690,7 @@ export default function BlogDetailView({
           <div className="bg-white rounded-3xl border border-slate-200/90 p-6 sm:p-8 shadow-xs space-y-4">
             <div>
               <h4 className="text-sm font-black text-slate-900">Post an Inquiry / Feedback</h4>
-              <p className="text-xs text-slate-500 mt-0.5">Ask questions regarding document requirements or share your feedback.</p>
+              <p className="text-xs text-slate-500 mt-0.5">Ask questions regarding eligibility or document requirements.</p>
             </div>
 
             {commentSuccess && (
@@ -565,7 +721,7 @@ export default function BlogDetailView({
                   required
                   value={newCommentText}
                   onChange={(e) => setNewCommentText(e.target.value)}
-                  placeholder="Type your question regarding required documents or processes..."
+                  placeholder="Type your question regarding required documents or application steps..."
                   className="w-full border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-[#0F4C81] focus:ring-1 focus:ring-[#0F4C81] outline-none bg-slate-50/50 notranslate"
                   translate="no"
                 />
@@ -580,10 +736,10 @@ export default function BlogDetailView({
             </form>
           </div>
 
-        </div>
+        </section>
 
-      </div>
+      </main>
 
-    </div>
+    </article>
   );
 }

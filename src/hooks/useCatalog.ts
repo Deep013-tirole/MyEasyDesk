@@ -5,8 +5,10 @@ import {
   getCachedCatalog,
   setCachedCatalog,
   fetchAllCatalogsWithCache,
+  fetchAuthoritativeBlogs,
   fetchReviewsWithCache,
   invalidateReviewsCache,
+  invalidateBlogsCache,
   AllCatalogs
 } from '../services/catalogService';
 
@@ -291,7 +293,9 @@ export function validateAndNormalizeBlogs(
     const wordCount = content.split(/\s+/).filter(Boolean).length;
     const readTime = String(item.readTime || `${Math.max(2, Math.ceil(wordCount / 200))} min read`).trim();
     const date = item.date || new Date().toISOString().slice(0, 10);
-    const status = (item.status === 'draft' || item.status === 'archived' || item.status === 'scheduled') ? item.status : 'published';
+    const validStatuses = ['published', 'active', 'draft', 'scheduled', 'archived', 'inactive', 'deleted'];
+    const rawStatus = String(item.status || 'published').toLowerCase().trim();
+    const status = validStatuses.includes(rawStatus) ? rawStatus : 'published';
 
     normalized.push({
       ...item,
@@ -369,7 +373,8 @@ export interface UseCatalogReturn {
   loading: boolean;
   isUsingCache: boolean;
   error: string | null;
-  refetchAll: () => Promise<AllCatalogs>;
+  refetchAll: (isSilent?: boolean) => Promise<AllCatalogs>;
+  refetchBlogs: () => Promise<Blog[]>;
   refetchReviews: () => Promise<Review[]>;
   updateCategories: (cats: ServiceCategory[]) => void;
   updateBlogCategories: (blogCats: BlogCategory[]) => void;
@@ -414,12 +419,17 @@ export function useCatalog(): UseCatalogReturn {
     return validateAndNormalizeReviews(rawRevs);
   });
 
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    const rawCats = getCachedCatalog<ServiceCategory[]>(CATALOG_CACHE_KEYS.CATEGORIES, []);
+    return rawCats.length === 0;
+  });
   const [isUsingCache, setIsUsingCache] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const refetchAll = useCallback(async (): Promise<AllCatalogs> => {
-    setLoading(true);
+  const refetchAll = useCallback(async (isSilent = false): Promise<AllCatalogs> => {
+    if (!isSilent && categories.length === 0) {
+      setLoading(true);
+    }
     setError(null);
     try {
       const result = await fetchAllCatalogsWithCache();
@@ -533,6 +543,73 @@ export function useCatalog(): UseCatalogReturn {
     }
   }, []);
 
+  const refetchBlogs = useCallback(async (): Promise<Blog[]> => {
+    try {
+      const liveBlogs = await fetchAuthoritativeBlogs();
+      const validated = validateAndNormalizeBlogs(liveBlogs, blogCategories);
+      setBlogsState(validated);
+      setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, validated);
+      return validated;
+    } catch (err) {
+      console.warn('[useCatalog] Failed to refetch blogs:', err);
+      return getCachedCatalog<Blog[]>(CATALOG_CACHE_KEYS.BLOGS, []);
+    }
+  }, [blogCategories]);
+
+  // Real-time synchronization across components and browser tabs
+  useEffect(() => {
+    const handleBlogUpdate = (e: any) => {
+      if (e.detail?.action === 'save' && e.detail?.blog) {
+        setBlogsState(prev => {
+          const incoming = e.detail.blog;
+          const exists = prev.some(b => b.id === incoming.id || (b.slug && incoming.slug && b.slug === incoming.slug));
+          const updated = exists
+            ? prev.map(b => (b.id === incoming.id || (b.slug && incoming.slug && b.slug === incoming.slug)) ? incoming : b)
+            : [incoming, ...prev];
+          const valid = validateAndNormalizeBlogs(updated, blogCategories);
+          setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, valid);
+          return valid;
+        });
+      } else if (e.detail?.action === 'delete' && e.detail?.id) {
+        setBlogsState(prev => {
+          const filtered = prev.filter(b => b.id !== e.detail.id && b.slug !== e.detail.id);
+          const valid = validateAndNormalizeBlogs(filtered, blogCategories);
+          setCachedCatalog(CATALOG_CACHE_KEYS.BLOGS, valid);
+          return valid;
+        });
+      } else {
+        refetchBlogs();
+      }
+    };
+
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === CATALOG_CACHE_KEYS.BLOGS) {
+        if (!e.newValue) {
+          refetchBlogs();
+        } else {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (Array.isArray(parsed)) {
+              setBlogsState(validateAndNormalizeBlogs(parsed, blogCategories));
+            } else {
+              refetchBlogs();
+            }
+          } catch {
+            refetchBlogs();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('easydesk_blogs_updated', handleBlogUpdate);
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      window.removeEventListener('easydesk_blogs_updated', handleBlogUpdate);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, [blogCategories, refetchBlogs]);
+
   useEffect(() => {
     refetchAll();
   }, [refetchAll]);
@@ -547,6 +624,7 @@ export function useCatalog(): UseCatalogReturn {
     isUsingCache,
     error,
     refetchAll,
+    refetchBlogs,
     refetchReviews,
     updateCategories,
     updateBlogCategories,

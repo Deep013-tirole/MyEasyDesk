@@ -126,7 +126,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
         // Heading 1: # Title
         if (trimmed.startsWith('# ') && !trimmed.startsWith('## ')) {
           return (
-            <h1 key={idx} className="text-xl sm:text-2xl font-black text-slate-950 mt-6 mb-3 tracking-tight">
+            <h1 key={idx} className={`${options.compact ? 'text-lg font-black mt-4 mb-2' : 'text-2xl sm:text-3xl font-black mt-8 mb-3'} text-slate-950 tracking-tight`}>
               {formatInlineText(trimmed.replace(/^#\s+/, ''))}
             </h1>
           );
@@ -135,7 +135,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
         // Heading 2: ## Section Title
         if (trimmed.startsWith('## ')) {
           return (
-            <h2 key={idx} className="text-base sm:text-lg font-black text-slate-900 mt-5 mb-2 pb-1.5 border-b border-slate-200/80 tracking-tight">
+            <h2 key={idx} className={`${options.compact ? 'text-base font-bold mt-3 mb-1.5' : 'text-xl sm:text-2xl font-bold mt-7 mb-3 pb-2 border-b border-slate-200/80'} text-slate-900 tracking-tight`}>
               {formatInlineText(trimmed.replace(/^##\s+/, ''))}
             </h2>
           );
@@ -144,7 +144,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
         // Heading 3: ### Sub-section Title
         if (trimmed.startsWith('### ')) {
           return (
-            <h3 key={idx} className="text-sm sm:text-base font-extrabold text-[#0F4C81] mt-4 mb-1.5">
+            <h3 key={idx} className={`${options.compact ? 'text-sm font-bold mt-2.5 mb-1' : 'text-lg sm:text-xl font-bold mt-5 mb-2'} text-[#0F4C81] tracking-tight`}>
               {formatInlineText(trimmed.replace(/^###\s+/, ''))}
             </h3>
           );
@@ -153,7 +153,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
         // Heading 4: #### Minor Heading
         if (trimmed.startsWith('#### ')) {
           return (
-            <h4 key={idx} className="text-xs sm:text-sm font-bold text-slate-900 mt-3 mb-1 uppercase tracking-wide">
+            <h4 key={idx} className={`${options.compact ? 'text-xs font-bold mt-2 mb-1' : 'text-sm sm:text-base font-bold mt-4 mb-1.5'} text-slate-800 uppercase tracking-wide`}>
               {formatInlineText(trimmed.replace(/^####\s+/, ''))}
             </h4>
           );
@@ -176,7 +176,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
             .trim();
 
           return (
-            <div key={idx} className="my-4 p-4 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 text-xs sm:text-sm leading-relaxed shadow-2xs">
+            <div key={idx} className="my-5 p-4 sm:p-5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-950 text-xs sm:text-sm leading-relaxed shadow-2xs">
               <div className="flex items-center gap-1.5 font-bold text-amber-900 uppercase tracking-wider text-[11px] mb-1">
                 <Info className="w-4 h-4 text-amber-700 shrink-0" />
                 <span>Important Guidance Note</span>
@@ -193,10 +193,10 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
         if (lines.every(line => line.trim().startsWith('- ') || line.trim().startsWith('* '))) {
           const items = lines.map(line => line.trim().replace(/^[-*]\s+/, ''));
           return (
-            <ul key={idx} className="my-3 space-y-2 text-xs sm:text-sm text-slate-700 list-none pl-1">
+            <ul key={idx} className={`my-4 space-y-2.5 ${options.compact ? 'text-xs' : 'text-[15px] sm:text-[16px]'} text-slate-700 list-none pl-1`}>
               {items.map((item, i) => (
                 <li key={i} className="flex items-start gap-2.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#0F4C81] mt-2 shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#0F4C81] mt-2.5 shrink-0" />
                   <span className="leading-relaxed">{formatInlineText(item)}</span>
                 </li>
               ))}
@@ -208,7 +208,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
         if (lines.every(line => /^\d+\.\s+/.test(line.trim()))) {
           const items = lines.map(line => line.trim().replace(/^\d+\.\s+/, ''));
           return (
-            <ol key={idx} className="my-3 space-y-2 text-xs sm:text-sm text-slate-700 list-none pl-1">
+            <ol key={idx} className={`my-4 space-y-2.5 ${options.compact ? 'text-xs' : 'text-[15px] sm:text-[16px]'} text-slate-700 list-none pl-1`}>
               {items.map((item, i) => (
                 <li key={i} className="flex items-start gap-2.5">
                   <span className="w-5 h-5 rounded-md bg-blue-50 text-[#0F4C81] font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-blue-100">
@@ -228,12 +228,12 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
           const headerCells = parseRow(lines[0]);
           const rowLines = lines.slice(2).filter(l => l.trim().length > 0 && l.includes('|'));
           return (
-            <div key={idx} className="overflow-x-auto my-3 border border-slate-200 rounded-xl shadow-2xs">
-              <table className="min-w-full border-collapse text-xs">
-                <thead className="bg-slate-100/90 text-slate-800 font-bold border-b border-slate-200">
+            <div key={idx} className="overflow-x-auto my-5 border border-slate-200 rounded-2xl shadow-2xs">
+              <table className="min-w-full border-collapse text-xs sm:text-sm">
+                <thead className="bg-slate-50 text-slate-800 font-bold border-b border-slate-200">
                   <tr>
                     {headerCells.map((h, hi) => (
-                      <th key={hi} className="px-3 py-2 text-left border-r border-slate-200 last:border-r-0">{formatInlineText(h)}</th>
+                      <th key={hi} className="px-3.5 py-2.5 text-left border-r border-slate-200 last:border-r-0">{formatInlineText(h)}</th>
                     ))}
                   </tr>
                 </thead>
@@ -243,7 +243,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
                     return (
                       <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                         {cells.map((cell, ci) => (
-                          <td key={ci} className="px-3 py-2 text-slate-700 border-r border-slate-100 last:border-r-0">
+                          <td key={ci} className="px-3.5 py-2.5 text-slate-700 border-r border-slate-100 last:border-r-0">
                             {formatInlineText(cell)}
                           </td>
                         ))}
@@ -258,7 +258,7 @@ export function renderRichText(content: string, options: { isDark?: boolean; com
 
         // Mixed paragraphs with newlines
         return (
-          <p key={idx} className="text-xs sm:text-sm text-slate-700 leading-relaxed font-normal">
+          <p key={idx} className={`${options.compact ? 'text-xs sm:text-sm' : 'text-[15px] sm:text-[17px]'} text-slate-700 leading-[1.8] sm:leading-[1.85] font-normal my-4`}>
             {lines.map((line, lineIdx) => (
               <React.Fragment key={lineIdx}>
                 {lineIdx > 0 && <br />}

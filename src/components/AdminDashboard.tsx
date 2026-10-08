@@ -36,7 +36,7 @@ const EmployeeLoginAccessModule = lazy(() => import('./admin/EmployeeLoginAccess
 import { ServiceEditorModule } from './admin/ServiceEditorModule.js';
 import { BlogEditorModule } from './admin/BlogEditorModule.js';
 import { MediaInput } from './admin/MediaInput.js';
-import { fetchServicesWithCache, fetchCategoriesWithCache, fetchBlogCategoriesWithCache, fetchBlogsWithCache, setCachedCatalog, invalidateAllCatalogsCache, CATALOG_CACHE_KEYS } from '../services/catalogService.js';
+import { fetchServicesWithCache, fetchCategoriesWithCache, fetchBlogCategoriesWithCache, fetchBlogsWithCache, setCachedCatalog, invalidateAllCatalogsCache, invalidateBlogsCache, CATALOG_CACHE_KEYS } from '../services/catalogService.js';
 import { useScrollToTopOnChange } from '../lib/scrollUtils.js';
 
 export type AdminTabType = 'analytics' | 'orders' | 'services' | 'category_management' | 'blogs' | 'reviews' | 'faqs' | 'banners' | 'pages' | 'media' | 'users' | 'notifications' | 'audit' | 'settings' | 'about_us' | 'contact_us' | 'payment_settings' | 'admin_settings' | 'social_media' | 'employee_records' | 'customer_records' | 'master_data' | 'record_integrity' | 'roles_management' | 'privacy_security' | 'calendar';
@@ -874,10 +874,15 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
       throw new Error(data.message || 'Failed to save blog article');
     }
 
+    const savedBlog = await res.json().catch(() => null);
+
     triggerAlert(`Article "${blogData.title}" ${isEditing ? 'updated' : 'published'} successfully!`);
     setIsBlogEditorOpen(false);
     setEditingBlog(null);
-    invalidateAllCatalogsCache();
+    invalidateBlogsCache();
+    window.dispatchEvent(new CustomEvent('easydesk_blogs_updated', {
+      detail: { action: 'save', blog: savedBlog || blogData }
+    }));
     onRefreshCatalogs?.();
     fetchTabData();
   };
@@ -1055,6 +1060,13 @@ export default function AdminDashboard({ onRefreshCatalogs, initialTab, onTabCha
       });
       if (res.ok) {
         triggerAlert(`Deleted ${type} record successfully.`);
+        if (type === 'blog') {
+          invalidateBlogsCache();
+          window.dispatchEvent(new CustomEvent('easydesk_blogs_updated', {
+            detail: { action: 'delete', id }
+          }));
+          setBlogs(prev => prev.filter(b => b.id !== id && b.slug !== id));
+        }
         if (['service', 'category', 'blog', 'faq', 'banner', 'page'].includes(type)) {
           invalidateAllCatalogsCache();
           onRefreshCatalogs?.();

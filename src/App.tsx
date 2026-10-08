@@ -296,7 +296,8 @@ export default function App() {
     reviews,
     setReviews,
     loading,
-    refetchAll: fetchPlatformCatalogs
+    refetchAll: fetchPlatformCatalogs,
+    refetchBlogs
   } = useCatalog();
 
   // Network connectivity status listener & auto-resync
@@ -327,6 +328,9 @@ export default function App() {
     }
     if (nextView !== 'blogs') {
       setSelectedBlogId(null);
+    } else {
+      // Revalidate blogs when navigating to blogs
+      refetchBlogs();
     }
 
     let targetPath = nextView === 'home' ? '/' : `/${nextView}`;
@@ -718,6 +722,8 @@ export default function App() {
                   onCloseBlog={handleCloseBlog}
                   services={services}
                   onSelectService={handleSelectService}
+                  refetchBlogs={refetchBlogs}
+                  setView={handleSetView}
                 />
               )}
 

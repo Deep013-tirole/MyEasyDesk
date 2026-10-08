@@ -7,6 +7,7 @@ import { openGeneralWhatsApp } from '../lib/whatsapp.js';
 import { auth, signOut } from '../lib/firebaseClient.js';
 import { useLanguage } from '../context/LanguageContext.js';
 import LanguageSwitcher from './LanguageSwitcher.js';
+import MyEasyDeskBrand from './ui/MyEasyDeskBrand.js';
 
 interface HeaderProps {
   currentView: string;
@@ -103,7 +104,7 @@ export default function Header({
 
           {/* Brand Logo */}
           <div
-            className="flex items-center gap-2 sm:gap-2.5 cursor-pointer shrink-0 focus-civic rounded-xl p-1 notranslate"
+            className="cursor-pointer shrink-0 focus-civic rounded-xl py-1 px-1.5 notranslate transition-opacity hover:opacity-95"
             translate="no"
             onClick={() => setView('home')}
             role="button"
@@ -111,26 +112,7 @@ export default function Header({
             onKeyDown={(e) => e.key === 'Enter' && setView('home')}
             aria-label="My EasyDesk Home"
           >
-            {logoUrl && !logoFailed ? (
-              <img
-                src={logoUrl}
-                alt="My EasyDesk Logo"
-                className="w-8 h-8 rounded-xl object-contain shadow-xs bg-white shrink-0"
-                onError={() => setLogoFailed(true)}
-              />
-            ) : (
-              <div className="w-8 h-8 bg-gradient-to-br from-[#0F4C81] to-[#0A2540] rounded-xl flex items-center justify-center shadow-xs text-white shrink-0">
-                <Shield className="w-4 h-4 text-cyan-300" />
-              </div>
-            )}
-            <div>
-              <span className="text-lg sm:text-xl font-black tracking-tight text-[#0F4C81] leading-none block notranslate" translate="no">
-                My EasyDesk
-              </span>
-              <span className="hidden sm:block text-[9px] text-slate-500 font-extrabold tracking-wider uppercase mt-0.5">
-                {t('nav.tagline', 'Your Online Work, Done Easily')}
-              </span>
-            </div>
+            <MyEasyDeskBrand size="md" showTagline={true} />
           </div>
 
           {/* Desktop Navigation Links */}
