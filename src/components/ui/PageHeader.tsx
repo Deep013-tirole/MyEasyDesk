@@ -32,13 +32,13 @@ export default function PageHeader({
 
   return (
     <section className={`border-b border-[#D3E3F5] dark:border-slate-800 bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] dark:from-[#0B0F19] dark:via-[#111827] dark:to-[#0B0F19] ${className}`}>
-      <div className="portal-container py-6 sm:py-9 space-y-4">
+      <div className="portal-container py-5 sm:py-7 space-y-3 sm:space-y-4">
         {breadcrumbs && breadcrumbs.length > 0 && (
           <Breadcrumbs items={breadcrumbs} />
         )}
 
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div className="space-y-2 max-w-3xl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-3 sm:gap-4">
+          <div className="space-y-1.5 sm:space-y-2 max-w-3xl">
             {badgeObj && (
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black tracking-wider uppercase bg-blue-100/90 text-[#0062FF] border border-blue-200/90 dark:bg-blue-950/60 dark:text-cyan-300 dark:border-blue-800/80 shadow-2xs">
                 {badgeObj.icon}

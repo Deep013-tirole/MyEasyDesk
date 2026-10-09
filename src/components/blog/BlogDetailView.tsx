@@ -58,6 +58,11 @@ export default function BlogDetailView({
     setIsDeletedOrUnavailable(false);
   }, [blog]);
 
+  // Scroll to top immediately when blog changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentBlog.id, currentBlog.slug]);
+
   // Authoritative API live verification on mount / change to prevent displaying stale deleted articles
   const blogIdentifier = blog.slug || blog.id;
   useEffect(() => {
@@ -263,7 +268,7 @@ export default function BlogDetailView({
   const seoDesc = currentBlog.seoDescription || currentBlog.shortDescription || currentBlog.excerpt || currentBlog.title;
 
   return (
-    <article id="blog-detail-view" className="min-h-screen bg-[#F8FAFC] pb-24 font-sans text-slate-900 w-full max-w-full overflow-x-hidden selection:bg-blue-100 selection:text-[#0F4C81]">
+    <article id="blog-detail-view" className="min-h-screen bg-[#F8FAFC] pb-10 sm:pb-14 font-sans text-slate-900 w-full max-w-full overflow-x-hidden selection:bg-blue-100 selection:text-[#0F4C81]">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
@@ -366,7 +371,7 @@ export default function BlogDetailView({
       </div>
 
       {/* 2. Main Article Editorial Column (Optimal 720-780px Readable Width) */}
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-8 sm:pt-12 space-y-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 space-y-6 sm:space-y-8">
         
         {/* Article Metadata & Header */}
         <header className="space-y-4">
@@ -467,17 +472,27 @@ export default function BlogDetailView({
 
         {/* 3. Featured Hero Image & Caption */}
         <figure className="space-y-2">
-          <div className="w-full aspect-[16/9] sm:aspect-[21/9] max-h-[460px] rounded-2xl sm:rounded-3xl bg-slate-100 overflow-hidden border border-slate-200/80 shadow-xs relative">
+          <div className="w-full relative rounded-2xl sm:rounded-3xl bg-slate-900/5 overflow-hidden border border-slate-200/80 shadow-xs flex items-center justify-center min-h-[200px] sm:min-h-[260px] max-h-[480px]">
             {currentBlog.image && !imageError ? (
-              <img
-                src={currentBlog.image}
-                alt={currentBlog.title}
-                referrerPolicy="no-referrer"
-                onError={() => setImageError(true)}
-                className="w-full h-full object-cover transition-opacity duration-300"
-              />
+              <>
+                {/* Ambient blurred backdrop to prevent harsh letterbox voids without cropping */}
+                <img
+                  src={currentBlog.image}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-20 scale-125 select-none pointer-events-none"
+                />
+                {/* 100% Uncropped full banner image preserving original proportions */}
+                <img
+                  src={currentBlog.image}
+                  alt={currentBlog.title}
+                  referrerPolicy="no-referrer"
+                  onError={() => setImageError(true)}
+                  className="relative z-10 w-full h-auto max-h-[460px] object-contain transition-opacity duration-300"
+                />
+              </>
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#0B2545] to-[#0F4C81] text-white p-8 text-center">
+              <div className="w-full h-full min-h-[200px] sm:min-h-[260px] flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#0B2545] to-[#0F4C81] text-white p-8 text-center">
                 <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center mb-3">
                   <FileText className="w-7 h-7 text-teal-300" />
                 </div>
@@ -751,7 +766,7 @@ export default function BlogDetailView({
 
         </section>
 
-      </main>
+      </div>
 
     </article>
   );

@@ -291,12 +291,12 @@ export default function AboutUsView({ setView }: { setView: (v: string) => void 
   };
 
   return (
-    <div className="font-sans pb-12 text-[#0B192C] bg-[#F4F8FC] w-full max-w-full overflow-x-hidden">
+    <div className="font-sans pb-8 sm:pb-10 text-[#0B192C] bg-[#F4F8FC] w-full max-w-full overflow-x-hidden">
       
       {/* =========================================================================
           1. HERO HEADER SECTION (Bootstrap Jumbotron + Motion Animation)
           ========================================================================= */}
-      <section className="relative py-12 lg:py-16 overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] border-b border-[#D3E3F5]">
+      <section className="relative py-8 sm:py-12 lg:py-14 overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] border-b border-[#D3E3F5]">
         {/* Subtle Decorative Background Blobs */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">
           <div className="absolute -top-24 -left-20 w-96 h-96 bg-blue-200/40 rounded-full blur-3xl" />

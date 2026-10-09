@@ -333,7 +333,7 @@ export default function ServiceDetailsView({
   const seoDesc = service.seoDescription || service.shortDescription || service.description || `Apply online for ${service.title} with verified desk assistance, full document verification, transparent fees, and real-time tracking on WhatsApp.`;
 
   return (
-    <div id="easydesk-service-details-page" className="w-full max-w-full overflow-x-hidden min-h-screen bg-[#F4F8FC] font-sans text-slate-900 pb-20">
+    <div id="easydesk-service-details-page" className="w-full max-w-full overflow-x-hidden min-h-screen bg-[#F4F8FC] font-sans text-slate-900 pb-10 sm:pb-14">
       <Helmet>
         <title>{seoTitle}</title>
         <meta name="description" content={seoDesc} />
@@ -588,7 +588,7 @@ export default function ServiceDetailsView({
           <div className="lg:col-span-8 space-y-5 sm:space-y-6 min-w-0 w-full">
 
             {/* HORIZONTAL SECTION TABS NAVIGATION */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 shadow-xs sticky top-28 z-20 overflow-x-auto scrollbar-none w-full max-w-full">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-1.5 shadow-xs sticky top-[116px] z-20 overflow-x-auto scrollbar-none w-full max-w-full">
               <div className="flex items-center gap-1 min-w-max">
                 {availableTabs.map(tab => (
                   <button
@@ -597,7 +597,7 @@ export default function ServiceDetailsView({
                       setActiveNavTab(tab.id);
                       const el = document.getElementById(`section-${tab.id}`);
                       if (el) {
-                        const yOffset = -140;
+                        const yOffset = -176;
                         const y = el.getBoundingClientRect().top + window.pageYOffset + yOffset;
                         window.scrollTo({ top: y, behavior: 'smooth' });
                       }
@@ -615,7 +615,7 @@ export default function ServiceDetailsView({
             </div>
 
             {/* SECTION 1: OVERVIEW */}
-            <div id="section-overview" className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
+            <div id="section-overview" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <FileText className="w-4 h-4 text-[#0F4C81]" />
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">Service Overview & Scope</h2>
@@ -649,7 +649,7 @@ export default function ServiceDetailsView({
 
             {/* CONDITIONAL SECTION: APPLICATION TIMELINE */}
             {hasTimeline && service.timeline?.startDate && service.timeline?.endDate && (
-              <div id="section-timeline" className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
+              <div id="section-timeline" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4 text-[#0F4C81]" />
@@ -698,7 +698,7 @@ export default function ServiceDetailsView({
             )}
 
             {/* SECTION 2: REQUIRED DOCUMENTS */}
-            <div id="section-documents" className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+            <div id="section-documents" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <CheckSquare className="w-4 h-4 text-[#0F4C81]" />
@@ -767,7 +767,7 @@ export default function ServiceDetailsView({
             </div>
 
             {/* SECTION 3: HOW IT WORKS */}
-            <div id="section-how-it-works" className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+            <div id="section-how-it-works" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                 <Clock className="w-4 h-4 text-[#0F4C81]" />
                 <h2 className="text-sm sm:text-base font-bold text-slate-900">How It Works (Assisted Process)</h2>
@@ -820,7 +820,7 @@ export default function ServiceDetailsView({
             </div>
 
             {/* SECTION 4: FEE & CHARGES BREAKDOWN */}
-            <div id="section-fees" className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+            <div id="section-fees" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <div className="flex items-center gap-2">
                   <Award className="w-4 h-4 text-[#0F4C81]" />
@@ -857,7 +857,7 @@ export default function ServiceDetailsView({
 
             {/* SECTION 5: ELIGIBILITY (Conditional) */}
             {service.eligibility && (
-              <div id="section-eligibility" className="bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
+              <div id="section-eligibility" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-5 sm:p-7 shadow-xs space-y-4 w-full min-w-0">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-[#0F4C81]" />
@@ -908,7 +908,7 @@ export default function ServiceDetailsView({
 
             {/* SECTION 6: FAQS (Conditional) */}
             {service.faqs && service.faqs.length > 0 && (
-              <div id="section-faqs" className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
+              <div id="section-faqs" className="scroll-mt-44 sm:scroll-mt-48 bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-4">
                 <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
                   <HelpCircle className="w-4 h-4 text-[#0F4C81]" />
                   <h2 className="text-sm sm:text-base font-bold text-slate-900">Frequently Asked Questions</h2>

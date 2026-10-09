@@ -133,7 +133,7 @@ export default function ServicesView({
   };
 
   return (
-    <div id="easydesk-services-view" className="font-sans text-[#0B192C] bg-[#F4F8FC] min-h-screen pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-services-view" className="font-sans text-[#0B192C] bg-[#F4F8FC] min-h-screen pb-10 sm:pb-14 w-full max-w-full overflow-x-hidden">
 
       {/* ==================================================
           SECTION 1: PAGE HEADER WITH BREADCRUMBS & BADGES
@@ -162,7 +162,7 @@ export default function ServicesView({
         }
       />
 
-      <div className="portal-container pt-8 sm:pt-10 space-y-8">
+      <div className="portal-container pt-5 sm:pt-7 space-y-6 sm:space-y-8">
 
         {/* ==================================================
             SECTION 2: SEARCH & CATEGORY FILTER TOOLBAR

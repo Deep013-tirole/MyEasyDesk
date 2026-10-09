@@ -21,6 +21,7 @@ interface HomeViewProps {
   reviews: Review[];
   setView: (view: string) => void;
   setSelectedServiceId: (id: string) => void;
+  setSelectedBlogId?: (id: string) => void;
 }
 
 export default function HomeView({
@@ -29,7 +30,8 @@ export default function HomeView({
   blogCategories = [],
   reviews,
   setView,
-  setSelectedServiceId
+  setSelectedServiceId,
+  setSelectedBlogId
 }: HomeViewProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [contactInfo, setContactInfo] = useState<{ phone: string; address: string }>({ phone: '', address: '' });
@@ -150,7 +152,7 @@ export default function HomeView({
         size="hero"
         ariaLabel="Hero Introduction"
       >
-        <div className="max-w-4xl mx-auto text-center space-y-6">
+        <div className="max-w-4xl mx-auto text-center space-y-4 sm:space-y-6">
 
           {/* Official Brand Identity Presentation */}
           <div className="flex justify-center pb-1">
@@ -642,8 +644,13 @@ export default function HomeView({
                 blogCategories={blogCategories}
                 onSelect={(b) => {
                   const slugOrId = b.slug || b.id;
-                  setView('blogs');
-                  window.history.pushState({ view: 'blogs', blogId: slugOrId }, '', `/blogs/${slugOrId}`);
+                  if (setSelectedBlogId) {
+                    setSelectedBlogId(slugOrId);
+                  } else {
+                    setView('blogs');
+                    window.history.pushState({ view: 'blogs', blogId: slugOrId }, '', `/blogs/${slugOrId}`);
+                    window.scrollTo({ top: 0, behavior: 'instant' });
+                  }
                 }}
               />
             ))}

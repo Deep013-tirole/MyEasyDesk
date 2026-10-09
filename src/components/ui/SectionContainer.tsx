@@ -27,10 +27,10 @@ const variantStyles: Record<SectionBackgroundVariant, string> = {
 };
 
 const sizeStyles: Record<SectionSize, string> = {
-  sm: 'py-8 sm:py-10',
-  md: 'py-12 sm:py-16',
-  lg: 'py-16 sm:py-20 lg:py-24',
-  hero: 'pt-8 pb-14 sm:pt-12 sm:pb-20 lg:pt-16 lg:pb-24'
+  sm: 'py-6 sm:py-8 lg:py-10',
+  md: 'py-8 sm:py-12 lg:py-16',
+  lg: 'py-12 sm:py-16 lg:py-20',
+  hero: 'pt-6 pb-10 sm:pt-8 sm:pb-14 lg:pt-10 lg:pb-16'
 };
 
 export default function SectionContainer({

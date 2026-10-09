@@ -327,10 +327,10 @@ export default function BlogsView({
   // MAIN BLOGS & KNOWLEDGE HUB DIRECTORY
   // -----------------------------------------------------------------
   return (
-    <div id="easydesk-blogs-view" className="min-h-screen bg-[#F4F8FC] pb-24 font-sans text-slate-900 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-blogs-view" className="min-h-screen bg-[#F4F8FC] pb-10 sm:pb-14 font-sans text-slate-900 w-full max-w-full overflow-x-hidden">
 
       {/* 1. HERO SECTION (Matching AboutUs Gradient Banner & Micro Metrics) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-12 sm:py-16 border-b border-[#D3E3F5]">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-8 sm:py-12 border-b border-[#D3E3F5]">
 
         {/* Subtle Decorative Background Blur */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">

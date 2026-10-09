@@ -372,7 +372,7 @@ export default function TrackingView() {
     : Math.max(0, totalAmount - effectiveAmountPaid);
 
   return (
-    <div id="easydesk-tracking" className="portal-container max-w-5xl py-10 font-sans text-slate-800 print:bg-white print:p-0 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-tracking" className="portal-container max-w-5xl py-6 sm:py-10 font-sans text-slate-800 print:bg-white print:p-0 w-full max-w-full overflow-x-hidden">
       
       {/* Title */}
       <div className="mb-8 print:hidden space-y-4">

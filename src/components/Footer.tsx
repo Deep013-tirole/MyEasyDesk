@@ -228,7 +228,7 @@ export default function Footer({ setView }: FooterProps) {
   });
 
   return (
-    <footer className="bg-[#0A2540] text-slate-300 font-sans border-t border-slate-800 mt-16 w-full max-w-full">
+    <footer id="easydesk-footer" className="bg-[#0A2540] text-slate-300 font-sans border-t border-slate-800 mt-10 sm:mt-16 pb-20 md:pb-0 w-full max-w-full">
       <div className="portal-container py-12 sm:py-16 w-full max-w-full">
 
         {/* Main 4-Column Grid */}

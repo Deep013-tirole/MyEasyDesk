@@ -428,7 +428,7 @@ export default function PrivacySecurityView({ setView }: { setView?: (v: string)
   };
 
   return (
-    <div id="easydesk-privacy-view" className="min-h-screen bg-[#F4F8FC] font-sans text-[#0B192C] pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-privacy-view" className="min-h-screen bg-[#F4F8FC] font-sans text-[#0B192C] pb-10 sm:pb-14 w-full max-w-full overflow-x-hidden">
       <Helmet>
         <title>Privacy & Security Trust Center | My EasyDesk — Your Online Work, Done Easily</title>
         <meta name="description" content="Learn how My EasyDesk protects your personal data, SSL 256-bit encryption, DPDP Act compliance, and strict anti-fraud guarantees." />

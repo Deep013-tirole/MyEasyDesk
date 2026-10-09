@@ -171,7 +171,7 @@ Please provide step-by-step guidance on document preparation, key verification c
   ];
 
   return (
-    <div id="ai-chat-assistant-container" className="fixed bottom-4 right-4 sm:bottom-5 sm:right-5 z-40 font-sans flex flex-col items-end pointer-events-auto">
+    <div id="ai-chat-assistant-container" className="fixed bottom-18 right-4 md:bottom-5 md:right-5 z-40 font-sans flex flex-col items-end pointer-events-auto">
       {/* Single Sleek Floating Chat Toggle Button */}
       {!isOpen && (
         <button

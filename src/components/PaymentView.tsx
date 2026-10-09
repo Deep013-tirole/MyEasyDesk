@@ -211,10 +211,10 @@ export default function PaymentView({
   }
 
   return (
-    <div id="easydesk-payment-view" className="font-sans text-[#0B192C] bg-[#F4F8FC] pb-20 w-full max-w-full overflow-x-hidden">
+    <div id="easydesk-payment-view" className="font-sans text-[#0B192C] bg-[#F4F8FC] pb-10 sm:pb-14 w-full max-w-full overflow-x-hidden">
       
       {/* 1. HERO HEADER (Matching Brand Gradient Banner & Pulse Badge) */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-12 sm:py-16 border-b border-[#D3E3F5] mb-10">
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#E6F0FA] via-[#EDF5FD] to-[#F4F8FC] py-8 sm:py-12 border-b border-[#D3E3F5] mb-6 sm:mb-8">
         
         {/* Subtle Decorative Background Blur */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full portal-container h-full pointer-events-none overflow-hidden opacity-60">

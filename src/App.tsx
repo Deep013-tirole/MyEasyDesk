@@ -619,7 +619,7 @@ export default function App() {
           onOpenSearch={() => setIsCommandPaletteOpen(true)}
         />
 
-        <main className="flex-1 w-full max-w-full min-w-0 pb-20 md:pb-0">
+        <main className="flex-1 w-full max-w-full min-w-0">
           {loading ? (
             <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-xs text-slate-400 font-sans">
               <div className="w-8 h-8 border-4 border-[#0F4C81] border-t-transparent rounded-full animate-spin" />
@@ -635,6 +635,7 @@ export default function App() {
                   reviews={reviews}
                   setView={handleSetView}
                   setSelectedServiceId={handleSelectService}
+                  setSelectedBlogId={handleSelectBlog}
                 />
               )}
 
